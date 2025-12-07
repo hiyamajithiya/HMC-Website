@@ -54,8 +54,7 @@ export function Header() {
               </a>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-xs">ICAI Membership: {SITE_INFO.icaiMembership}</span>
-              <span className="text-xs">FRN: {SITE_INFO.firmRegistrationNo}</span>
+              <span className="text-xs">Chartered Accountants</span>
             </div>
           </div>
         </div>

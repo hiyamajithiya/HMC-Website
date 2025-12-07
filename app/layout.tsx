@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer"
 import { WhatsAppButton } from "@/components/common/WhatsAppButton"
 import { ScrollToTop } from "@/components/common/ScrollToTop"
 import { CookieConsent } from "@/components/common/CookieConsent"
+import GoogleAnalytics from "@/components/common/GoogleAnalytics"
 import { SITE_INFO } from "@/lib/constants"
 
 export const metadata: Metadata = {
@@ -67,6 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className="min-h-screen flex flex-col">
+        <GoogleAnalytics />
         <Header />
         <main className="flex-1 pt-20 lg:pt-32">{children}</main>
         <Footer />

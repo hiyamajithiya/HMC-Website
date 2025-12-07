@@ -19,9 +19,8 @@ export function Footer() {
               Chartered Accountants
             </p>
             <div className="space-y-2 text-sm">
-              <p>ICAI Membership: {SITE_INFO.icaiMembership}</p>
-              <p>FRN: {SITE_INFO.firmRegistrationNo}</p>
               <p>Established: {SITE_INFO.yearEstablished}</p>
+              <p>Ahmedabad, Gujarat</p>
             </div>
 
             <div className="mt-6">

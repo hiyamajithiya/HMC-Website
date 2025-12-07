@@ -136,6 +136,7 @@ export const NAV_ITEMS = [
   },
   { label: "Tools", href: "/tools" },
   { label: "Contact", href: "/contact" },
+  { label: "Client Portal", href: "/client-portal/login" },
 ];
 
 // Regulatory Links (Permitted by ICAI)

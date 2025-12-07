@@ -1,8 +1,17 @@
 import Link from "next/link"
+import { Metadata } from "next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, ClipboardCheck, Building2, Bot, Receipt, Briefcase, Calendar, Calculator } from "lucide-react"
 import { SITE_INFO, SERVICES } from "@/lib/constants"
+import { generateMetadata as createMetadata } from "@/lib/metadata"
+import { organizationSchema, localBusinessSchema } from "@/lib/schema"
+
+export const metadata: Metadata = createMetadata({
+  title: `${SITE_INFO.name} - Chartered Accountants in Ahmedabad`,
+  description: SITE_INFO.description,
+  path: '/',
+})
 
 const iconMap: Record<string, any> = {
   FileText,
@@ -16,6 +25,20 @@ const iconMap: Record<string, any> = {
 export default function HomePage() {
   return (
     <div>
+      {/* JSON-LD Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationSchema),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(localBusinessSchema),
+        }}
+      />
+
       {/* Hero Section */}
       <section className="gradient-navy text-white py-20 md:py-32">
         <div className="container-custom">
@@ -27,7 +50,7 @@ export default function HomePage() {
               Chartered Accountants
             </p>
             <p className="text-lg mb-8 text-white/80">
-              Practicing Since {SITE_INFO.yearEstablished} | ICAI Membership: {SITE_INFO.icaiMembership}
+              Practicing Since {SITE_INFO.yearEstablished}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/book-appointment">
@@ -56,18 +79,14 @@ export default function HomePage() {
               {SITE_INFO.name} is a proprietorship firm of Chartered Accountants established in {SITE_INFO.yearEstablished},
               located in Ahmedabad, Gujarat. The firm is registered with the Institute of Chartered Accountants of India (ICAI).
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 max-w-xl mx-auto">
               <div className="text-center p-4">
                 <div className="text-3xl font-bold text-primary mb-2">17+</div>
                 <div className="text-sm text-text-muted">Years of Practice</div>
               </div>
               <div className="text-center p-4">
-                <div className="text-3xl font-bold text-primary mb-2">{SITE_INFO.icaiMembership}</div>
-                <div className="text-sm text-text-muted">ICAI Membership</div>
-              </div>
-              <div className="text-center p-4">
-                <div className="text-3xl font-bold text-primary mb-2">{SITE_INFO.firmRegistrationNo}</div>
-                <div className="text-sm text-text-muted">Firm Registration No.</div>
+                <div className="text-3xl font-bold text-primary mb-2">{SITE_INFO.yearEstablished}</div>
+                <div className="text-sm text-text-muted">Established</div>
               </div>
             </div>
             <Link href="/about">

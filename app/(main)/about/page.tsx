@@ -5,7 +5,7 @@ import { SITE_INFO } from "@/lib/constants"
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: `Learn about ${SITE_INFO.name}, a Chartered Accountant firm established in ${SITE_INFO.yearEstablished} in Ahmedabad. ICAI Membership ${SITE_INFO.icaiMembership}, FRN ${SITE_INFO.firmRegistrationNo}.`,
+  description: `Learn about ${SITE_INFO.name}, a Chartered Accountant firm established in ${SITE_INFO.yearEstablished} in Ahmedabad, providing professional accounting and auditing services.`,
 }
 
 export default function AboutPage() {
@@ -37,8 +37,8 @@ export default function AboutPage() {
                     Proprietor, {SITE_INFO.name}
                   </p>
                   <div className="space-y-1 text-sm">
-                    <p>ICAI Membership No.: {SITE_INFO.icaiMembership}</p>
-                    <p>Firm Registration No.: {SITE_INFO.firmRegistrationNo}</p>
+                    <p>Chartered Accountant</p>
+                    <p>Ahmedabad, Gujarat</p>
                   </div>
                 </div>
 
