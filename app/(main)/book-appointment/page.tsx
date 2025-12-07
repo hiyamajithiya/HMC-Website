@@ -177,7 +177,8 @@ export default function BookAppointmentPage() {
                 <MapPin className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Visit Us</h3>
                 <p className="text-sm text-text-secondary">
-                  {SITE_INFO.address.street}<br />
+                  {SITE_INFO.address.line1}<br />
+                  {SITE_INFO.address.line2}<br />
                   {SITE_INFO.address.city}
                 </p>
               </div>

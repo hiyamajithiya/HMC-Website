@@ -3,8 +3,6 @@ export const SITE_INFO = {
   name: "Himanshu Majithiya & Co.",
   description: "Chartered Accountants in Ahmedabad providing Income Tax, Company Audit, FFMC Compliance, GST, and AI Automation services since 2007",
   domain: "www.himanshumajithiya.com",
-  email: "info@himanshumajithiya.com",
-  phone: "+91 98795 03465",
   whatsapp: "+919879503465",
 
   // Firm Details

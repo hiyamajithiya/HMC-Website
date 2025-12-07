@@ -240,8 +240,9 @@ export default function PrivacyPolicyPage() {
                 <p><strong>Chartered Accountants</strong></p>
                 <p className="mt-3">
                   <strong>Address:</strong><br />
-                  {SITE_INFO.address.street}<br />
-                  {SITE_INFO.address.city}, {SITE_INFO.address.state} {SITE_INFO.address.zip}
+                  {SITE_INFO.address.line1}<br />
+                  {SITE_INFO.address.line2}<br />
+                  {SITE_INFO.address.city}, {SITE_INFO.address.state} {SITE_INFO.address.pincode}
                 </p>
                 <p className="mt-2">
                   <strong>Email:</strong>{" "}

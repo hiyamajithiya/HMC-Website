@@ -24,7 +24,7 @@ export default function FAQPage() {
         },
         {
           q: "Where is your office located?",
-          a: `Our office is located at ${SITE_INFO.address.street}, ${SITE_INFO.address.city}, ${SITE_INFO.address.state} ${SITE_INFO.address.zip}. We also offer virtual consultations for clients who prefer online meetings.`
+          a: `Our office is located at ${SITE_INFO.address.line1}, ${SITE_INFO.address.line2}, ${SITE_INFO.address.city}, ${SITE_INFO.address.state} ${SITE_INFO.address.pincode}. We also offer virtual consultations for clients who prefer online meetings.`
         },
         {
           q: "What are your office hours?",
