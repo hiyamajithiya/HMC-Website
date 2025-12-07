@@ -1,0 +1,260 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for client portal
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  phone         String?
+  password      String
+  role          UserRole  @default(CLIENT)
+  isActive      Boolean   @default(true)
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  documents     Document[]
+  appointments  Appointment[]
+  toolPurchases ToolPurchase[]
+  sessions      Session[]
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Documents for client portal
+model Document {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  fileName    String
+  filePath    String
+  fileSize    Int
+  fileType    String
+  category    DocCategory
+  uploadedBy  String
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum DocCategory {
+  TAX_RETURNS
+  AUDIT_REPORTS
+  GST_RETURNS
+  COMPLIANCE
+  INVOICES
+  OTHER
+}
+
+// Blog posts
+model BlogPost {
+  id          String      @id @default(cuid())
+  title       String
+  titleGu     String?     // Gujarati title
+  slug        String      @unique
+  excerpt     String
+  excerptGu   String?     // Gujarati excerpt
+  content     String      @db.Text
+  contentGu   String?     @db.Text // Gujarati content
+  coverImage  String?
+  category    BlogCategory
+  tags        String[]
+  isPublished Boolean     @default(false)
+  publishedAt DateTime?
+  viewCount   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+enum BlogCategory {
+  TAX_UPDATES
+  GST_UPDATES
+  AUTOMATION_TIPS
+  COMPLIANCE
+  FFMC_RBI
+  GENERAL
+}
+
+// Automation Tools
+model Tool {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  description     String         @db.Text
+  shortDesc       String
+  version         String
+  category        ToolCategory
+  toolType        ToolType
+  price           Decimal?       @db.Decimal(10, 2)
+  licenseType     LicenseType
+  licenseDuration Int?           // in days, null for lifetime/free
+  downloadUrl     String?        // for downloadable tools
+  requirements    String?        @db.Text
+  setupGuide      String?        @db.Text
+  features        String[]
+  screenshots     String[]
+  downloadCount   Int            @default(0)
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  purchases       ToolPurchase[]
+}
+
+enum ToolCategory {
+  DOCUMENT_AUTOMATION
+  DATA_PROCESSING
+  REDACTION
+  TAX_TOOLS
+  COMPLIANCE
+  UTILITY
+}
+
+enum ToolType {
+  DOWNLOADABLE    // Python scripts, Excel tools
+  ONLINE          // Web-based tools
+  HYBRID          // Both options available
+}
+
+enum LicenseType {
+  FREE
+  ONE_TIME
+  ANNUAL
+  MONTHLY
+}
+
+// Tool purchases/licenses
+model ToolPurchase {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  toolId      String
+  tool        Tool      @relation(fields: [toolId], references: [id])
+  licenseKey  String    @unique
+  purchaseDate DateTime @default(now())
+  expiryDate  DateTime?
+  amount      Decimal   @db.Decimal(10, 2)
+  status      PurchaseStatus @default(ACTIVE)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
+// Contact form submissions
+model ContactSubmission {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  service   String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  isReplied Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Newsletter subscribers
+model NewsletterSubscriber {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String?
+  isActive     Boolean   @default(true)
+  subscribedAt DateTime  @default(now())
+  unsubscribedAt DateTime?
+}
+
+// Appointments
+model Appointment {
+  id          String           @id @default(cuid())
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id])
+  name        String
+  email       String
+  phone       String
+  service     String
+  date        DateTime
+  timeSlot    String
+  message     String?          @db.Text
+  status      AppointmentStatus @default(PENDING)
+  calendlyId  String?          // Calendly event ID if integrated
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// Compliance calendar events
+model ComplianceEvent {
+  id          String   @id @default(cuid())
+  title       String
+  titleGu     String?
+  description String?
+  dueDate     DateTime
+  category    ComplianceCategory
+  frequency   String   // Monthly, Quarterly, Annually
+  isRecurring Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum ComplianceCategory {
+  INCOME_TAX
+  GST
+  ROC
+  RBI_FFMC
+  TDS
+  ADVANCE_TAX
+  OTHER
+}
+
+// Site settings
+model SiteSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

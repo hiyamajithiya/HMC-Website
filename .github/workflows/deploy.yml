@@ -1,0 +1,71 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /var/www/hmc-website
+
+            echo "📥 Pulling latest changes from GitHub..."
+            git pull origin main
+
+            echo "🛑 Stopping containers..."
+            docker-compose down
+
+            echo "🏗️ Building new images..."
+            docker-compose build --no-cache
+
+            echo "🚀 Starting containers..."
+            docker-compose up -d
+
+            echo "🧹 Cleaning up old images..."
+            docker image prune -af
+
+            echo "✅ Deployment completed successfully!"
+
+            echo "📊 Container status:"
+            docker-compose ps
+
+      - name: Health check
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            echo "⏳ Waiting for services to start..."
+            sleep 10
+
+            echo "🔍 Checking service health..."
+            if curl -f http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ Website is up and running!"
+            else
+              echo "❌ Website health check failed!"
+              exit 1
+            fi
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+          fi

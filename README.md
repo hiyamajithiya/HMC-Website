@@ -1,36 +1,198 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Himanshu Majithiya & Co. - Website
+
+Professional website for Himanshu Majithiya & Co., a Chartered Accountant firm in Ahmedabad, Gujarat, India.
+
+## Project Overview
+
+This is a Next.js 14 website built with TypeScript, Tailwind CSS, and Prisma ORM. The website is designed to be ICAI-compliant and follows all professional guidelines for CA firm websites in India.
+
+## Features
+
+- ✅ ICAI-compliant design and content
+- ✅ Responsive design (Mobile, Tablet, Desktop)
+- ✅ Professional color scheme (Navy Blue & Gold)
+- ✅ Modern UI with shadcn/ui components
+- ✅ Services showcase
+- ✅ Tax calculators
+- ✅ Compliance calendar
+- ✅ Automation tools
+- ✅ Blog/Articles section
+- ✅ Client portal
+- ✅ Contact forms
+- ✅ WhatsApp integration
+- ✅ Cookie consent
+- ✅ SEO optimized
+- ✅ Multi-language support (English & Gujarati)
+
+## Technology Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui
+- **Database**: PostgreSQL
+- **ORM**: Prisma
+- **Authentication**: NextAuth.js v5
+- **Forms**: React Hook Form + Zod
+- **Email**: Nodemailer
+- **Icons**: Lucide React
+- **Animation**: Framer Motion
+- **Date Handling**: date-fns
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18.x or higher
+- npm or yarn
+- PostgreSQL database
+
+### Installation
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables**
+
+   Copy `.env.example` to `.env.local` and update the values:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Edit `.env.local` with your configuration:
+   ```env
+   DATABASE_URL="postgresql://username:password@localhost:5432/himanshumajithiya_db"
+   NEXTAUTH_SECRET="your-secure-random-string"
+   NEXTAUTH_URL="http://localhost:3000"
+   SMTP_HOST="smtp.example.com"
+   SMTP_PORT="587"
+   SMTP_USER="info@himanshumajithiya.com"
+   SMTP_PASS="your-email-password"
+   ```
+
+3. **Set up the database**
+
+   Generate Prisma client and run migrations:
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open your browser**
+
+   Visit [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+```
+himanshumajithiya-website/
+├── app/                          # Next.js app directory
+│   ├── (main)/                   # Main website routes
+│   │   ├── about/
+│   │   ├── services/
+│   │   ├── resources/
+│   │   ├── tools/
+│   │   ├── contact/
+│   │   └── book-appointment/
+│   ├── (client-portal)/          # Client portal routes
+│   ├── (legal)/                  # Legal pages
+│   ├── (gujarati)/               # Gujarati pages
+│   ├── api/                      # API routes
+│   ├── globals.css               # Global styles
+│   └── layout.tsx                # Root layout
+├── components/                   # React components
+│   ├── ui/                       # shadcn/ui components
+│   ├── layout/                   # Layout components
+│   ├── common/                   # Common components
+│   ├── forms/                    # Form components
+│   └── home/                     # Homepage components
+├── lib/                          # Utility libraries
+│   ├── prisma.ts                 # Prisma client
+│   ├── utils.ts                  # Utility functions
+│   └── constants.ts              # Constants
+├── prisma/                       # Prisma schema
+│   └── schema.prisma
+├── public/                       # Static assets
+├── types/                        # TypeScript types
+└── content/                      # Content files
+    └── blog/                     # MDX blog posts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Available Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
+- `npx prisma studio` - Open Prisma Studio (database GUI)
+- `npx prisma migrate dev` - Create and apply migrations
+- `npx prisma generate` - Generate Prisma Client
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ICAI Compliance Guidelines
 
-## Learn More
+This website is designed in compliance with ICAI Website Guidelines dated 14-10-2020. The following principles are followed:
 
-To learn more about Next.js, take a look at the following resources:
+### Permitted Content:
+- ✅ Firm name, address, contact details
+- ✅ Year of establishment
+- ✅ Professional qualifications
+- ✅ Services offered (factual listing)
+- ✅ Educational articles and resources
+- ✅ Social media links
+- ✅ Links to regulatory bodies (ICAI, Income Tax, GST, RBI, MCA)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prohibited Content:
+- ❌ Client names or logos
+- ❌ Testimonials with names
+- ❌ Awards, certifications, rankings
+- ❌ Promotional language (best, leading, top)
+- ❌ Professional fees
+- ❌ Event galleries
+- ❌ "Why Choose Us" sections
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Content Guidelines:
+- Use factual, objective language only
+- No superlatives or comparative statements
+- Services listed as "Areas of Practice"
+- Pull-model website (users request information)
+- No auto-playing content or pop-ups
 
-## Deploy on Vercel
+## Next Steps
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The basic structure is in place. Continue building:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **Create Service Pages** - Individual pages for each service
+2. **Build About Page** - Professional profile and firm information
+3. **Legal Pages** - Privacy Policy, Terms of Use, Disclaimer, Cookie Policy
+4. **Resources Section** - Blog, Calculators, Compliance Calendar
+5. **Contact & Appointment** - Contact forms and booking system
+6. **Client Portal** - Authentication and document management
+7. **Tools Section** - Automation tools showcase
+
+## Contact
+
+**Himanshu Majithiya & Co.**
+Chartered Accountants
+
+- **Email**: info@himanshumajithiya.com
+- **Phone**: +91 98795 03465
+- **Address**: 507-508, Maple Trade Centre, SAL Hospital Road, Near Surdhara Circle, Thaltej, Ahmedabad - 380059, Gujarat, India
+
+## Legal
+
+- ICAI Membership: 126185
+- Firm Registration No.: 128134W
+- Established: 2007
+
+## License
+
+© 2024 Himanshu Majithiya & Co. All rights reserved.
+
+Website designed in compliance with ICAI Guidelines.
