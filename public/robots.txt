@@ -1,0 +1,13 @@
+# Robots.txt for Himanshu Majithiya & Co.
+# https://www.himanshumajithiya.com
+
+User-agent: *
+Allow: /
+
+# Disallow client portal and API routes
+Disallow: /client-portal/
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap location
+Sitemap: https://www.himanshumajithiya.com/sitemap.xml
