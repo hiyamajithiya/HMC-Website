@@ -3,84 +3,152 @@ import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, FileText, Table, Calculator, Bot, Zap, ArrowRight, Code } from "lucide-react"
+import { prisma } from "@/lib/prisma"
 
 export const metadata: Metadata = {
   title: "Automation Tools",
   description: "Download professional automation tools for accounting, tax compliance, and data processing developed by CA Himanshu Majithiya.",
 }
 
-const tools = [
+const categoryLabels: Record<string, string> = {
+  DOCUMENT_AUTOMATION: "Document Automation",
+  DATA_PROCESSING: "Data Processing",
+  REDACTION: "Redaction",
+  TAX_TOOLS: "Tax Tools",
+  COMPLIANCE: "Compliance",
+  UTILITY: "Utility",
+  OTHER: "Other",
+}
+
+const toolTypeLabels: Record<string, string> = {
+  WEB_APP: "Web App",
+  DOWNLOADABLE: "Downloadable",
+  ONLINE: "Online Tool",
+  HYBRID: "Hybrid",
+}
+
+const licenseLabels: Record<string, string> = {
+  FREE: "Free",
+  ONE_TIME: "One-time Purchase",
+  ANNUAL: "Annual License",
+  MONTHLY: "Monthly License",
+}
+
+// Static fallback tools for when database is empty
+const staticTools = [
   {
     id: "bank-statement-converter",
-    title: "Bank Statement PDF to Excel Converter",
-    description: "Convert PDF bank statements to Excel format with automatic transaction categorization and analysis",
-    icon: FileText,
-    color: "bg-blue-500/10 text-blue-600",
-    category: "Data Processing",
-    fileType: "Python Script",
+    name: "Bank Statement PDF to Excel Converter",
+    shortDescription: "Convert PDF bank statements to Excel format with automatic transaction categorization and analysis",
+    category: "DATA_PROCESSING",
+    toolType: "DOWNLOADABLE",
+    licenseType: "FREE",
     features: ["OCR technology", "Auto-categorization", "Multi-bank support", "Export to Excel"],
+    isActive: true,
+    slug: "bank-statement-converter",
     comingSoon: true,
   },
   {
     id: "gst-data-processor",
-    title: "GST Return Data Processor",
-    description: "Automate GST return data processing, reconciliation, and GSTR filing preparation",
-    icon: Table,
-    color: "bg-green-500/10 text-green-600",
-    category: "GST Compliance",
-    fileType: "Excel + Python",
+    name: "GST Return Data Processor",
+    shortDescription: "Automate GST return data processing, reconciliation, and GSTR filing preparation",
+    category: "TAX_TOOLS",
+    toolType: "HYBRID",
+    licenseType: "FREE",
     features: ["GSTR-1 automation", "ITC reconciliation", "Error detection", "Report generation"],
+    isActive: true,
+    slug: "gst-data-processor",
     comingSoon: true,
   },
   {
     id: "tds-calculator",
-    title: "TDS Calculator & Certificate Generator",
-    description: "Calculate TDS with automatic Form 16/16A generation and quarterly return preparation",
-    icon: Calculator,
-    color: "bg-purple-500/10 text-purple-600",
-    category: "TDS Management",
-    fileType: "Excel Macro",
+    name: "TDS Calculator & Certificate Generator",
+    shortDescription: "Calculate TDS with automatic Form 16/16A generation and quarterly return preparation",
+    category: "TAX_TOOLS",
+    toolType: "DOWNLOADABLE",
+    licenseType: "FREE",
     features: ["All TDS sections", "Form 16/16A generation", "Quarterly returns", "Challan tracking"],
+    isActive: true,
+    slug: "tds-calculator",
     comingSoon: true,
   },
   {
     id: "invoice-processor",
-    title: "Invoice Processing Automation",
-    description: "Extract data from invoices, validate GST compliance, and update accounting records",
-    icon: Bot,
-    color: "bg-orange-500/10 text-orange-600",
-    category: "Automation",
-    fileType: "Python + AI",
+    name: "Invoice Processing Automation",
+    shortDescription: "Extract data from invoices, validate GST compliance, and update accounting records",
+    category: "DOCUMENT_AUTOMATION",
+    toolType: "WEB_APP",
+    licenseType: "FREE",
     features: ["OCR extraction", "GST validation", "Auto-posting", "Email integration"],
+    isActive: true,
+    slug: "invoice-processor",
     comingSoon: true,
   },
   {
     id: "form26as-extractor",
-    title: "Form 26AS Data Extractor",
-    description: "Extract and analyze Form 26AS data for TDS reconciliation and ITR filing",
-    icon: FileText,
-    color: "bg-red-500/10 text-red-600",
-    category: "Tax Compliance",
-    fileType: "Python Script",
+    name: "Form 26AS Data Extractor",
+    shortDescription: "Extract and analyze Form 26AS data for TDS reconciliation and ITR filing",
+    category: "TAX_TOOLS",
+    toolType: "DOWNLOADABLE",
+    licenseType: "FREE",
     features: ["PDF parsing", "TDS reconciliation", "Excel export", "Variance analysis"],
+    isActive: true,
+    slug: "form26as-extractor",
     comingSoon: true,
   },
   {
     id: "compliance-reminder",
-    title: "Compliance Calendar & Reminder Tool",
-    description: "Automated reminders for tax due dates, GST filing deadlines, and ROC compliance",
-    icon: Zap,
-    color: "bg-indigo-500/10 text-indigo-600",
-    category: "Compliance",
-    fileType: "Web App",
+    name: "Compliance Calendar & Reminder Tool",
+    shortDescription: "Automated reminders for tax due dates, GST filing deadlines, and ROC compliance",
+    category: "COMPLIANCE",
+    toolType: "WEB_APP",
+    licenseType: "FREE",
     features: ["Email alerts", "SMS notifications", "Custom calendars", "Multi-entity support"],
+    isActive: true,
+    slug: "compliance-reminder",
     comingSoon: true,
   },
 ]
 
-const categories = ["All", "Data Processing", "GST Compliance", "TDS Management", "Automation", "Tax Compliance", "Compliance"]
+const iconMap: Record<string, any> = {
+  DOCUMENT_AUTOMATION: Bot,
+  DATA_PROCESSING: FileText,
+  REDACTION: FileText,
+  TAX_TOOLS: Calculator,
+  COMPLIANCE: Zap,
+  UTILITY: Table,
+  OTHER: Code,
+}
 
-export default function ToolsPage() {
+const colorMap: Record<string, string> = {
+  DOCUMENT_AUTOMATION: "bg-orange-500/10 text-orange-600",
+  DATA_PROCESSING: "bg-blue-500/10 text-blue-600",
+  REDACTION: "bg-red-500/10 text-red-600",
+  TAX_TOOLS: "bg-purple-500/10 text-purple-600",
+  COMPLIANCE: "bg-indigo-500/10 text-indigo-600",
+  UTILITY: "bg-green-500/10 text-green-600",
+  OTHER: "bg-gray-500/10 text-gray-600",
+}
+
+async function getTools() {
+  try {
+    const tools = await prisma.tool.findMany({
+      where: { isActive: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    return tools
+  } catch (error) {
+    console.error('Failed to fetch tools:', error)
+    return []
+  }
+}
+
+export default async function ToolsPage() {
+  const dbTools = await getTools()
+
+  // Use database tools if available, otherwise use static fallback
+  const tools = dbTools.length > 0 ? dbTools : staticTools
+
   return (
     <div>
       {/* Hero Section */}
@@ -128,55 +196,77 @@ export default function ToolsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {tools.map((tool) => {
-                const Icon = tool.icon
+              {tools.map((tool: any) => {
+                const Icon = iconMap[tool.category] || Code
+                const color = colorMap[tool.category] || "bg-gray-500/10 text-gray-600"
+                const isComingSoon = 'comingSoon' in tool ? tool.comingSoon : !tool.downloadUrl
+                const features = Array.isArray(tool.features) ? tool.features : []
+
                 return (
                   <Card key={tool.id} className="card-hover relative">
-                    {tool.comingSoon && (
+                    {isComingSoon && (
                       <div className="absolute top-4 right-4 bg-secondary text-white text-xs px-3 py-1 rounded-full font-semibold z-10">
                         Coming Soon
                       </div>
                     )}
                     <CardHeader>
-                      <div className={`w-16 h-16 ${tool.color} rounded-lg flex items-center justify-center mb-4`}>
+                      <div className={`w-16 h-16 ${color} rounded-lg flex items-center justify-center mb-4`}>
                         <Icon className="h-8 w-8" />
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center space-x-2 text-xs text-text-muted">
-                          <span className="bg-bg-secondary px-2 py-1 rounded">{tool.category}</span>
+                          <span className="bg-bg-secondary px-2 py-1 rounded">
+                            {categoryLabels[tool.category] || tool.category}
+                          </span>
                           <span>•</span>
-                          <span>{tool.fileType}</span>
+                          <span>{toolTypeLabels[tool.toolType] || tool.toolType}</span>
                         </div>
-                        <CardTitle className="text-xl font-heading">{tool.title}</CardTitle>
+                        <CardTitle className="text-xl font-heading">{tool.name}</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <CardDescription className="text-text-secondary mb-4">
-                        {tool.description}
+                        {tool.shortDescription}
                       </CardDescription>
 
-                      <div className="space-y-3">
-                        <div className="text-sm font-semibold text-primary">Key Features:</div>
-                        <ul className="space-y-1">
-                          {tool.features.map((feature, index) => (
-                            <li key={index} className="text-sm text-text-secondary flex items-start">
-                              <span className="text-primary mr-2">•</span>
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                      {features.length > 0 && (
+                        <div className="space-y-3">
+                          <div className="text-sm font-semibold text-primary">Key Features:</div>
+                          <ul className="space-y-1">
+                            {features.slice(0, 4).map((feature: string, index: number) => (
+                              <li key={index} className="text-sm text-text-secondary flex items-start">
+                                <span className="text-primary mr-2">•</span>
+                                {feature}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
-                      <div className="mt-6">
-                        {tool.comingSoon ? (
+                      <div className="mt-6 space-y-2">
+                        {tool.licenseType !== 'FREE' && tool.price && (
+                          <div className="text-sm font-semibold text-primary">
+                            Price: ₹{Number(tool.price).toLocaleString('en-IN')} ({licenseLabels[tool.licenseType]})
+                          </div>
+                        )}
+
+                        {isComingSoon ? (
                           <Button variant="outline" disabled className="w-full">
                             Coming Soon
                           </Button>
+                        ) : tool.downloadUrl ? (
+                          <Link href={tool.downloadUrl} target="_blank">
+                            <Button className="w-full bg-primary hover:bg-primary-light text-white">
+                              <Download className="h-4 w-4 mr-2" />
+                              Download Tool
+                            </Button>
+                          </Link>
                         ) : (
-                          <Button className="w-full bg-primary hover:bg-primary-light text-white">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download Tool
-                          </Button>
+                          <Link href={`/tools/${tool.slug}`}>
+                            <Button className="w-full bg-primary hover:bg-primary-light text-white">
+                              View Details
+                            </Button>
+                          </Link>
                         )}
                       </div>
                     </CardContent>

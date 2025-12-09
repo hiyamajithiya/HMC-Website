@@ -25,11 +25,13 @@ const config: Config = {
           DEFAULT: '#1a365d',
           light: '#2c5282',
           dark: '#1a202c',
+          foreground: '#ffffff',
         },
         secondary: {
           DEFAULT: '#d69e2e',
           light: '#ecc94b',
           dark: '#b7791f',
+          foreground: '#ffffff',
         },
         'text-primary': '#2d3748',
         'text-secondary': '#4a5568',

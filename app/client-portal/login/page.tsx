@@ -1,5 +1,7 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
+import { auth } from '@/auth'
 import LoginForm from '@/components/client-portal/LoginForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield } from 'lucide-react'
@@ -13,7 +15,20 @@ export const metadata: Metadata = {
   },
 }
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>
+}) {
+  const session = await auth()
+  const params = await searchParams
+  const callbackUrl = params.callbackUrl || '/client-portal/dashboard'
+
+  // If user is already logged in, redirect to callbackUrl
+  if (session?.user) {
+    redirect(callbackUrl)
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center gradient-navy py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
