@@ -82,40 +82,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Statistics Section */}
-      <section className="section-padding bg-bg-secondary">
-        <div className="container-custom">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {new Date().getFullYear() - parseInt(SITE_INFO.yearEstablished)}+
-                </div>
-                <div className="text-text-muted">Years of Practice</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {SITE_INFO.icaiMembership}
-                </div>
-                <div className="text-text-muted">ICAI Membership</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <div className="text-4xl font-bold text-primary mb-2">
-                  {SITE_INFO.firmRegistrationNo}
-                </div>
-                <div className="text-text-muted">Firm Registration No.</div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
       {/* Office Information Section */}
       <section className="section-padding">
         <div className="container-custom">

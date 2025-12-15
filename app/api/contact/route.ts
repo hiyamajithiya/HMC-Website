@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { SITE_INFO } from "@/lib/constants"
+import { prisma } from "@/lib/prisma"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -25,6 +26,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // Save contact submission to database
+    await prisma.contactSubmission.create({
+      data: {
+        name,
+        email,
+        phone,
+        service: subject,
+        message,
+      },
+    })
 
     // Send email to the firm
     const { data, error } = await resend.emails.send({

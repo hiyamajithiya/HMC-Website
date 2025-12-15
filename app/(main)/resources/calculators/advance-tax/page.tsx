@@ -6,19 +6,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ArrowLeft, Calculator, Calendar } from "lucide-react"
+import { ArrowLeft, Calculator, Calendar, Building2, Users, User } from "lucide-react"
+
+type AssesseeType = "individual" | "company" | "partnership"
+type TaxRegime = "old" | "new"
+type CompanyType = "domestic" | "domestic_new" | "foreign"
 
 export default function AdvanceTaxCalculator() {
+  const [assesseeType, setAssesseeType] = useState<AssesseeType>("individual")
   const [totalIncome, setTotalIncome] = useState("")
   const [deductions, setDeductions] = useState("")
   const [tdsDeducted, setTdsDeducted] = useState("")
-  const [regime, setRegime] = useState<"old" | "new">("new")
+  const [regime, setRegime] = useState<TaxRegime>("new")
+  const [companyType, setCompanyType] = useState<CompanyType>("domestic")
+  const [turnoverBelow400Cr, setTurnoverBelow400Cr] = useState(true)
   const [result, setResult] = useState<{
     grossIncome: number
     taxableIncome: number
     totalTax: number
     tdsDeducted: number
     advanceTaxPayable: number
+    taxRate: string
     installments: {
       date: string
       percentage: number
@@ -27,7 +35,7 @@ export default function AdvanceTaxCalculator() {
     }[]
   } | null>(null)
 
-  const calculateIncomeTax = (taxableIncome: number, regime: "old" | "new") => {
+  const calculateIndividualTax = (taxableIncome: number, regime: TaxRegime) => {
     let tax = 0
 
     if (regime === "new") {
@@ -70,7 +78,68 @@ export default function AdvanceTaxCalculator() {
 
     // Add 4% cess
     const totalTax = tax + (tax * 0.04)
-    return totalTax
+    return { tax: totalTax, rate: regime === "new" ? "Slab (New Regime)" : "Slab (Old Regime)" }
+  }
+
+  const calculateCompanyTax = (taxableIncome: number, companyType: CompanyType, turnoverBelow400Cr: boolean) => {
+    let rate = 0
+    let rateDescription = ""
+
+    if (companyType === "domestic_new") {
+      // Section 115BAA - New manufacturing companies
+      rate = 0.22
+      rateDescription = "22% (Section 115BAA)"
+    } else if (companyType === "domestic") {
+      if (turnoverBelow400Cr) {
+        rate = 0.25
+        rateDescription = "25% (Turnover ≤ ₹400 Cr)"
+      } else {
+        rate = 0.30
+        rateDescription = "30% (Turnover > ₹400 Cr)"
+      }
+    } else {
+      // Foreign company
+      rate = 0.40
+      rateDescription = "40% (Foreign Company)"
+    }
+
+    const tax = taxableIncome * rate
+    // Surcharge
+    let surcharge = 0
+    if (companyType === "domestic" || companyType === "domestic_new") {
+      if (taxableIncome > 100000000) {
+        surcharge = tax * 0.12 // 12% surcharge above 10 Cr
+      } else if (taxableIncome > 10000000) {
+        surcharge = tax * 0.07 // 7% surcharge above 1 Cr
+      }
+    } else {
+      // Foreign company surcharge
+      if (taxableIncome > 100000000) {
+        surcharge = tax * 0.05
+      } else if (taxableIncome > 10000000) {
+        surcharge = tax * 0.02
+      }
+    }
+
+    // Add 4% cess
+    const totalTax = (tax + surcharge) * 1.04
+    return { tax: totalTax, rate: rateDescription }
+  }
+
+  const calculatePartnershipTax = (taxableIncome: number) => {
+    // Partnership Firm/LLP - Flat 30%
+    const rate = 0.30
+    const tax = taxableIncome * rate
+
+    // Surcharge: 12% if income exceeds ₹1 crore
+    let surcharge = 0
+    if (taxableIncome > 10000000) {
+      surcharge = tax * 0.12
+    }
+
+    // Add 4% cess
+    const totalTax = (tax + surcharge) * 1.04
+    return { tax: totalTax, rate: "30% (Flat Rate)" }
   }
 
   const calculateAdvanceTax = () => {
@@ -78,14 +147,28 @@ export default function AdvanceTaxCalculator() {
     const totalDeductions = parseFloat(deductions) || 0
     const tds = parseFloat(tdsDeducted) || 0
 
-    // For new regime, standard deduction is ₹75,000 (FY 2025-26)
-    const standardDeduction = regime === "new" ? 75000 : (regime === "old" ? 50000 : 0)
-    const taxableIncome = Math.max(income - standardDeduction - totalDeductions, 0)
+    let taxableIncome = 0
+    let taxResult = { tax: 0, rate: "" }
 
-    const totalTax = calculateIncomeTax(taxableIncome, regime)
-    const advanceTaxPayable = Math.max(totalTax - tds, 0)
+    if (assesseeType === "individual") {
+      // For individuals, apply standard deduction
+      const standardDeduction = regime === "new" ? 75000 : 50000
+      taxableIncome = Math.max(income - standardDeduction - totalDeductions, 0)
+      taxResult = calculateIndividualTax(taxableIncome, regime)
+    } else if (assesseeType === "company") {
+      taxableIncome = Math.max(income - totalDeductions, 0)
+      taxResult = calculateCompanyTax(taxableIncome, companyType, turnoverBelow400Cr)
+    } else {
+      // Partnership/LLP
+      taxableIncome = Math.max(income - totalDeductions, 0)
+      taxResult = calculatePartnershipTax(taxableIncome)
+    }
 
-    // Advance tax installments (if tax liability > ₹10,000)
+    const advanceTaxPayable = Math.max(taxResult.tax - tds, 0)
+
+    // Advance tax installments
+    // For companies: 4 installments (15%, 45%, 75%, 100%)
+    // For others with presumptive income (44AD/44ADA): Single payment by 15th March
     const installments = [
       { date: "15th June 2025", percentage: 15, amount: 0, cumulative: 0 },
       { date: "15th September 2025", percentage: 45, amount: 0, cumulative: 0 },
@@ -105,9 +188,10 @@ export default function AdvanceTaxCalculator() {
     setResult({
       grossIncome: income,
       taxableIncome,
-      totalTax,
+      totalTax: taxResult.tax,
       tdsDeducted: tds,
       advanceTaxPayable,
+      taxRate: taxResult.rate,
       installments,
     })
   }
@@ -116,7 +200,7 @@ export default function AdvanceTaxCalculator() {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 0,
     }).format(value)
   }
 
@@ -134,7 +218,7 @@ export default function AdvanceTaxCalculator() {
           </Link>
           <h1 className="text-4xl font-heading font-bold mb-4">Advance Tax Calculator</h1>
           <p className="text-xl text-white/90">
-            Calculate advance tax liability and payment schedule for FY 2025-26
+            Calculate advance tax for Individuals, Companies & Partnership Firms/LLPs - FY 2025-26
           </p>
         </div>
       </section>
@@ -153,36 +237,164 @@ export default function AdvanceTaxCalculator() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Tax Regime */}
+                  {/* Assessee Type */}
                   <div className="space-y-2">
-                    <Label>Tax Regime</Label>
-                    <div className="flex gap-4">
+                    <Label>Type of Assessee</Label>
+                    <div className="grid grid-cols-3 gap-2">
                       <button
-                        onClick={() => setRegime("new")}
-                        className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
-                          regime === "new"
+                        onClick={() => setAssesseeType("individual")}
+                        className={`py-3 px-3 rounded-lg border-2 transition-colors flex flex-col items-center gap-1 ${
+                          assesseeType === "individual"
                             ? "border-primary bg-primary/10 text-primary font-semibold"
                             : "border-border-light hover:border-primary/50"
                         }`}
                       >
-                        New Regime
+                        <User className="h-5 w-5" />
+                        <span className="text-sm">Individual</span>
                       </button>
                       <button
-                        onClick={() => setRegime("old")}
-                        className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
-                          regime === "old"
+                        onClick={() => setAssesseeType("company")}
+                        className={`py-3 px-3 rounded-lg border-2 transition-colors flex flex-col items-center gap-1 ${
+                          assesseeType === "company"
                             ? "border-primary bg-primary/10 text-primary font-semibold"
                             : "border-border-light hover:border-primary/50"
                         }`}
                       >
-                        Old Regime
+                        <Building2 className="h-5 w-5" />
+                        <span className="text-sm">Company</span>
+                      </button>
+                      <button
+                        onClick={() => setAssesseeType("partnership")}
+                        className={`py-3 px-3 rounded-lg border-2 transition-colors flex flex-col items-center gap-1 ${
+                          assesseeType === "partnership"
+                            ? "border-primary bg-primary/10 text-primary font-semibold"
+                            : "border-border-light hover:border-primary/50"
+                        }`}
+                      >
+                        <Users className="h-5 w-5" />
+                        <span className="text-sm">Firm/LLP</span>
                       </button>
                     </div>
                   </div>
 
+                  {/* Individual: Tax Regime */}
+                  {assesseeType === "individual" && (
+                    <div className="space-y-2">
+                      <Label>Tax Regime</Label>
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => setRegime("new")}
+                          className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                            regime === "new"
+                              ? "border-primary bg-primary/10 text-primary font-semibold"
+                              : "border-border-light hover:border-primary/50"
+                          }`}
+                        >
+                          New Regime
+                        </button>
+                        <button
+                          onClick={() => setRegime("old")}
+                          className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                            regime === "old"
+                              ? "border-primary bg-primary/10 text-primary font-semibold"
+                              : "border-border-light hover:border-primary/50"
+                          }`}
+                        >
+                          Old Regime
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Company: Type Selection */}
+                  {assesseeType === "company" && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Company Type</Label>
+                        <div className="space-y-2">
+                          <button
+                            onClick={() => setCompanyType("domestic")}
+                            className={`w-full py-3 px-4 rounded-lg border-2 transition-colors text-left ${
+                              companyType === "domestic"
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border-light hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="font-medium">Domestic Company (Normal)</div>
+                            <div className="text-xs text-text-muted">25% or 30% based on turnover</div>
+                          </button>
+                          <button
+                            onClick={() => setCompanyType("domestic_new")}
+                            className={`w-full py-3 px-4 rounded-lg border-2 transition-colors text-left ${
+                              companyType === "domestic_new"
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border-light hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="font-medium">Domestic Company (Section 115BAA)</div>
+                            <div className="text-xs text-text-muted">22% - No exemptions/deductions</div>
+                          </button>
+                          <button
+                            onClick={() => setCompanyType("foreign")}
+                            className={`w-full py-3 px-4 rounded-lg border-2 transition-colors text-left ${
+                              companyType === "foreign"
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border-light hover:border-primary/50"
+                            }`}
+                          >
+                            <div className="font-medium">Foreign Company</div>
+                            <div className="text-xs text-text-muted">40% tax rate</div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {companyType === "domestic" && (
+                        <div className="space-y-2">
+                          <Label>Previous Year Turnover</Label>
+                          <div className="flex gap-4">
+                            <button
+                              onClick={() => setTurnoverBelow400Cr(true)}
+                              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors text-sm ${
+                                turnoverBelow400Cr
+                                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                                  : "border-border-light hover:border-primary/50"
+                              }`}
+                            >
+                              ≤ ₹400 Crore
+                            </button>
+                            <button
+                              onClick={() => setTurnoverBelow400Cr(false)}
+                              className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors text-sm ${
+                                !turnoverBelow400Cr
+                                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                                  : "border-border-light hover:border-primary/50"
+                              }`}
+                            >
+                              &gt; ₹400 Crore
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Partnership/LLP Info */}
+                  {assesseeType === "partnership" && (
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-sm text-blue-800">
+                        <strong>Tax Rate:</strong> Flat 30% + Surcharge (if applicable) + 4% Cess
+                      </div>
+                      <div className="text-xs text-blue-700 mt-1">
+                        Surcharge: 12% if income exceeds ₹1 Crore
+                      </div>
+                    </div>
+                  )}
+
                   {/* Total Income */}
                   <div className="space-y-2">
-                    <Label htmlFor="totalIncome">Total Annual Income (₹)</Label>
+                    <Label htmlFor="totalIncome">
+                      {assesseeType === "individual" ? "Total Annual Income (₹)" : "Total Business Income (₹)"}
+                    </Label>
                     <Input
                       id="totalIncome"
                       type="number"
@@ -191,13 +403,17 @@ export default function AdvanceTaxCalculator() {
                       onChange={(e) => setTotalIncome(e.target.value)}
                     />
                     <p className="text-xs text-text-muted">
-                      Include salary, business income, capital gains, other income
+                      {assesseeType === "individual"
+                        ? "Include salary, business income, capital gains, other income"
+                        : "Net profit before tax"}
                     </p>
                   </div>
 
                   {/* Deductions */}
                   <div className="space-y-2">
-                    <Label htmlFor="deductions">Total Deductions (₹)</Label>
+                    <Label htmlFor="deductions">
+                      {assesseeType === "individual" ? "Total Deductions (₹)" : "Allowable Deductions (₹)"}
+                    </Label>
                     <Input
                       id="deductions"
                       type="number"
@@ -206,15 +422,17 @@ export default function AdvanceTaxCalculator() {
                       onChange={(e) => setDeductions(e.target.value)}
                     />
                     <p className="text-xs text-text-muted">
-                      {regime === "new"
-                        ? "Limited deductions in new regime. Standard deduction ₹75,000 applied automatically"
-                        : "80C, 80D, HRA, etc. Standard deduction ₹50,000 applied automatically"}
+                      {assesseeType === "individual"
+                        ? regime === "new"
+                          ? "Limited deductions in new regime. Standard deduction ₹75,000 applied automatically"
+                          : "80C, 80D, HRA, etc. Standard deduction ₹50,000 applied automatically"
+                        : "Depreciation, business expenses, etc."}
                     </p>
                   </div>
 
-                  {/* TDS Deducted */}
+                  {/* TDS/TCS Deducted */}
                   <div className="space-y-2">
-                    <Label htmlFor="tdsDeducted">TDS Already Deducted (₹)</Label>
+                    <Label htmlFor="tdsDeducted">TDS/TCS Already Deducted (₹)</Label>
                     <Input
                       id="tdsDeducted"
                       type="number"
@@ -223,7 +441,7 @@ export default function AdvanceTaxCalculator() {
                       onChange={(e) => setTdsDeducted(e.target.value)}
                     />
                     <p className="text-xs text-text-muted">
-                      TDS on salary, interest, rent, etc. already deducted
+                      TDS on payments received, TCS on purchases, etc.
                     </p>
                   </div>
 
@@ -242,9 +460,16 @@ export default function AdvanceTaxCalculator() {
                   {result ? (
                     <div className="space-y-6">
                       <div className="bg-blue-50 p-4 rounded-lg mb-4">
-                        <div className="text-sm text-blue-800 mb-1">Tax Regime: {regime.toUpperCase()}</div>
+                        <div className="text-sm text-blue-800 mb-1">
+                          {assesseeType === "individual" && "Individual"}
+                          {assesseeType === "company" && "Company"}
+                          {assesseeType === "partnership" && "Partnership Firm / LLP"}
+                        </div>
                         <div className="font-semibold text-blue-900">
                           FY 2025-26 (AY 2026-27)
+                        </div>
+                        <div className="text-sm text-blue-700 mt-1">
+                          Tax Rate: {result.taxRate}
                         </div>
                       </div>
 
@@ -267,7 +492,7 @@ export default function AdvanceTaxCalculator() {
                         </div>
 
                         <div className="flex justify-between items-center pb-2 border-b">
-                          <span className="text-text-secondary">TDS Deducted</span>
+                          <span className="text-text-secondary">TDS/TCS Deducted</span>
                           <span className="font-semibold text-green-700">
                             - {formatCurrency(result.tdsDeducted)}
                           </span>
@@ -324,6 +549,67 @@ export default function AdvanceTaxCalculator() {
               </Card>
             </div>
 
+            {/* Tax Rates Reference */}
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Tax Rates Reference (FY 2025-26)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Individual */}
+                  <div className="p-4 border border-border-light rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <User className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-primary">Individual</h4>
+                    </div>
+                    <div className="text-sm space-y-1 text-text-secondary">
+                      <div><strong>New Regime:</strong></div>
+                      <div>₹0-4L: Nil</div>
+                      <div>₹4-8L: 5%</div>
+                      <div>₹8-12L: 10%</div>
+                      <div>₹12-16L: 15%</div>
+                      <div>₹16-20L: 20%</div>
+                      <div>Above ₹20L: 30%</div>
+                      <div className="text-xs mt-2">+ 4% Cess on total tax</div>
+                    </div>
+                  </div>
+
+                  {/* Company */}
+                  <div className="p-4 border border-border-light rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-primary">Company</h4>
+                    </div>
+                    <div className="text-sm space-y-1 text-text-secondary">
+                      <div><strong>Domestic (Normal):</strong></div>
+                      <div>Turnover ≤ ₹400Cr: 25%</div>
+                      <div>Turnover &gt; ₹400Cr: 30%</div>
+                      <div className="mt-2"><strong>Section 115BAA:</strong> 22%</div>
+                      <div className="mt-2"><strong>Foreign:</strong> 40%</div>
+                      <div className="text-xs mt-2">+ Surcharge + 4% Cess</div>
+                    </div>
+                  </div>
+
+                  {/* Partnership/LLP */}
+                  <div className="p-4 border border-border-light rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="h-5 w-5 text-primary" />
+                      <h4 className="font-semibold text-primary">Partnership / LLP</h4>
+                    </div>
+                    <div className="text-sm space-y-1 text-text-secondary">
+                      <div><strong>Tax Rate:</strong> 30% (Flat)</div>
+                      <div className="mt-2"><strong>Surcharge:</strong></div>
+                      <div>Income &gt; ₹1Cr: 12%</div>
+                      <div className="text-xs mt-2">+ 4% Cess on total tax</div>
+                      <div className="mt-3 text-xs">
+                        Note: Partner remuneration & interest deductible subject to limits
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Advance Tax Due Dates */}
             <Card className="mt-8">
               <CardHeader>
@@ -340,13 +626,13 @@ export default function AdvanceTaxCalculator() {
                   <div className="p-4 border border-border-light rounded-lg bg-green-50">
                     <div className="text-sm text-green-800 mb-1">2nd Installment</div>
                     <div className="font-semibold text-green-900 text-lg">15th Sept 2025</div>
-                    <div className="text-sm text-green-700 mt-1">45% of tax</div>
+                    <div className="text-sm text-green-700 mt-1">45% of tax (cumulative)</div>
                   </div>
 
                   <div className="p-4 border border-border-light rounded-lg bg-orange-50">
                     <div className="text-sm text-orange-800 mb-1">3rd Installment</div>
                     <div className="font-semibold text-orange-900 text-lg">15th Dec 2025</div>
-                    <div className="text-sm text-orange-700 mt-1">75% of tax</div>
+                    <div className="text-sm text-orange-700 mt-1">75% of tax (cumulative)</div>
                   </div>
 
                   <div className="p-4 border border-border-light rounded-lg bg-red-50">
@@ -364,9 +650,9 @@ export default function AdvanceTaxCalculator() {
                 <h3 className="font-semibold text-blue-800 mb-2">Who Must Pay Advance Tax?</h3>
                 <div className="text-sm text-blue-700 space-y-1">
                   <div>• Tax liability exceeds ₹10,000 in a year</div>
-                  <div>• Applies to salaried, self-employed, businesses</div>
+                  <div>• Individuals, Companies, Firms, LLPs</div>
                   <div>• Senior citizens (60+) with no business income exempt</div>
-                  <div>• Pay even if TDS is deducted</div>
+                  <div>• Presumptive taxation (44AD/44ADA): Pay 100% by 15th March</div>
                 </div>
               </div>
 
@@ -384,7 +670,7 @@ export default function AdvanceTaxCalculator() {
             <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r">
               <h3 className="font-semibold text-yellow-800 mb-2">Disclaimer</h3>
               <p className="text-sm text-yellow-700">
-                This calculator provides approximate advance tax calculations for FY 2025-26. Actual tax may vary based on deductions, exemptions, and other income sources. Consult a CA for accurate tax planning and compliance.
+                This calculator provides approximate advance tax calculations for FY 2025-26. Actual tax may vary based on specific exemptions, deductions, MAT/AMT applicability, and other factors. Consult a Chartered Accountant for accurate tax planning and compliance.
               </p>
             </div>
           </div>
