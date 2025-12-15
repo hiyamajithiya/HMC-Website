@@ -1,10 +1,9 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { auth, signOut } from '@/auth'
-import { User, Mail, Phone, Calendar, Shield, LogOut, ArrowLeft } from 'lucide-react'
+import { auth } from '@/auth'
+import { User, Mail, Phone, Calendar, Shield } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import Link from 'next/link'
+import ClientPortalLayout from '@/components/client-portal/ClientPortalLayout'
 
 export const metadata: Metadata = {
   title: 'Profile | Client Portal',
@@ -25,44 +24,14 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-secondary">
-      {/* Header */}
-      <header className="bg-primary text-white border-b border-primary-dark">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-heading font-bold">My Profile</h1>
-              <p className="text-sm text-white/80">Manage your account settings</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/client-portal/dashboard"
-                className="flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </Link>
-              <form action={async () => {
-                'use server'
-                await signOut({ redirectTo: '/client-portal/login' })
-              }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  type="submit"
-                  className="border-white/30 text-white hover:bg-white/10"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign Out
-                </Button>
-              </form>
-            </div>
-          </div>
+    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email}>
+      <div className="space-y-6">
+        {/* Page Title */}
+        <div>
+          <h2 className="text-2xl font-bold text-text-primary">My Profile</h2>
+          <p className="text-text-muted">Manage your account settings</p>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Profile Card */}
           <div className="md:col-span-1">
@@ -159,7 +128,7 @@ export default async function ProfilePage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <a
                     href="tel:+919879503465"
-                    className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-bg-tertiary transition-colors"
+                    className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <Phone className="h-5 w-5 text-secondary" />
                     <div>
@@ -169,7 +138,7 @@ export default async function ProfilePage() {
                   </a>
                   <a
                     href="mailto:info@himanshumajithiya.com"
-                    className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-bg-tertiary transition-colors"
+                    className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg hover:bg-gray-100 transition-colors"
                   >
                     <Mail className="h-5 w-5 text-secondary" />
                     <div>
@@ -182,7 +151,7 @@ export default async function ProfilePage() {
             </Card>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </ClientPortalLayout>
   )
 }
