@@ -1,27 +1,26 @@
-'use client'
-
-import { useSession, signOut } from 'next-auth/react'
+import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import { auth, signOut } from '@/auth'
 import { User, Mail, Phone, Calendar, Shield, LogOut, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-export default function ProfilePage() {
-  const { data: session, status } = useSession()
+export const metadata: Metadata = {
+  title: 'Profile | Client Portal',
+  description: 'Manage your account settings and profile information.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-text-muted">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+export const dynamic = 'force-dynamic'
 
-  if (status === 'unauthenticated') {
+export default async function ProfilePage() {
+  const session = await auth()
+
+  if (!session) {
     redirect('/client-portal/login')
   }
 
@@ -43,15 +42,20 @@ export default function ProfilePage() {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Dashboard
               </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => signOut({ callbackUrl: '/client-portal/login' })}
-                className="border-white/30 text-white hover:bg-white/10"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
+              <form action={async () => {
+                'use server'
+                await signOut({ redirectTo: '/client-portal/login' })
+              }}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="submit"
+                  className="border-white/30 text-white hover:bg-white/10"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              </form>
             </div>
           </div>
         </div>

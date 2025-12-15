@@ -3,6 +3,8 @@ import { auth } from '@/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 
+export const dynamic = 'force-dynamic'
+
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()
