@@ -1,10 +1,11 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { auth } from '@/auth'
 import LoginForm from '@/components/client-portal/LoginForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield } from 'lucide-react'
+import { Shield, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Client Portal Login | Himanshu Majithiya & Co.',
@@ -30,7 +31,16 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center gradient-navy py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center gradient-navy py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Back to Website Link */}
+      <Link
+        href="/"
+        className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5" />
+        <span>Back to Website</span>
+      </Link>
+
       <div className="max-w-md w-full space-y-8">
         {/* Logo and Header */}
         <div className="text-center">
