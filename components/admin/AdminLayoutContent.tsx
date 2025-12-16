@@ -52,9 +52,8 @@ export function AdminLayoutContent({
     redirect('/client-portal/login?callbackUrl=/admin')
   }
 
-  // Check if user is admin
-  const isAdmin = session?.user?.email === 'info@himanshumajithiya.com' ||
-                  session?.user?.email === 'admin@himanshumajithiya.com'
+  // Check if user is admin based on role from database
+  const isAdmin = session?.user?.role === 'ADMIN'
 
   if (!isAdmin) {
     return (
