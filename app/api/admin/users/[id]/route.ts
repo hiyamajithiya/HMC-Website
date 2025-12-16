@@ -42,6 +42,7 @@ export async function GET(
         phone: true,
         role: true,
         isActive: true,
+        services: true,
         createdAt: true,
       },
     })
@@ -76,7 +77,7 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { isActive, role, name, phone } = body
+    const { isActive, role, name, phone, services } = body
 
     const user = await prisma.user.update({
       where: { id },
@@ -85,6 +86,7 @@ export async function PATCH(
         ...(role !== undefined && { role }),
         ...(name !== undefined && { name }),
         ...(phone !== undefined && { phone }),
+        ...(services !== undefined && { services: Array.isArray(services) ? services : [] }),
       },
       select: {
         id: true,
@@ -93,6 +95,7 @@ export async function PATCH(
         phone: true,
         role: true,
         isActive: true,
+        services: true,
         createdAt: true,
       },
     })

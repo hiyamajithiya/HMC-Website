@@ -19,6 +19,7 @@ model User {
   password      String
   role          UserRole  @default(CLIENT)
   isActive      Boolean   @default(true)
+  services      String[]  @default([]) // Services offered to this client
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())

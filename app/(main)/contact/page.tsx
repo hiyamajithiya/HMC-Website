@@ -44,11 +44,11 @@ export default function ContactPage() {
 
       setSubmitted(true)
 
-      // Reset form after 5 seconds
+      // Reset form after 15 seconds
       setTimeout(() => {
         setFormData({ name: "", email: "", phone: "", subject: "", message: "" })
         setSubmitted(false)
-      }, 5000)
+      }, 15000)
     } catch (err) {
       console.error("Form submission error:", err)
       setError(err instanceof Error ? err.message : "Failed to send message. Please try again.")
@@ -162,12 +162,20 @@ export default function ContactPage() {
                   </CardHeader>
                   <CardContent>
                     {submitted ? (
-                      <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-r">
-                        <h3 className="font-semibold text-green-800 mb-2">
-                          Message Sent Successfully!
+                      <div className="bg-green-50 border border-green-200 p-8 rounded-lg text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <h3 className="text-xl font-semibold text-green-800 mb-3">
+                          Thank You for Contacting Us!
                         </h3>
-                        <p className="text-sm text-green-700">
-                          Thank you for contacting us. We'll get back to you within 24 hours. A confirmation email has been sent to your email address.
+                        <p className="text-green-700 mb-2">
+                          Your message has been received successfully.
+                        </p>
+                        <p className="text-sm text-green-600">
+                          Our team will review your inquiry and get back to you shortly. We typically respond within 24 hours during business days.
                         </p>
                       </div>
                     ) : (

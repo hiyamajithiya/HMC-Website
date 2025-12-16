@@ -140,7 +140,8 @@ export async function POST(request: NextRequest) {
     // Always return success since the contact was saved to the database
     return NextResponse.json(
       {
-        message: "Your message has been received. We will get back to you soon!",
+        success: true,
+        message: "Thank you for contacting us! Your message has been received successfully. Our team will review your inquiry and get back to you shortly.",
         contactId: contact.id
       },
       { status: 200 }
