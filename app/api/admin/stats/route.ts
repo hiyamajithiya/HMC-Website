@@ -13,8 +13,7 @@ export async function GET() {
     }
 
     // Check if user is admin
-    const isAdmin = session.user.email === 'info@himanshumajithiya.com' ||
-                    session.user.email === 'admin@himanshumajithiya.com'
+    const isAdmin = session.user.role === 'ADMIN'
 
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

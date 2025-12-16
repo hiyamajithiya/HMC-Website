@@ -11,8 +11,7 @@ async function checkAdmin() {
     return { error: 'Unauthorized', status: 401 }
   }
 
-  const isAdmin = session.user.email === 'info@himanshumajithiya.com' ||
-                  session.user.email === 'admin@himanshumajithiya.com'
+  const isAdmin = session.user.role === 'ADMIN'
 
   if (!isAdmin) {
     return { error: 'Forbidden', status: 403 }
