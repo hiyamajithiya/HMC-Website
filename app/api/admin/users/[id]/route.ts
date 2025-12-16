@@ -39,10 +39,19 @@ export async function GET(
         id: true,
         name: true,
         email: true,
+        loginId: true,
         phone: true,
+        dateOfBirth: true,
         role: true,
         isActive: true,
         services: true,
+        groupId: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         createdAt: true,
       },
     })
@@ -77,7 +86,29 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
-    const { isActive, role, name, phone, services } = body
+    const { isActive, role, name, phone, email, dateOfBirth, services, groupId, newGroupName } = body
+
+    // Handle group - create new if newGroupName provided, otherwise use existing groupId
+    let finalGroupId: string | null | undefined = undefined
+    if (newGroupName && newGroupName.trim()) {
+      // Create new group if doesn't exist
+      const existingGroup = await prisma.clientGroup.findUnique({
+        where: { name: newGroupName.trim() }
+      })
+      if (existingGroup) {
+        finalGroupId = existingGroup.id
+      } else {
+        const newGroup = await prisma.clientGroup.create({
+          data: { name: newGroupName.trim() }
+        })
+        finalGroupId = newGroup.id
+      }
+    } else if (groupId !== undefined) {
+      finalGroupId = groupId || null
+    }
+
+    // Parse date of birth if provided
+    const parsedDOB = dateOfBirth ? new Date(dateOfBirth) : undefined
 
     const user = await prisma.user.update({
       where: { id },
@@ -86,16 +117,28 @@ export async function PATCH(
         ...(role !== undefined && { role }),
         ...(name !== undefined && { name }),
         ...(phone !== undefined && { phone }),
+        ...(email !== undefined && { email: email || null }),
+        ...(parsedDOB !== undefined && { dateOfBirth: parsedDOB }),
         ...(services !== undefined && { services: Array.isArray(services) ? services : [] }),
+        ...(finalGroupId !== undefined && { groupId: finalGroupId }),
       },
       select: {
         id: true,
         name: true,
         email: true,
+        loginId: true,
         phone: true,
+        dateOfBirth: true,
         role: true,
         isActive: true,
         services: true,
+        groupId: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         createdAt: true,
       },
     })

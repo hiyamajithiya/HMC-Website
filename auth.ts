@@ -21,20 +21,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Credentials({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        identifier: { label: 'Login ID or Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please enter your email and password')
+        if (!credentials?.identifier || !credentials?.password) {
+          throw new Error('Please enter your login ID/email and password')
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+        const identifier = credentials.identifier as string
+
+        // Try to find user by email first, then by loginId
+        let user = await prisma.user.findUnique({
+          where: { email: identifier },
         })
 
         if (!user) {
-          throw new Error('No user found with this email')
+          // Try by loginId
+          user = await prisma.user.findUnique({
+            where: { loginId: identifier },
+          })
+        }
+
+        if (!user) {
+          throw new Error('No user found with this login ID or email')
         }
 
         if (!user.isActive) {

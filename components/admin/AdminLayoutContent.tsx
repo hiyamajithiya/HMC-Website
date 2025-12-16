@@ -14,7 +14,8 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  Home
+  Home,
+  FolderOpen
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { signOut } from 'next-auth/react'
@@ -23,6 +24,7 @@ const sidebarItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
   { name: 'Blog Posts', href: '/admin/blog', icon: FileText },
   { name: 'Tools', href: '/admin/tools', icon: Wrench },
+  { name: 'Documents', href: '/admin/documents', icon: FolderOpen },
   { name: 'Contacts', href: '/admin/contacts', icon: Mail },
   { name: 'Appointments', href: '/admin/appointments', icon: Calendar },
   { name: 'Users', href: '/admin/users', icon: Users },

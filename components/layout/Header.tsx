@@ -30,6 +30,18 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isMobileMenuOpen])
+
   return (
     <header
       className={cn(
@@ -147,8 +159,8 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden py-4 animate-slide-down">
-            <nav className="flex flex-col space-y-3">
+          <div className="lg:hidden fixed inset-x-0 top-[60px] bottom-0 bg-white overflow-y-auto animate-slide-down z-50">
+            <nav className="flex flex-col space-y-3 p-4 pb-8">
               {NAV_ITEMS.map((item) =>
                 item.submenu ? (
                   <div key={item.label} className="space-y-2">

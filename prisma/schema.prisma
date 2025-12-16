@@ -10,16 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Client groups for organizing clients
+model ClientGroup {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     User[]
+}
+
 // User model for client portal
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
+  email         String?   @unique
+  loginId       String?   @unique  // Auto-generated: first 4 letters of name + first 2 digits of DOB
   name          String?
   phone         String?
   password      String
+  dateOfBirth   DateTime? // Date of birth or date of incorporation
   role          UserRole  @default(CLIENT)
   isActive      Boolean   @default(true)
   services      String[]  @default([]) // Services offered to this client
+  groupId       String?
+  group         ClientGroup? @relation(fields: [groupId], references: [id])
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())

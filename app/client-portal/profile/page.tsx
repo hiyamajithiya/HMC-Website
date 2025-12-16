@@ -1,9 +1,11 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { User, Mail, Phone, Calendar, Shield } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Shield, Key } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import ClientPortalLayout from '@/components/client-portal/ClientPortalLayout'
+import ChangePasswordForm from '@/components/client-portal/ChangePasswordForm'
+import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = {
   title: 'Profile | Client Portal',
@@ -26,6 +28,17 @@ export default async function ProfilePage() {
   // Check if user is admin based on role from database
   const isAdmin = session.user?.role === 'ADMIN'
 
+  // Get full user details from database
+  const user = session.user?.id ? await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      loginId: true,
+      phone: true,
+      dateOfBirth: true,
+      createdAt: true
+    }
+  }) : null
+
   return (
     <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={isAdmin}>
       <div className="space-y-6">
@@ -47,7 +60,13 @@ export default async function ProfilePage() {
                   <h2 className="text-xl font-semibold text-text-primary">
                     {session?.user?.name || 'Client'}
                   </h2>
-                  <p className="text-sm text-text-muted">{session?.user?.email}</p>
+                  {user?.loginId && (
+                    <div className="flex items-center justify-center gap-1 text-sm text-text-muted mt-1">
+                      <Key className="h-3 w-3" />
+                      <span>{user.loginId}</span>
+                    </div>
+                  )}
+                  <p className="text-sm text-text-muted mt-1">{session?.user?.email}</p>
                   <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
                     <Shield className="h-4 w-4" />
                     Active Account
@@ -73,25 +92,43 @@ export default async function ProfilePage() {
                     <p className="font-medium">{session?.user?.name || 'Not provided'}</p>
                   </div>
                 </div>
+                {user?.loginId && (
+                  <div className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
+                    <Key className="h-5 w-5 text-text-muted" />
+                    <div>
+                      <p className="text-sm text-text-muted">Login ID</p>
+                      <p className="font-medium">{user.loginId}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
                   <Mail className="h-5 w-5 text-text-muted" />
                   <div>
                     <p className="text-sm text-text-muted">Email Address</p>
-                    <p className="font-medium">{session?.user?.email}</p>
+                    <p className="font-medium">{session?.user?.email || 'Not provided'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
                   <Phone className="h-5 w-5 text-text-muted" />
                   <div>
                     <p className="text-sm text-text-muted">Phone Number</p>
-                    <p className="font-medium">Contact office to update</p>
+                    <p className="font-medium">{user?.phone || 'Not provided'}</p>
                   </div>
                 </div>
+                {user?.dateOfBirth && (
+                  <div className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
+                    <Calendar className="h-5 w-5 text-text-muted" />
+                    <div>
+                      <p className="text-sm text-text-muted">Date of Birth / Incorporation</p>
+                      <p className="font-medium">{new Date(user.dateOfBirth).toLocaleDateString('en-IN')}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-4 p-3 bg-bg-secondary rounded-lg">
                   <Calendar className="h-5 w-5 text-text-muted" />
                   <div>
                     <p className="text-sm text-text-muted">Member Since</p>
-                    <p className="font-medium">Contact office for details</p>
+                    <p className="font-medium">{user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : 'Not available'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -103,14 +140,15 @@ export default async function ProfilePage() {
                 <CardTitle>Security</CardTitle>
                 <CardDescription>Manage your account security</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <ChangePasswordForm />
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex gap-3">
                     <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-blue-900">Password Reset</p>
+                      <p className="text-sm font-medium text-blue-900">Need Help?</p>
                       <p className="text-sm text-blue-700 mt-1">
-                        To reset your password or update security settings, please contact our office at{' '}
+                        If you forgot your password or need assistance, please contact our office at{' '}
                         <a href="mailto:info@himanshumajithiya.com" className="underline">
                           info@himanshumajithiya.com
                         </a>

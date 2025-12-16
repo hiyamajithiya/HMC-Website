@@ -16,10 +16,10 @@ import {
   ShieldOff,
   Check,
   X,
-  Eye,
-  EyeOff,
   Edit,
-  Briefcase
+  Briefcase,
+  Users,
+  Key
 } from 'lucide-react'
 
 // Available services that can be offered to clients
@@ -38,19 +38,29 @@ const AVAILABLE_SERVICES = [
   'Project Finance'
 ]
 
+interface ClientGroup {
+  id: string
+  name: string
+}
+
 interface UserData {
   id: string
   name: string | null
-  email: string
+  email: string | null
+  loginId: string | null
   phone: string | null
+  dateOfBirth: string | null
   role: 'ADMIN' | 'CLIENT'
   isActive: boolean
   services: string[]
+  groupId: string | null
+  group: ClientGroup | null
   createdAt: string
 }
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserData[]>([])
+  const [groups, setGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'ADMIN' | 'CLIENT'>('all')
@@ -60,19 +70,21 @@ export default function UsersPage() {
   const [updatingUser, setUpdatingUser] = useState(false)
   const [addError, setAddError] = useState('')
   const [editError, setEditError] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [editingUser, setEditingUser] = useState<UserData | null>(null)
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
     phone: '',
-    password: '',
+    dateOfBirth: '',
     role: 'CLIENT' as 'ADMIN' | 'CLIENT',
-    services: [] as string[]
+    services: [] as string[],
+    groupId: '',
+    newGroupName: ''
   })
 
   useEffect(() => {
     fetchUsers()
+    fetchGroups()
   }, [])
 
   const fetchUsers = async () => {
@@ -86,6 +98,18 @@ export default function UsersPage() {
       console.error('Failed to fetch users:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch('/api/admin/groups')
+      if (response.ok) {
+        const data = await response.json()
+        setGroups(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch groups:', error)
     }
   }
 
@@ -125,8 +149,11 @@ export default function UsersPage() {
       // Add new user to the list
       setUsers([data, ...users])
 
+      // Refresh groups in case a new one was created
+      fetchGroups()
+
       // Reset form and close modal
-      setNewUser({ name: '', email: '', phone: '', password: '', role: 'CLIENT', services: [] })
+      setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
       setShowAddModal(false)
     } catch (error) {
       setAddError(error instanceof Error ? error.message : 'Failed to create user')
@@ -134,6 +161,9 @@ export default function UsersPage() {
       setAddingUser(false)
     }
   }
+
+  // State for editing user's new group name
+  const [editNewGroupName, setEditNewGroupName] = useState('')
 
   const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,6 +181,8 @@ export default function UsersPage() {
           phone: editingUser.phone,
           role: editingUser.role,
           services: editingUser.services,
+          groupId: editingUser.groupId,
+          newGroupName: editNewGroupName,
         }),
       })
 
@@ -163,9 +195,13 @@ export default function UsersPage() {
       // Update user in the list
       setUsers(users.map((u) => (u.id === editingUser.id ? data : u)))
 
+      // Refresh groups in case a new one was created
+      fetchGroups()
+
       // Close modal
       setShowEditModal(false)
       setEditingUser(null)
+      setEditNewGroupName('')
     } catch (error) {
       setEditError(error instanceof Error ? error.message : 'Failed to update user')
     } finally {
@@ -189,6 +225,7 @@ export default function UsersPage() {
 
   const openEditModal = (user: UserData) => {
     setEditingUser({ ...user })
+    setEditNewGroupName('')
     setEditError('')
     setShowEditModal(true)
   }
@@ -201,7 +238,8 @@ export default function UsersPage() {
     .filter(
       (user) =>
         user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.loginId?.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
   const adminCount = users.filter((u) => u.role === 'ADMIN').length
@@ -238,7 +276,7 @@ export default function UsersPage() {
                   onClick={() => {
                     setShowAddModal(false)
                     setAddError('')
-                    setNewUser({ name: '', email: '', phone: '', password: '', role: 'CLIENT', services: [] })
+                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
                   }}
                   className="text-text-muted hover:text-text-primary"
                 >
@@ -254,18 +292,50 @@ export default function UsersPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="role">Role</Label>
+                <select
+                  id="role"
+                  value={newUser.role}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'CLIENT' })}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="CLIENT">Client</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="name">
+                  Full Name {newUser.role === 'CLIENT' && <span className="text-red-500">*</span>}
+                </Label>
                 <Input
                   id="name"
                   placeholder="Enter full name"
                   value={newUser.name}
                   onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  required={newUser.role === 'CLIENT'}
                 />
               </div>
 
+              {newUser.role === 'CLIENT' && (
+                <div className="space-y-2">
+                  <Label htmlFor="dateOfBirth">
+                    Date of Birth / Incorporation <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={newUser.dateOfBirth}
+                    onChange={(e) => setNewUser({ ...newUser, dateOfBirth: e.target.value })}
+                    required
+                  />
+                  <p className="text-xs text-text-muted">Login ID will be auto-generated from name and date</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  Email Address <span className="text-red-500">*</span>
+                  Email Address {newUser.role === 'ADMIN' && <span className="text-red-500">*</span>}
                 </Label>
                 <Input
                   id="email"
@@ -273,8 +343,11 @@ export default function UsersPage() {
                   placeholder="user@example.com"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  required
+                  required={newUser.role === 'ADMIN'}
                 />
+                {newUser.role === 'CLIENT' && (
+                  <p className="text-xs text-text-muted">Optional for clients</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -288,68 +361,68 @@ export default function UsersPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">
-                  Password <span className="text-red-500">*</span>
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter password"
-                    value={newUser.password}
-                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              {newUser.role === 'CLIENT' && (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded-r">
+                  <p className="text-sm text-blue-700">
+                    <strong>Default Password:</strong> Password123
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">Users can change their password after first login</p>
                 </div>
-                <p className="text-xs text-text-muted">Minimum 6 characters</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <select
-                  id="role"
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'CLIENT' })}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="CLIENT">Client</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-              </div>
+              )}
 
               {newUser.role === 'CLIENT' && (
-                <div className="space-y-2">
-                  <Label>Services Offered</Label>
-                  <p className="text-xs text-text-muted mb-2">Select services being provided to this client</p>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-border-light rounded-md p-3">
-                    {AVAILABLE_SERVICES.map((service) => (
-                      <label
-                        key={service}
-                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-bg-secondary p-1 rounded"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newUser.services.includes(service)}
-                          onChange={() => toggleService(service, true)}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                        <span>{service}</span>
-                      </label>
-                    ))}
+                <>
+                  <div className="space-y-2">
+                    <Label>Group (Optional)</Label>
+                    <p className="text-xs text-text-muted mb-2">Assign client to a group or create new one</p>
+                    <select
+                      value={newUser.groupId}
+                      onChange={(e) => setNewUser({ ...newUser, groupId: e.target.value, newGroupName: '' })}
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">No Group</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-2">
+                      <Label htmlFor="newGroupName" className="text-xs text-text-muted">Or create new group:</Label>
+                      <Input
+                        id="newGroupName"
+                        placeholder="Enter new group name"
+                        value={newUser.newGroupName}
+                        onChange={(e) => setNewUser({ ...newUser, newGroupName: e.target.value, groupId: '' })}
+                        className="mt-1"
+                      />
+                    </div>
                   </div>
-                  {newUser.services.length > 0 && (
-                    <p className="text-xs text-primary">{newUser.services.length} service(s) selected</p>
-                  )}
-                </div>
+
+                  <div className="space-y-2">
+                    <Label>Services Offered</Label>
+                    <p className="text-xs text-text-muted mb-2">Select services being provided to this client</p>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-border-light rounded-md p-3">
+                      {AVAILABLE_SERVICES.map((service) => (
+                        <label
+                          key={service}
+                          className="flex items-center gap-2 text-sm cursor-pointer hover:bg-bg-secondary p-1 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={newUser.services.includes(service)}
+                            onChange={() => toggleService(service, true)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span>{service}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {newUser.services.length > 0 && (
+                      <p className="text-xs text-primary">{newUser.services.length} service(s) selected</p>
+                    )}
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3 pt-4">
@@ -360,7 +433,7 @@ export default function UsersPage() {
                   onClick={() => {
                     setShowAddModal(false)
                     setAddError('')
-                    setNewUser({ name: '', email: '', phone: '', password: '', role: 'CLIENT', services: [] })
+                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
                   }}
                 >
                   Cancel
@@ -424,10 +497,36 @@ export default function UsersPage() {
                 />
               </div>
 
+              {editingUser.loginId && (
+                <div className="space-y-2">
+                  <Label>Login ID</Label>
+                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-gray-100">
+                    <Key className="h-4 w-4 text-text-muted" />
+                    <span className="text-sm font-medium">{editingUser.loginId}</span>
+                  </div>
+                  <p className="text-xs text-text-muted">Login ID cannot be changed</p>
+                </div>
+              )}
+
+              {editingUser.dateOfBirth && (
+                <div className="space-y-2">
+                  <Label>Date of Birth / Incorporation</Label>
+                  <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-gray-100">
+                    <Calendar className="h-4 w-4 text-text-muted" />
+                    <span className="text-sm">{new Date(editingUser.dateOfBirth).toLocaleDateString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input value={editingUser.email} disabled className="bg-gray-100" />
-                <p className="text-xs text-text-muted">Email cannot be changed</p>
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={editingUser.email || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                />
               </div>
 
               <div className="space-y-2">
@@ -455,29 +554,69 @@ export default function UsersPage() {
               </div>
 
               {editingUser.role === 'CLIENT' && (
-                <div className="space-y-2">
-                  <Label>Services Offered</Label>
-                  <p className="text-xs text-text-muted mb-2">Select services being provided to this client</p>
-                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-border-light rounded-md p-3">
-                    {AVAILABLE_SERVICES.map((service) => (
-                      <label
-                        key={service}
-                        className="flex items-center gap-2 text-sm cursor-pointer hover:bg-bg-secondary p-1 rounded"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={editingUser.services.includes(service)}
-                          onChange={() => toggleService(service, false)}
-                          className="rounded border-gray-300 text-primary focus:ring-primary"
-                        />
-                        <span>{service}</span>
-                      </label>
-                    ))}
+                <>
+                  <div className="space-y-2">
+                    <Label>Group (Optional)</Label>
+                    <p className="text-xs text-text-muted mb-2">Assign client to a group or create new one</p>
+                    <select
+                      value={editingUser.groupId || ''}
+                      onChange={(e) => {
+                        setEditingUser({ ...editingUser, groupId: e.target.value || null })
+                        setEditNewGroupName('')
+                      }}
+                      className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="">No Group</option>
+                      {groups.map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="mt-2">
+                      <Label htmlFor="editNewGroupName" className="text-xs text-text-muted">Or create new group:</Label>
+                      <Input
+                        id="editNewGroupName"
+                        placeholder="Enter new group name"
+                        value={editNewGroupName}
+                        onChange={(e) => {
+                          setEditNewGroupName(e.target.value)
+                          if (e.target.value) {
+                            setEditingUser({ ...editingUser, groupId: null })
+                          }
+                        }}
+                        className="mt-1"
+                      />
+                    </div>
+                    {editingUser.group && !editNewGroupName && (
+                      <p className="text-xs text-primary">Current group: {editingUser.group.name}</p>
+                    )}
                   </div>
-                  {editingUser.services.length > 0 && (
-                    <p className="text-xs text-primary">{editingUser.services.length} service(s) selected</p>
-                  )}
-                </div>
+
+                  <div className="space-y-2">
+                    <Label>Services Offered</Label>
+                    <p className="text-xs text-text-muted mb-2">Select services being provided to this client</p>
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-border-light rounded-md p-3">
+                      {AVAILABLE_SERVICES.map((service) => (
+                        <label
+                          key={service}
+                          className="flex items-center gap-2 text-sm cursor-pointer hover:bg-bg-secondary p-1 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={editingUser.services.includes(service)}
+                            onChange={() => toggleService(service, false)}
+                            className="rounded border-gray-300 text-primary focus:ring-primary"
+                          />
+                          <span>{service}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {editingUser.services.length > 0 && (
+                      <p className="text-xs text-primary">{editingUser.services.length} service(s) selected</p>
+                    )}
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3 pt-4">
@@ -628,6 +767,7 @@ export default function UsersPage() {
                     <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">User</th>
                     <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">Contact</th>
                     <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">Role</th>
+                    <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">Group</th>
                     <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">Services</th>
                     <th className="text-left px-6 py-3 text-sm font-semibold text-text-muted">Status</th>
                     <th className="text-right px-6 py-3 text-sm font-semibold text-text-muted">Actions</th>
@@ -643,21 +783,31 @@ export default function UsersPage() {
                           </div>
                           <div>
                             <p className="font-medium text-text-primary">{user.name || 'No name'}</p>
-                            <p className="text-sm text-text-muted">{user.email}</p>
+                            {user.loginId && (
+                              <div className="flex items-center gap-1 text-sm text-text-muted">
+                                <Key className="h-3 w-3" />
+                                <span>{user.loginId}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-4 w-4 text-text-muted" />
-                            <span>{user.email}</span>
-                          </div>
+                          {user.email && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Mail className="h-4 w-4 text-text-muted" />
+                              <span>{user.email}</span>
+                            </div>
+                          )}
                           {user.phone && (
                             <div className="flex items-center gap-2 text-sm">
                               <Phone className="h-4 w-4 text-text-muted" />
                               <span>{user.phone}</span>
                             </div>
+                          )}
+                          {!user.email && !user.phone && (
+                            <span className="text-sm text-text-muted">No contact info</span>
                           )}
                         </div>
                       </td>
@@ -676,6 +826,20 @@ export default function UsersPage() {
                           )}
                           {user.role}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {user.role === 'CLIENT' ? (
+                          user.group ? (
+                            <div className="flex items-center gap-1">
+                              <Users className="h-4 w-4 text-text-muted" />
+                              <span className="text-sm font-medium">{user.group.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-text-muted">No group</span>
+                          )
+                        ) : (
+                          <span className="text-sm text-text-muted">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         {user.role === 'CLIENT' ? (

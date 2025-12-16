@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
-import { Loader2, Mail, Lock } from 'lucide-react'
+import { Loader2, User, Lock } from 'lucide-react'
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  identifier: z.string().min(1, 'Login ID or Email is required'),
   password: z.string().min(1, 'Password is required'),
 })
 
@@ -41,7 +41,7 @@ export default function LoginForm() {
 
     try {
       const result = await signIn('credentials', {
-        email: data.email,
+        identifier: data.identifier,
         password: data.password,
         redirect: false,
       })
@@ -68,27 +68,27 @@ export default function LoginForm() {
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="email" style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.875rem' }}>
-          Email Address
+        <Label htmlFor="identifier" style={{ color: '#ffffff', fontWeight: 600, fontSize: '0.875rem' }}>
+          Login ID or Email
         </Label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#ffffff' }} />
+          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#ffffff' }} />
           <Input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
+            id="identifier"
+            type="text"
+            placeholder="Enter your login ID or email"
             className="pl-10"
             style={{
               backgroundColor: 'transparent',
               borderColor: 'rgba(255, 255, 255, 0.3)',
               color: '#ffffff'
             }}
-            {...register('email')}
+            {...register('identifier')}
             disabled={isLoading}
           />
         </div>
-        {errors.email && (
-          <p className="text-sm text-red-600 font-medium">{errors.email.message}</p>
+        {errors.identifier && (
+          <p className="text-sm text-red-600 font-medium">{errors.identifier.message}</p>
         )}
       </div>
 
