@@ -23,8 +23,12 @@ export default async function ProfilePage() {
     redirect('/client-portal/login')
   }
 
+  // Check if user is admin
+  const isAdmin = session.user?.email === 'info@himanshumajithiya.com' ||
+                  session.user?.email === 'admin@himanshumajithiya.com'
+
   return (
-    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email}>
+    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={isAdmin}>
       <div className="space-y-6">
         {/* Page Title */}
         <div>

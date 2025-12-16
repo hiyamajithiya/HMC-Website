@@ -25,6 +25,10 @@ export default async function AppointmentsPage() {
     redirect('/client-portal/login')
   }
 
+  // Check if user is admin
+  const isAdmin = session.user?.email === 'info@himanshumajithiya.com' ||
+                  session.user?.email === 'admin@himanshumajithiya.com'
+
   // Mock appointments data - in production this would come from the database
   const appointments: any[] = []
 
@@ -59,7 +63,7 @@ export default async function AppointmentsPage() {
   }
 
   return (
-    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email}>
+    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={isAdmin}>
       <div className="space-y-6">
         {/* Page Title */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

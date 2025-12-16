@@ -13,7 +13,8 @@ import {
   LogOut,
   Home,
   Menu,
-  X
+  X,
+  Shield
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -21,6 +22,7 @@ interface ClientPortalLayoutProps {
   children: React.ReactNode
   userName?: string | null
   userEmail?: string | null
+  isAdmin?: boolean
 }
 
 const navItems = [
@@ -33,7 +35,8 @@ const navItems = [
 export default function ClientPortalLayout({
   children,
   userName,
-  userEmail
+  userEmail,
+  isAdmin = false
 }: ClientPortalLayoutProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -66,6 +69,15 @@ export default function ClientPortalLayout({
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-secondary text-white rounded-lg text-sm font-medium hover:bg-secondary/90 transition-colors"
+                >
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Admin Panel</span>
+                </Link>
+              )}
               <Link
                 href="/"
                 className="hidden sm:flex items-center gap-2 text-sm text-white/80 hover:text-white transition-colors"
@@ -145,6 +157,16 @@ export default function ClientPortalLayout({
               <Home className="h-5 w-5" />
               Main Website
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium bg-secondary/10 text-secondary hover:bg-secondary/20"
+              >
+                <Shield className="h-5 w-5" />
+                Admin Panel
+              </Link>
+            )}
           </div>
         </nav>
       )}
