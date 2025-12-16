@@ -22,9 +22,8 @@ export default async function DashboardPage() {
     redirect('/client-portal/login')
   }
 
-  // Check if user is admin
-  const isAdmin = session.user?.email === 'info@himanshumajithiya.com' ||
-                  session.user?.email === 'admin@himanshumajithiya.com'
+  // Check if user is admin based on role from database
+  const isAdmin = session.user?.role === 'ADMIN'
 
   return (
     <ClientPortalLayout

@@ -25,9 +25,8 @@ export default async function AppointmentsPage() {
     redirect('/client-portal/login')
   }
 
-  // Check if user is admin
-  const isAdmin = session.user?.email === 'info@himanshumajithiya.com' ||
-                  session.user?.email === 'admin@himanshumajithiya.com'
+  // Check if user is admin based on role from database
+  const isAdmin = session.user?.role === 'ADMIN'
 
   // Mock appointments data - in production this would come from the database
   const appointments: any[] = []
