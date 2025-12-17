@@ -5,20 +5,20 @@ import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
 
-// Helper to check admin status
-async function checkAdmin() {
+// Helper to check admin or staff status
+async function checkAdminOrStaff() {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: 'Unauthorized', status: 401 }
   }
 
-  const isAdmin = session.user.role === 'ADMIN'
+  const hasAccess = session.user.role === 'ADMIN' || session.user.role === 'STAFF'
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return { error: 'Forbidden', status: 403 }
   }
 
-  return { session }
+  return { session, role: session.user.role }
 }
 
 // Helper to generate loginId from name and date of birth
@@ -58,7 +58,7 @@ async function ensureUniqueLoginId(baseLoginId: string): Promise<string> {
 // GET all users
 export async function GET() {
   try {
-    const adminCheck = await checkAdmin()
+    const adminCheck = await checkAdminOrStaff()
     if ('error' in adminCheck) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
@@ -102,7 +102,7 @@ const DEFAULT_PASSWORD = 'Password123'
 // POST - Create new user
 export async function POST(request: NextRequest) {
   try {
-    const adminCheck = await checkAdmin()
+    const adminCheck = await checkAdminOrStaff()
     if ('error' in adminCheck) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
@@ -110,8 +110,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, email, phone, dateOfBirth, role, services, groupId, newGroupName } = body
 
+    // STAFF can only create CLIENT users, not ADMIN or STAFF
+    if (adminCheck.role === 'STAFF' && (role === 'ADMIN' || role === 'STAFF')) {
+      return NextResponse.json(
+        { error: 'Staff members can only create client users' },
+        { status: 403 }
+      )
+    }
+
     // Validate required fields for clients
-    if (role !== 'ADMIN') {
+    if (role === 'CLIENT') {
       if (!name || !dateOfBirth) {
         return NextResponse.json(
           { error: 'Name and Date of Birth/Incorporation are required for clients' },
@@ -120,10 +128,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // For admin users, email is required
-    if (role === 'ADMIN' && !email) {
+    // For admin/staff users, email is required
+    if ((role === 'ADMIN' || role === 'STAFF') && !email) {
       return NextResponse.json(
-        { error: 'Email is required for admin users' },
+        { error: 'Email is required for admin/staff users' },
         { status: 400 }
       )
     }
@@ -145,13 +153,13 @@ export async function POST(request: NextRequest) {
     // Parse date of birth
     const parsedDOB = dateOfBirth ? new Date(dateOfBirth) : null
 
-    // Generate loginId for clients
+    // Generate loginId for clients, or use email for admin/staff
     let loginId: string | null = null
-    if (role !== 'ADMIN' && name && parsedDOB) {
+    if (role === 'CLIENT' && name && parsedDOB) {
       const baseLoginId = generateLoginId(name, parsedDOB)
       loginId = await ensureUniqueLoginId(baseLoginId)
-    } else if (role === 'ADMIN' && email) {
-      // For admin, use email as loginId
+    } else if ((role === 'ADMIN' || role === 'STAFF') && email) {
+      // For admin/staff, use email as loginId
       loginId = email
     }
 
@@ -159,8 +167,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10)
 
     // Handle group - create new if newGroupName provided, otherwise use existing groupId
+    // Only clients can be in groups
     let finalGroupId: string | null = null
-    if (role !== 'ADMIN') {
+    if (role === 'CLIENT') {
       if (newGroupName && newGroupName.trim()) {
         // Create new group
         const existingGroup = await prisma.clientGroup.findUnique({
@@ -188,7 +197,7 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         dateOfBirth: parsedDOB,
         password: hashedPassword,
-        role: role === 'ADMIN' ? 'ADMIN' : 'CLIENT',
+        role: role === 'ADMIN' ? 'ADMIN' : role === 'STAFF' ? 'STAFF' : 'CLIENT',
         services: Array.isArray(services) ? services : [],
         groupId: finalGroupId,
         isActive: true,

@@ -48,6 +48,7 @@ model User {
 
 enum UserRole {
   ADMIN
+  STAFF   // Can only manage users and documents, no blog/tools access
   CLIENT
 }
 

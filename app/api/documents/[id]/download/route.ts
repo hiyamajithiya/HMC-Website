@@ -42,8 +42,8 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Check access: Admin can access all, clients only their own documents
-    if (currentUser.role !== 'ADMIN' && document.userId !== currentUser.id) {
+    // Check access: Admin/Staff can access all, clients only their own documents
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'STAFF' && document.userId !== currentUser.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

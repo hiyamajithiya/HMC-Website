@@ -20,15 +20,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { signOut } from 'next-auth/react'
 
-const sidebarItems = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'Blog Posts', href: '/admin/blog', icon: FileText },
-  { name: 'Tools', href: '/admin/tools', icon: Wrench },
-  { name: 'Documents', href: '/admin/documents', icon: FolderOpen },
-  { name: 'Contacts', href: '/admin/contacts', icon: Mail },
-  { name: 'Appointments', href: '/admin/appointments', icon: Calendar },
-  { name: 'Users', href: '/admin/users', icon: Users },
-  { name: 'Settings', href: '/admin/settings', icon: Settings },
+// All sidebar items with role-based visibility
+const allSidebarItems = [
+  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, roles: ['ADMIN'] },
+  { name: 'Blog Posts', href: '/admin/blog', icon: FileText, roles: ['ADMIN'] },
+  { name: 'Tools', href: '/admin/tools', icon: Wrench, roles: ['ADMIN'] },
+  { name: 'Documents', href: '/admin/documents', icon: FolderOpen, roles: ['ADMIN', 'STAFF'] },
+  { name: 'Contacts', href: '/admin/contacts', icon: Mail, roles: ['ADMIN'] },
+  { name: 'Appointments', href: '/admin/appointments', icon: Calendar, roles: ['ADMIN'] },
+  { name: 'Users', href: '/admin/users', icon: Users, roles: ['ADMIN', 'STAFF'] },
+  { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['ADMIN'] },
 ]
 
 export function AdminLayoutContent({
@@ -54,10 +55,16 @@ export function AdminLayoutContent({
     redirect('/client-portal/login?callbackUrl=/admin')
   }
 
-  // Check if user is admin based on role from database
-  const isAdmin = session?.user?.role === 'ADMIN'
+  // Check if user has admin or staff role
+  const userRole = session?.user?.role
+  const isAdminOrStaff = userRole === 'ADMIN' || userRole === 'STAFF'
 
-  if (!isAdmin) {
+  // Filter sidebar items based on user role
+  const sidebarItems = allSidebarItems.filter(item =>
+    userRole && item.roles.includes(userRole)
+  )
+
+  if (!isAdminOrStaff) {
     return (
       <div className="min-h-screen bg-bg-secondary flex items-center justify-center">
         <div className="text-center max-w-md p-8">
@@ -82,12 +89,12 @@ export function AdminLayoutContent({
       <aside className="fixed inset-y-0 left-0 w-64 bg-primary text-white">
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link href={userRole === 'STAFF' ? '/admin/documents' : '/admin'} className="flex items-center gap-2">
             <div className="w-10 h-10 bg-secondary rounded-lg flex items-center justify-center">
               <span className="font-bold text-lg">HM</span>
             </div>
             <div>
-              <h1 className="font-heading font-bold">Admin Panel</h1>
+              <h1 className="font-heading font-bold">{userRole === 'STAFF' ? 'Staff Panel' : 'Admin Panel'}</h1>
               <p className="text-xs text-white/60">HMC Website</p>
             </div>
           </Link>
@@ -144,9 +151,14 @@ export function AdminLayoutContent({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-text-muted">Welcome back,</p>
-              <p className="font-semibold text-text-primary">{session?.user?.name || 'Admin'}</p>
+              <p className="font-semibold text-text-primary">{session?.user?.name || (userRole === 'STAFF' ? 'Staff' : 'Admin')}</p>
             </div>
             <div className="flex items-center gap-4">
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                userRole === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {userRole}
+              </span>
               <span className="text-sm text-text-muted">{session?.user?.email}</span>
             </div>
           </div>

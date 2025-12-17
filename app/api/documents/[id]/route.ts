@@ -43,8 +43,8 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Check access: Admin can access all, clients only their own
-    if (currentUser.role !== 'ADMIN' && document.userId !== currentUser.id) {
+    // Check access: Admin/Staff can access all, clients only their own
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'STAFF' && document.userId !== currentUser.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -86,8 +86,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Check access: Admin can delete all, clients only their own uploads
-    if (currentUser.role !== 'ADMIN') {
+    // Check access: Admin/Staff can delete all, clients only their own uploads
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'STAFF') {
       if (document.userId !== currentUser.id || document.uploadedBy !== 'CLIENT') {
         return NextResponse.json(
           { error: 'You can only delete documents you uploaded' },
@@ -146,9 +146,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Only admin can update document details
-    if (currentUser.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    // Only admin/staff can update document details
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'STAFF') {
+      return NextResponse.json({ error: 'Admin or staff access required' }, { status: 403 })
     }
 
     const body = await request.json()

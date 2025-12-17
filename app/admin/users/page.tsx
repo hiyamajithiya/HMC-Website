@@ -50,7 +50,7 @@ interface UserData {
   loginId: string | null
   phone: string | null
   dateOfBirth: string | null
-  role: 'ADMIN' | 'CLIENT'
+  role: 'ADMIN' | 'STAFF' | 'CLIENT'
   isActive: boolean
   services: string[]
   groupId: string | null
@@ -63,7 +63,7 @@ export default function UsersPage() {
   const [groups, setGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
-  const [filter, setFilter] = useState<'all' | 'ADMIN' | 'CLIENT'>('all')
+  const [filter, setFilter] = useState<'all' | 'ADMIN' | 'STAFF' | 'CLIENT'>('all')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [addingUser, setAddingUser] = useState(false)
@@ -76,7 +76,7 @@ export default function UsersPage() {
     email: '',
     phone: '',
     dateOfBirth: '',
-    role: 'CLIENT' as 'ADMIN' | 'CLIENT',
+    role: 'CLIENT' as 'ADMIN' | 'STAFF' | 'CLIENT',
     services: [] as string[],
     groupId: '',
     newGroupName: ''
@@ -153,7 +153,7 @@ export default function UsersPage() {
       fetchGroups()
 
       // Reset form and close modal
-      setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
+      setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT' as 'ADMIN' | 'STAFF' | 'CLIENT', services: [], groupId: '', newGroupName: '' })
       setShowAddModal(false)
     } catch (error) {
       setAddError(error instanceof Error ? error.message : 'Failed to create user')
@@ -243,6 +243,7 @@ export default function UsersPage() {
     )
 
   const adminCount = users.filter((u) => u.role === 'ADMIN').length
+  const staffCount = users.filter((u) => u.role === 'STAFF').length
   const clientCount = users.filter((u) => u.role === 'CLIENT').length
   const activeCount = users.filter((u) => u.isActive).length
 
@@ -276,7 +277,7 @@ export default function UsersPage() {
                   onClick={() => {
                     setShowAddModal(false)
                     setAddError('')
-                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
+                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT' as 'ADMIN' | 'STAFF' | 'CLIENT', services: [], groupId: '', newGroupName: '' })
                   }}
                   className="text-text-muted hover:text-text-primary"
                 >
@@ -296,12 +297,16 @@ export default function UsersPage() {
                 <select
                   id="role"
                   value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'CLIENT' })}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <option value="CLIENT">Client</option>
+                  <option value="STAFF">Staff</option>
                   <option value="ADMIN">Admin</option>
                 </select>
+                {newUser.role === 'STAFF' && (
+                  <p className="text-xs text-amber-600">Staff can only manage users and documents</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -335,7 +340,7 @@ export default function UsersPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  Email Address {newUser.role === 'ADMIN' && <span className="text-red-500">*</span>}
+                  Email Address {(newUser.role === 'ADMIN' || newUser.role === 'STAFF') && <span className="text-red-500">*</span>}
                 </Label>
                 <Input
                   id="email"
@@ -343,7 +348,7 @@ export default function UsersPage() {
                   placeholder="user@example.com"
                   value={newUser.email}
                   onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                  required={newUser.role === 'ADMIN'}
+                  required={newUser.role === 'ADMIN' || newUser.role === 'STAFF'}
                 />
                 {newUser.role === 'CLIENT' && (
                   <p className="text-xs text-text-muted">Optional for clients</p>
@@ -433,7 +438,7 @@ export default function UsersPage() {
                   onClick={() => {
                     setShowAddModal(false)
                     setAddError('')
-                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT', services: [], groupId: '', newGroupName: '' })
+                    setNewUser({ name: '', email: '', phone: '', dateOfBirth: '', role: 'CLIENT' as 'ADMIN' | 'STAFF' | 'CLIENT', services: [], groupId: '', newGroupName: '' })
                   }}
                 >
                   Cancel
@@ -545,12 +550,16 @@ export default function UsersPage() {
                 <select
                   id="edit-role"
                   value={editingUser.role}
-                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'ADMIN' | 'CLIENT' })}
+                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
                   className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
                   <option value="CLIENT">Client</option>
+                  <option value="STAFF">Staff</option>
                   <option value="ADMIN">Admin</option>
                 </select>
+                {editingUser.role === 'STAFF' && (
+                  <p className="text-xs text-amber-600">Staff can only manage users and documents</p>
+                )}
               </div>
 
               {editingUser.role === 'CLIENT' && (
@@ -656,7 +665,7 @@ export default function UsersPage() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -676,6 +685,17 @@ export default function UsersPage() {
                 <p className="text-2xl font-bold">{adminCount}</p>
               </div>
               <Shield className="h-8 w-8 text-purple-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-text-muted">Staff</p>
+                <p className="text-2xl font-bold">{staffCount}</p>
+              </div>
+              <Shield className="h-8 w-8 text-amber-500 opacity-50" />
             </div>
           </CardContent>
         </Card>
@@ -730,6 +750,13 @@ export default function UsersPage() {
                 onClick={() => setFilter('ADMIN')}
               >
                 Admins
+              </Button>
+              <Button
+                variant={filter === 'STAFF' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter('STAFF')}
+              >
+                Staff
               </Button>
               <Button
                 variant={filter === 'CLIENT' ? 'default' : 'outline'}
@@ -816,10 +843,14 @@ export default function UsersPage() {
                           className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                             user.role === 'ADMIN'
                               ? 'bg-purple-100 text-purple-700'
+                              : user.role === 'STAFF'
+                              ? 'bg-amber-100 text-amber-700'
                               : 'bg-blue-100 text-blue-700'
                           }`}
                         >
                           {user.role === 'ADMIN' ? (
+                            <Shield className="h-3 w-3" />
+                          ) : user.role === 'STAFF' ? (
                             <Shield className="h-3 w-3" />
                           ) : (
                             <User className="h-3 w-3" />

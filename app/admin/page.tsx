@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +29,15 @@ interface DashboardStats {
 }
 
 export default function AdminDashboard() {
+  const { data: session } = useSession()
+  const router = useRouter()
+
+  // Redirect STAFF users to documents page (they don't have access to dashboard)
+  useEffect(() => {
+    if (session?.user?.role === 'STAFF') {
+      router.replace('/admin/documents')
+    }
+  }, [session, router])
   const [stats, setStats] = useState<DashboardStats>({
     totalBlogPosts: 0,
     publishedPosts: 0,

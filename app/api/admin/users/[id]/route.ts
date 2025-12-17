@@ -4,20 +4,20 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-// Helper to check admin status
-async function checkAdmin() {
+// Helper to check admin or staff status
+async function checkAdminOrStaff() {
   const session = await auth()
   if (!session?.user?.id) {
     return { error: 'Unauthorized', status: 401 }
   }
 
-  const isAdmin = session.user.role === 'ADMIN'
+  const hasAccess = session.user.role === 'ADMIN' || session.user.role === 'STAFF'
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return { error: 'Forbidden', status: 403 }
   }
 
-  return { session }
+  return { session, role: session.user.role }
 }
 
 // GET single user
@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCheck = await checkAdmin()
+    const adminCheck = await checkAdminOrStaff()
     if ('error' in adminCheck) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
@@ -79,7 +79,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCheck = await checkAdmin()
+    const adminCheck = await checkAdminOrStaff()
     if ('error' in adminCheck) {
       return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
     }
@@ -87,6 +87,28 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
     const { isActive, role, name, phone, email, dateOfBirth, services, groupId, newGroupName } = body
+
+    // STAFF cannot change roles to ADMIN or STAFF
+    if (adminCheck.role === 'STAFF' && role && (role === 'ADMIN' || role === 'STAFF')) {
+      return NextResponse.json(
+        { error: 'Staff members cannot assign admin or staff roles' },
+        { status: 403 }
+      )
+    }
+
+    // STAFF cannot edit ADMIN or STAFF users
+    if (adminCheck.role === 'STAFF') {
+      const targetUser = await prisma.user.findUnique({
+        where: { id },
+        select: { role: true }
+      })
+      if (targetUser && (targetUser.role === 'ADMIN' || targetUser.role === 'STAFF')) {
+        return NextResponse.json(
+          { error: 'Staff members cannot edit admin or staff users' },
+          { status: 403 }
+        )
+      }
+    }
 
     // Handle group - create new if newGroupName provided, otherwise use existing groupId
     let finalGroupId: string | null | undefined = undefined
@@ -153,15 +175,20 @@ export async function PATCH(
   }
 }
 
-// DELETE user
+// DELETE user - Only ADMIN can delete users
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCheck = await checkAdmin()
-    if ('error' in adminCheck) {
-      return NextResponse.json({ error: adminCheck.error }, { status: adminCheck.status })
+    const session = await auth()
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Only ADMIN can delete users (STAFF cannot)
+    if (session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Only admins can delete users' }, { status: 403 })
     }
 
     const { id } = await params

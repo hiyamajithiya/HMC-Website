@@ -36,13 +36,13 @@ export async function GET(request: NextRequest) {
     // Build where clause based on role and filters
     const whereClause: any = {}
 
-    // Admin can see all documents, or filter by specific user
+    // Admin and Staff can see all documents, or filter by specific user
     // Clients can only see their own documents
-    if (currentUser.role === 'ADMIN') {
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') {
       if (userId) {
         whereClause.userId = userId
       }
-      // If no userId specified, admin sees ALL documents
+      // If no userId specified, admin/staff sees ALL documents
     } else {
       // Client can only see their own documents
       whereClause.userId = currentUser.id
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
 
     // Determine target user
     let documentUserId = currentUser.id
-    if (currentUser.role === 'ADMIN' && targetUserId) {
-      // Admin uploading for a client
+    if ((currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') && targetUserId) {
+      // Admin/Staff uploading for a client
       const targetUser = await prisma.user.findUnique({
         where: { id: targetUserId }
       })
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         fileType: file.type,
         category: category as any,
-        uploadedBy: currentUser.role === 'ADMIN' ? 'ADMIN' : 'CLIENT',
+        uploadedBy: currentUser.role === 'ADMIN' || currentUser.role === 'STAFF' ? 'ADMIN' : 'CLIENT',
         userId: documentUserId,
       },
       include: {
