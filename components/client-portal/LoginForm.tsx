@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -26,7 +26,6 @@ interface UserAccount {
 }
 
 export default function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/client-portal/dashboard'
 
@@ -88,8 +87,8 @@ export default function LoginForm() {
       if (result?.error) {
         setError('Login failed. Please try again.')
       } else if (result?.ok) {
-        router.push(callbackUrl)
-        router.refresh()
+        // Use window.location for full page navigation to avoid blinking issues
+        window.location.href = callbackUrl
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
@@ -134,8 +133,8 @@ export default function LoginForm() {
       if (result?.error) {
         setError('Login failed. Please try again.')
       } else if (result?.ok) {
-        router.push(callbackUrl)
-        router.refresh()
+        // Use window.location for full page navigation to avoid blinking issues
+        window.location.href = callbackUrl
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
