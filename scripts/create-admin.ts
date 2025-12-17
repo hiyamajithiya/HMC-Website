@@ -8,11 +8,13 @@ async function main() {
   const password = 'Admin@123'
   const hashedPassword = await bcrypt.hash(password, 12)
 
+  // For admin users, loginId equals email (loginId is unique, email is not)
   const user = await prisma.user.upsert({
-    where: { email },
+    where: { loginId: email },
     update: {},
     create: {
       email,
+      loginId: email,
       name: 'Admin',
       password: hashedPassword,
       role: 'ADMIN',
@@ -22,6 +24,7 @@ async function main() {
 
   console.log('Admin user created:')
   console.log('Email:', email)
+  console.log('Login ID:', email)
   console.log('Password:', password)
   console.log('User ID:', user.id)
 }
