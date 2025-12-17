@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert } from '@/components/ui/alert'
-import { Loader2, User, Lock, Building2, ArrowLeft, Key } from 'lucide-react'
+import { Loader2, User, Lock, Building2, ArrowLeft, Key, Eye, EyeOff } from 'lucide-react'
 
 const loginSchema = z.object({
   identifier: z.string().min(1, 'Login ID or Email is required'),
@@ -32,6 +32,7 @@ export default function LoginForm() {
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   // Multi-account selection state
   const [showAccountSelector, setShowAccountSelector] = useState(false)
@@ -265,9 +266,9 @@ export default function LoginForm() {
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4" style={{ color: '#ffffff' }} />
           <Input
             id="password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="Enter your password"
-            className="pl-10"
+            className="pl-10 pr-10"
             style={{
               backgroundColor: 'transparent',
               borderColor: 'rgba(255, 255, 255, 0.3)',
@@ -276,6 +277,18 @@ export default function LoginForm() {
             {...register('password')}
             disabled={isLoading}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 hover:opacity-80 transition-opacity"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" style={{ color: '#ffffff' }} />
+            ) : (
+              <Eye className="h-4 w-4" style={{ color: '#ffffff' }} />
+            )}
+          </button>
         </div>
         {errors.password && (
           <p className="text-sm text-red-600 font-medium">{errors.password.message}</p>
