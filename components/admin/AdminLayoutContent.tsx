@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -101,7 +102,7 @@ export function AdminLayoutContent({
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1">
+        <nav className="p-4">
           {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href ||
@@ -111,7 +112,8 @@ export function AdminLayoutContent({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                prefetch={true}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors no-underline border-none ${
                   isActive
                     ? 'bg-white/20 text-white'
                     : 'text-white/70 hover:bg-white/10 hover:text-white'
@@ -129,14 +131,14 @@ export function AdminLayoutContent({
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
           <Link
             href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors no-underline border-none"
           >
             <Home className="h-5 w-5" />
             <span>View Website</span>
           </Link>
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors border-none"
           >
             <LogOut className="h-5 w-5" />
             <span>Sign Out</span>
@@ -166,9 +168,44 @@ export function AdminLayoutContent({
 
         {/* Page Content */}
         <div className="p-8">
-          {children}
+          <Suspense fallback={<PageLoadingSkeleton />}>
+            {children}
+          </Suspense>
         </div>
       </main>
+    </div>
+  )
+}
+
+// Fast loading skeleton for page transitions
+function PageLoadingSkeleton() {
+  return (
+    <div className="space-y-6 animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="h-8 bg-gray-200 rounded w-48"></div>
+        <div className="h-10 bg-gray-200 rounded w-32"></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white p-6 rounded-lg border border-border-light">
+            <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+            <div className="h-8 bg-gray-200 rounded w-16"></div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-white rounded-lg border border-border-light p-4">
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4">
+              <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+              <div className="flex-1 space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-48"></div>
+                <div className="h-3 bg-gray-200 rounded w-32"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

@@ -87,21 +87,22 @@ model DocumentFolder {
 
 // Documents for client portal
 model Document {
-  id          String       @id @default(cuid())
-  title       String
-  description String?
-  fileName    String
-  filePath    String
-  fileSize    Int
-  fileType    String
-  category    DocCategory
-  folderId    String?
-  folder      DocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  uploadedBy  String
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  title         String
+  description   String?
+  fileName      String
+  filePath      String
+  fileSize      Int
+  fileType      String
+  category      DocCategory
+  financialYear String?      // Format: "2024-25" (April to March)
+  folderId      String?
+  folder        DocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploadedBy    String
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 enum DocCategory {

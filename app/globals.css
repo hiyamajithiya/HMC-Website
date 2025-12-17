@@ -134,6 +134,13 @@
     text-wrap: balance;
   }
 
+  /* Remove underline from sidebar navigation links */
+  aside nav a,
+  aside a {
+    text-decoration: none !important;
+    border-bottom: none !important;
+  }
+
   /* Scrollbar Styles */
   .scrollbar-thin {
     scrollbar-width: thin;

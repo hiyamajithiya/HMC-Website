@@ -34,6 +34,7 @@ interface Document {
   fileSize: number
   fileType: string
   category: string
+  financialYear: string | null
   folderId: string | null
   uploadedBy: string
   userId: string
@@ -46,6 +47,20 @@ interface Document {
     id: string
     name: string
   } | null
+}
+
+// Generate financial year options (Indian FY: April to March)
+function getFinancialYearOptions(): string[] {
+  const currentDate = new Date()
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth()
+  const currentFYStartYear = currentMonth < 3 ? currentYear - 1 : currentYear
+
+  const years: string[] = []
+  for (let i = currentFYStartYear; i >= currentFYStartYear - 5; i--) {
+    years.push(`${i}-${(i + 1).toString().slice(-2)}`)
+  }
+  return years
 }
 
 interface UserOption {
@@ -72,6 +87,7 @@ export default function AdminDocumentsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
 
   const [documents, setDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<DocumentFolder[]>([])
@@ -84,6 +100,8 @@ export default function AdminDocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('ALL')
   const [filterUser, setFilterUser] = useState('ALL')
+  const [filterFinancialYear, setFilterFinancialYear] = useState('ALL')
+  const financialYearOptions = getFinancialYearOptions()
 
   // Folder navigation state
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
@@ -102,6 +120,7 @@ export default function AdminDocumentsPage() {
     title: '',
     description: '',
     category: 'OTHER',
+    financialYear: getFinancialYearOptions()[0],
     userId: '',
     file: null as File | null,
   })
@@ -125,7 +144,7 @@ export default function AdminDocumentsPage() {
       setFolders([])
       fetchDocuments()
     }
-  }, [filterUser, currentFolderId])
+  }, [filterUser, currentFolderId, filterFinancialYear])
 
   const fetchDocuments = async () => {
     try {
@@ -140,6 +159,10 @@ export default function AdminDocumentsPage() {
         } else {
           params.append('folderId', 'root')
         }
+      }
+
+      if (filterFinancialYear && filterFinancialYear !== 'ALL') {
+        params.append('financialYear', filterFinancialYear)
       }
 
       if (params.toString()) {
@@ -345,6 +368,9 @@ export default function AdminDocumentsPage() {
       formData.append('description', uploadForm.description)
       formData.append('category', uploadForm.category)
       formData.append('userId', uploadForm.userId)
+      if (uploadForm.financialYear) {
+        formData.append('financialYear', uploadForm.financialYear)
+      }
       if (currentFolderId) {
         formData.append('folderId', currentFolderId)
       }
@@ -362,6 +388,7 @@ export default function AdminDocumentsPage() {
           title: '',
           description: '',
           category: 'OTHER',
+          financialYear: getFinancialYearOptions()[0],
           userId: uploadForm.userId,
           file: null,
         })
@@ -452,17 +479,15 @@ export default function AdminDocumentsPage() {
         </div>
         <div className="flex gap-2">
           {filterUser && filterUser !== 'ALL' && (
-            <>
-              <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
-                <FolderPlus className="h-4 w-4 mr-2" />
-                New Folder
-              </Button>
-              <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Bulk Upload
-              </Button>
-            </>
+            <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
+              <FolderPlus className="h-4 w-4 mr-2" />
+              New Folder
+            </Button>
           )}
+          <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Bulk Upload
+          </Button>
           <Button onClick={() => setShowUploadModal(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Upload Document
@@ -510,6 +535,16 @@ export default function AdminDocumentsPage() {
               <option value="ALL">All Categories</option>
               {CATEGORIES.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
+              ))}
+            </select>
+            <select
+              value={filterFinancialYear}
+              onChange={(e) => setFilterFinancialYear(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="ALL">All Years</option>
+              {financialYearOptions.map(fy => (
+                <option key={fy} value={fy}>FY {fy}</option>
               ))}
             </select>
           </div>
@@ -572,6 +607,7 @@ export default function AdminDocumentsPage() {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
@@ -598,6 +634,15 @@ export default function AdminDocumentsPage() {
                               <p className="text-xs text-gray-500">{doc.user?.email}</p>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {doc.financialYear ? (
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                              {doc.financialYear}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
@@ -681,6 +726,7 @@ export default function AdminDocumentsPage() {
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
@@ -698,6 +744,15 @@ export default function AdminDocumentsPage() {
                                 <p className="text-sm text-gray-500">{doc.fileName}</p>
                               </div>
                             </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {doc.financialYear ? (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                                {doc.financialYear}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
@@ -855,7 +910,7 @@ export default function AdminDocumentsPage() {
       )}
 
       {/* Bulk Upload Modal with Drag & Drop */}
-      {showBulkUploadModal && filterUser && filterUser !== 'ALL' && (
+      {showBulkUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
@@ -866,26 +921,52 @@ export default function AdminDocumentsPage() {
                 </button>
               </div>
 
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  <strong>Client:</strong> {users.find(u => u.id === filterUser)?.name || users.find(u => u.id === filterUser)?.email}
-                </p>
-                {currentFolderId && (
-                  <p className="text-sm text-blue-700">
-                    <strong>Current Folder:</strong> {breadcrumbs[breadcrumbs.length - 1]?.name}
-                  </p>
-                )}
-              </div>
+              {filterUser && filterUser !== 'ALL' ? (
+                <>
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-700">
+                      <strong>Client:</strong> {users.find(u => u.id === filterUser)?.name || users.find(u => u.id === filterUser)?.email}
+                    </p>
+                    {currentFolderId && (
+                      <p className="text-sm text-blue-700">
+                        <strong>Current Folder:</strong> {breadcrumbs[breadcrumbs.length - 1]?.name}
+                      </p>
+                    )}
+                  </div>
 
-              <DocumentUploadDropzone
-                userId={filterUser}
-                folderId={currentFolderId}
-                onUploadComplete={() => {
-                  fetchDocuments()
-                  fetchFolders()
-                }}
-                onCreateFolder={handleCreateFolderForUpload}
-              />
+                  <DocumentUploadDropzone
+                    userId={filterUser}
+                    folderId={currentFolderId}
+                    onUploadComplete={() => {
+                      fetchDocuments()
+                      fetchFolders()
+                    }}
+                    onCreateFolder={handleCreateFolderForUpload}
+                  />
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <User className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client First</h3>
+                  <p className="text-gray-600 mb-6">Please select a client from the dropdown filter to upload documents.</p>
+                  <select
+                    value={filterUser}
+                    onChange={(e) => {
+                      setFilterUser(e.target.value)
+                      setCurrentFolderId(null)
+                      setBreadcrumbs([{ id: null, name: 'Root' }])
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[250px]"
+                  >
+                    <option value="ALL">Choose a client...</option>
+                    {users.map(user => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="mt-6 flex justify-end">
                 <Button variant="outline" onClick={() => setShowBulkUploadModal(false)}>
@@ -943,15 +1024,94 @@ export default function AdminDocumentsPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">File *</label>
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer hover:border-blue-400 ${
+                        uploadForm.file ? 'border-green-400 bg-green-50' : 'border-gray-300'
+                      }`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation() }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const droppedFile = e.dataTransfer.files?.[0]
+                        if (droppedFile) {
+                          setUploadForm(prev => ({
+                            ...prev,
+                            file: droppedFile,
+                            title: prev.title || droppedFile.name.replace(/\.[^/.]+$/, '')
+                          }))
+                        }
+                      }}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploadForm.file ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <FileText className="h-8 w-8 text-green-600" />
+                          <div className="text-left">
+                            <p className="text-sm font-medium text-gray-900">{uploadForm.file.name}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(uploadForm.file.size)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setUploadForm(prev => ({ ...prev, file: null }))
+                              if (fileInputRef.current) fileInputRef.current.value = ''
+                            }}
+                            className="ml-2 p-1 hover:bg-gray-200 rounded"
+                          >
+                            <X className="h-4 w-4 text-gray-500" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-600 mb-1">Drag and drop a file here</p>
+                          <p className="text-xs text-gray-400 mb-3">PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
+                          <div className="flex justify-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                fileInputRef.current?.click()
+                              }}
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              Select File
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                folderInputRef.current?.click()
+                              }}
+                            >
+                              <Folder className="h-4 w-4 mr-1" />
+                              Select Folder
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
                       onChange={handleFileSelect}
                       accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
+                      className="hidden"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Allowed: PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
+                    <input
+                      ref={folderInputRef}
+                      type="file"
+                      onChange={handleFileSelect}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
+                      className="hidden"
+                      {...({ webkitdirectory: '', directory: '' } as any)}
+                    />
                   </div>
 
                   <div>
@@ -976,6 +1136,20 @@ export default function AdminDocumentsPage() {
                     >
                       {CATEGORIES.map(cat => (
                         <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Financial Year *</label>
+                    <select
+                      value={uploadForm.financialYear}
+                      onChange={(e) => setUploadForm({ ...uploadForm, financialYear: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      {financialYearOptions.map(fy => (
+                        <option key={fy} value={fy}>FY {fy} (April {fy.split('-')[0]} - March {parseInt(fy.split('-')[0]) + 1})</option>
                       ))}
                     </select>
                   </div>

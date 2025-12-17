@@ -1,9 +1,27 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import { Upload, X, FileText, Folder, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, X, FileText, Folder, Loader2, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+
+// Generate financial year options (Indian FY: April to March)
+function getFinancialYearOptions(): string[] {
+  const currentDate = new Date()
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = currentDate.getMonth() // 0-indexed (0 = January)
+
+  // If we're in Jan-March, current FY started last year
+  // If we're in April-December, current FY started this year
+  const currentFYStartYear = currentMonth < 3 ? currentYear - 1 : currentYear
+
+  const years: string[] = []
+  // Show 5 years back and current year
+  for (let i = currentFYStartYear; i >= currentFYStartYear - 5; i--) {
+    years.push(`${i}-${(i + 1).toString().slice(-2)}`)
+  }
+  return years
+}
 
 interface FileWithPath extends File {
   relativePath?: string
@@ -21,6 +39,7 @@ interface UploadFile {
 interface DocumentUploadDropzoneProps {
   userId: string
   folderId?: string | null
+  defaultFinancialYear?: string
   onUploadComplete: () => void
   onCreateFolder?: (name: string, parentId?: string) => Promise<string>
 }
@@ -28,14 +47,17 @@ interface DocumentUploadDropzoneProps {
 export default function DocumentUploadDropzone({
   userId,
   folderId,
+  defaultFinancialYear,
   onUploadComplete,
   onCreateFolder,
 }: DocumentUploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [files, setFiles] = useState<UploadFile[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [financialYear, setFinancialYear] = useState(defaultFinancialYear || getFinancialYearOptions()[0])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const folderInputRef = useRef<HTMLInputElement>(null)
+  const financialYearOptions = getFinancialYearOptions()
 
   const allowedTypes = [
     'application/pdf',
@@ -200,6 +222,9 @@ export default function DocumentUploadDropzone({
     formData.append('title', uploadFile.file.name.replace(/\.[^/.]+$/, ''))
     formData.append('category', 'OTHER')
     formData.append('userId', userId)
+    if (financialYear) {
+      formData.append('financialYear', financialYear)
+    }
     if (targetFolderId) {
       formData.append('folderId', targetFolderId)
     }
@@ -317,6 +342,26 @@ export default function DocumentUploadDropzone({
 
   return (
     <div className="space-y-4">
+      {/* Financial Year Selector */}
+      <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <Calendar className="h-5 w-5 text-blue-600" />
+        <label className="text-sm font-medium text-blue-900">Financial Year:</label>
+        <select
+          value={financialYear}
+          onChange={(e) => setFinancialYear(e.target.value)}
+          className="flex-1 max-w-[150px] h-9 px-3 rounded-md border border-blue-300 bg-white text-sm font-medium text-blue-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {financialYearOptions.map((fy) => (
+            <option key={fy} value={fy}>
+              FY {fy}
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-blue-600">
+          (April {financialYear.split('-')[0]} - March {parseInt(financialYear.split('-')[0]) + 1})
+        </span>
+      </div>
+
       {/* Drop Zone */}
       <div
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${

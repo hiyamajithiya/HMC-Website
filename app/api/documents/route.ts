@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const category = searchParams.get('category')
     const folderId = searchParams.get('folderId')
+    const financialYear = searchParams.get('financialYear')
 
     // Build where clause based on role and filters
     const whereClause: any = {}
@@ -58,6 +59,11 @@ export async function GET(request: NextRequest) {
       whereClause.folderId = null
     } else if (folderId) {
       whereClause.folderId = folderId
+    }
+
+    // Filter by financial year
+    if (financialYear && financialYear !== 'ALL') {
+      whereClause.financialYear = financialYear
     }
 
     const documents = await prisma.document.findMany({
@@ -106,6 +112,7 @@ export async function POST(request: NextRequest) {
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const category = formData.get('category') as string
+    const financialYear = formData.get('financialYear') as string | null // e.g., "2024-25"
     const targetUserId = formData.get('userId') as string // For admin uploading to client
     const folderId = formData.get('folderId') as string | null // Optional folder
 
@@ -210,6 +217,7 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         fileType: file.type,
         category: category as any,
+        financialYear: financialYear || null,
         folderId: validFolderId,
         uploadedBy: currentUser.role === 'ADMIN' || currentUser.role === 'STAFF' ? 'ADMIN' : 'CLIENT',
         userId: documentUserId,
