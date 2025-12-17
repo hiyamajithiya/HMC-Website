@@ -25,8 +25,18 @@ export default async function ProfilePage() {
     redirect('/client-portal/login')
   }
 
-  // Check if user is admin based on role from database
-  const isAdmin = session.user?.role === 'ADMIN'
+  // Check user role
+  const userRole = session.user?.role
+
+  // Redirect ADMIN to admin dashboard
+  if (userRole === 'ADMIN') {
+    redirect('/admin')
+  }
+
+  // Redirect STAFF to admin documents (they have limited admin access)
+  if (userRole === 'STAFF') {
+    redirect('/admin/documents')
+  }
 
   // Get full user details from database
   const user = session.user?.id ? await prisma.user.findUnique({
@@ -40,7 +50,7 @@ export default async function ProfilePage() {
   }) : null
 
   return (
-    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={isAdmin}>
+    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={false}>
       <div className="space-y-6">
         {/* Page Title */}
         <div>

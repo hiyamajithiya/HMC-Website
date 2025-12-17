@@ -22,11 +22,22 @@ export default async function DocumentsPage() {
     redirect('/client-portal/login')
   }
 
-  // Check if user is admin based on role from database
-  const isAdmin = session.user?.role === 'ADMIN'
+  // Check user role
+  const userRole = session.user?.role
 
+  // Redirect ADMIN to admin dashboard
+  if (userRole === 'ADMIN') {
+    redirect('/admin')
+  }
+
+  // Redirect STAFF to admin documents (they have limited admin access)
+  if (userRole === 'STAFF') {
+    redirect('/admin/documents')
+  }
+
+  // Only CLIENT users see the client portal
   return (
-    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={isAdmin}>
+    <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={false}>
       <ClientDocumentsContent userId={session.user?.id || ''} />
     </ClientPortalLayout>
   )
