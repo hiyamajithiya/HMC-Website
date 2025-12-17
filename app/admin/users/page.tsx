@@ -178,6 +178,7 @@ export default function UsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: editingUser.name,
+          email: editingUser.email,
           phone: editingUser.phone,
           role: editingUser.role,
           services: editingUser.services,
