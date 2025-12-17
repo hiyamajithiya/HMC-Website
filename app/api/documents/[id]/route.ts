@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { unlink } from 'fs/promises'
+import { unlink, readFile } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 
 export const dynamic = 'force-dynamic'
+
+// Secure storage directory
+const SECURE_UPLOADS_DIR = path.join(process.cwd(), 'private', 'documents')
 
 // GET - Get single document details
 export async function GET(
@@ -93,8 +96,14 @@ export async function DELETE(
       }
     }
 
-    // Delete file from filesystem
-    const filePath = path.join(process.cwd(), 'public', document.filePath)
+    // Delete file from filesystem (handles both old public paths and new private paths)
+    let filePath: string
+    if (document.filePath.startsWith('private/')) {
+      filePath = path.join(process.cwd(), document.filePath)
+    } else {
+      // Legacy path in public folder
+      filePath = path.join(process.cwd(), 'public', document.filePath)
+    }
     if (existsSync(filePath)) {
       await unlink(filePath)
     }

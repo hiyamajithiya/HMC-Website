@@ -31,8 +31,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# uploads
+# uploads - secure document storage (private folder not accessible via web)
 /public/uploads
+/private
 
 # typescript
 *.tsbuildinfo

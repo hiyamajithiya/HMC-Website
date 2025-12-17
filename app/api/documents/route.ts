@@ -4,8 +4,12 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
+
+// Secure storage directory - OUTSIDE public folder
+const SECURE_UPLOADS_DIR = path.join(process.cwd(), 'private', 'documents')
 
 // GET - Fetch documents for a user
 export async function GET(request: NextRequest) {
@@ -138,25 +142,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'documents', documentUserId)
+    // Create secure uploads directory if it doesn't exist (OUTSIDE public folder)
+    const uploadsDir = path.join(SECURE_UPLOADS_DIR, documentUserId)
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }
 
-    // Generate unique filename
+    // Generate secure unique filename with random hash
     const timestamp = Date.now()
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-    const fileName = `${timestamp}_${sanitizedName}`
-    const filePath = path.join(uploadsDir, fileName)
+    const randomHash = crypto.randomBytes(16).toString('hex')
+    const extension = path.extname(file.name)
+    const secureFileName = `${timestamp}_${randomHash}${extension}`
+    const filePath = path.join(uploadsDir, secureFileName)
 
-    // Save file
+    // Save file to secure location
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Store relative path for serving
-    const relativePath = `/uploads/documents/${documentUserId}/${fileName}`
+    // Store secure path (not publicly accessible)
+    const securePath = `private/documents/${documentUserId}/${secureFileName}`
 
     // Create document record in database
     const document = await prisma.document.create({
@@ -164,7 +169,7 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         fileName: file.name,
-        filePath: relativePath,
+        filePath: securePath,
         fileSize: file.size,
         fileType: file.type,
         category: category as any,

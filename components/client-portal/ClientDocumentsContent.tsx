@@ -339,7 +339,7 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
                             asChild
                             title="View"
                           >
-                            <a href={doc.filePath} target="_blank" rel="noopener noreferrer">
+                            <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
                               <Eye className="h-4 w-4" />
                             </a>
                           </Button>
@@ -349,7 +349,7 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
                             asChild
                             title="Download"
                           >
-                            <a href={doc.filePath} download={doc.fileName}>
+                            <a href={`/api/documents/${doc.id}/download`} download={doc.fileName}>
                               <Download className="h-4 w-4" />
                             </a>
                           </Button>
