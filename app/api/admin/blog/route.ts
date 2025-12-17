@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return { error: 'Unauthorized', status: 401 }
   }
 
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     // Get the admin user
     const user = await prisma.user.findUnique({
-      where: { email: adminCheck.session.user.email! },
+      where: { id: adminCheck.session.user.id! },
     })
 
     if (!user) {

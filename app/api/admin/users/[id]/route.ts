@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return { error: 'Unauthorized', status: 401 }
   }
 

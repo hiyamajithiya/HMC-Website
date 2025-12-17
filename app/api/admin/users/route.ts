@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()
-  if (!session?.user?.email) {
+  if (!session?.user?.id) {
     return { error: 'Unauthorized', status: 401 }
   }
 
@@ -137,18 +137,9 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         )
       }
-
-      // Check if user with this email already exists
-      const existingUserByEmail = await prisma.user.findUnique({
-        where: { email },
-      })
-
-      if (existingUserByEmail) {
-        return NextResponse.json(
-          { error: 'A user with this email already exists' },
-          { status: 400 }
-        )
-      }
+      // Note: Same email can be used for multiple users/clients
+      // Each user has a unique loginId for direct access
+      // Email login shows account selection if multiple users share the email
     }
 
     // Parse date of birth

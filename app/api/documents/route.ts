@@ -15,13 +15,13 @@ const SECURE_UPLOADS_DIR = path.join(process.cwd(), 'private', 'documents')
 export async function GET(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user from database
+    // Get user from database using ID
     const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       select: { id: true, role: true }
     })
 
@@ -33,11 +33,21 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId')
     const category = searchParams.get('category')
 
-    // If admin and userId provided, fetch that user's documents
-    // Otherwise fetch current user's documents
-    const targetUserId = currentUser.role === 'ADMIN' && userId ? userId : currentUser.id
+    // Build where clause based on role and filters
+    const whereClause: any = {}
 
-    const whereClause: any = { userId: targetUserId }
+    // Admin can see all documents, or filter by specific user
+    // Clients can only see their own documents
+    if (currentUser.role === 'ADMIN') {
+      if (userId) {
+        whereClause.userId = userId
+      }
+      // If no userId specified, admin sees ALL documents
+    } else {
+      // Client can only see their own documents
+      whereClause.userId = currentUser.id
+    }
+
     if (category && category !== 'ALL') {
       whereClause.category = category
     }
@@ -66,13 +76,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user from database
+    // Get user from database using ID
     const currentUser = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { id: session.user.id },
       select: { id: true, role: true, name: true }
     })
 
