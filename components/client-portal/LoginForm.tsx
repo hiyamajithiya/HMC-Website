@@ -309,7 +309,7 @@ export default function LoginForm() {
         </div>
 
         <div className="text-sm">
-          <a href="/contact" className="underline-offset-2 hover:underline" style={{ color: '#ffffff', fontWeight: 600 }}>
+          <a href="/client-portal/forgot-password" className="underline-offset-2 hover:underline" style={{ color: '#ffffff', fontWeight: 600 }}>
             Forgot password?
           </a>
         </div>

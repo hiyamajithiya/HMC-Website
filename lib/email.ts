@@ -120,6 +120,47 @@ export async function sendNewsletterConfirmation(email: string, name?: string) {
   })
 }
 
+// Password reset email
+export async function sendPasswordResetEmail(data: {
+  email: string
+  name: string | null
+  resetUrl: string
+}) {
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: data.email,
+    subject: 'Password Reset Request - Himanshu Majithiya & Co.',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0;">Himanshu Majithiya & Co.</h1>
+          <p style="color: rgba(255,255,255,0.8); margin: 10px 0 0;">Chartered Accountants</p>
+        </div>
+        <div style="padding: 30px; background: #f8f9fa;">
+          <p style="font-size: 16px; color: #333;">Dear ${data.name || 'Client'},</p>
+          <p style="font-size: 16px; color: #333;">We received a request to reset your password for your Client Portal account.</p>
+          <p style="font-size: 16px; color: #333;">Click the button below to reset your password:</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.resetUrl}" style="background: #c9a227; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
+          </div>
+          <p style="font-size: 14px; color: #666;">This link will expire in 1 hour for security reasons.</p>
+          <p style="font-size: 14px; color: #666;">If you didn't request a password reset, please ignore this email or contact us if you have concerns.</p>
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+          <p style="font-size: 14px; color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="font-size: 12px; color: #999; word-break: break-all;">${data.resetUrl}</p>
+        </div>
+        <div style="background: #1e3a5f; padding: 20px; text-align: center;">
+          <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 14px;">
+            Best regards,<br>
+            Himanshu Majithiya & Co.<br>
+            +91 98795 03465 | info@himanshumajithiya.com
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}
+
 // Test email connection
 export async function testEmailConnection(): Promise<boolean> {
   try {

@@ -5,8 +5,15 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const isAuth = !!req.auth
 
-  // Protect client portal routes (except login page)
-  if (pathname.startsWith('/client-portal') && pathname !== '/client-portal/login') {
+  // Public client portal routes (no auth required)
+  const publicClientPortalRoutes = [
+    '/client-portal/login',
+    '/client-portal/forgot-password',
+    '/client-portal/reset-password'
+  ]
+
+  // Protect client portal routes (except public pages)
+  if (pathname.startsWith('/client-portal') && !publicClientPortalRoutes.includes(pathname)) {
     if (!isAuth) {
       const loginUrl = new URL('/client-portal/login', req.url)
       loginUrl.searchParams.set('callbackUrl', pathname)

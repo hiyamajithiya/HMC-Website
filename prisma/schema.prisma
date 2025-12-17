@@ -69,6 +69,17 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Password reset tokens
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  identifier String   // Email or loginId
+  token      String   @unique
+  expires    DateTime
+  createdAt  DateTime @default(now())
+
+  @@unique([identifier, token])
+}
+
 // Document folders for organizing documents
 model DocumentFolder {
   id          String       @id @default(cuid())

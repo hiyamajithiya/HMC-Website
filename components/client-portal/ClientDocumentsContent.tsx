@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import {
   FileText, Download, Eye, Upload, Trash2, Search,
-  X, CheckCircle, AlertCircle, Loader2, Calendar, Folder
+  X, CheckCircle, AlertCircle, Loader2, Calendar, Folder,
+  Filter, Grid, List, ArrowUpDown, FileIcon, MoreVertical
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -27,12 +28,12 @@ interface ClientDocumentsContentProps {
 }
 
 const CATEGORIES = [
-  { value: 'TAX_RETURNS', label: 'Tax Returns', color: 'blue' },
-  { value: 'AUDIT_REPORTS', label: 'Audit Reports', color: 'purple' },
-  { value: 'GST_RETURNS', label: 'GST Returns', color: 'green' },
-  { value: 'COMPLIANCE', label: 'Compliance', color: 'orange' },
-  { value: 'INVOICES', label: 'Invoices', color: 'yellow' },
-  { value: 'OTHER', label: 'Other', color: 'gray' },
+  { value: 'TAX_RETURNS', label: 'Tax Returns', color: 'blue', bgColor: 'bg-blue-50', textColor: 'text-blue-700', borderColor: 'border-blue-200' },
+  { value: 'AUDIT_REPORTS', label: 'Audit Reports', color: 'purple', bgColor: 'bg-purple-50', textColor: 'text-purple-700', borderColor: 'border-purple-200' },
+  { value: 'GST_RETURNS', label: 'GST Returns', color: 'green', bgColor: 'bg-green-50', textColor: 'text-green-700', borderColor: 'border-green-200' },
+  { value: 'COMPLIANCE', label: 'Compliance', color: 'orange', bgColor: 'bg-orange-50', textColor: 'text-orange-700', borderColor: 'border-orange-200' },
+  { value: 'INVOICES', label: 'Invoices', color: 'yellow', bgColor: 'bg-yellow-50', textColor: 'text-yellow-700', borderColor: 'border-yellow-200' },
+  { value: 'OTHER', label: 'Other', color: 'gray', bgColor: 'bg-slate-50', textColor: 'text-slate-700', borderColor: 'border-slate-200' },
 ]
 
 export default function ClientDocumentsContent({ userId }: ClientDocumentsContentProps) {
@@ -43,6 +44,7 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('ALL')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -171,28 +173,9 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
   }
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      TAX_RETURNS: 'bg-blue-100 text-blue-800',
-      AUDIT_REPORTS: 'bg-purple-100 text-purple-800',
-      GST_RETURNS: 'bg-green-100 text-green-800',
-      COMPLIANCE: 'bg-orange-100 text-orange-800',
-      INVOICES: 'bg-yellow-100 text-yellow-800',
-      OTHER: 'bg-gray-100 text-gray-800',
-    }
-    return colors[category] || colors.OTHER
-  }
-
-  const getCategoryIcon = (category: string) => {
-    const iconColors: Record<string, string> = {
-      TAX_RETURNS: 'text-blue-600',
-      AUDIT_REPORTS: 'text-purple-600',
-      GST_RETURNS: 'text-green-600',
-      COMPLIANCE: 'text-orange-600',
-      INVOICES: 'text-yellow-600',
-      OTHER: 'text-gray-600',
-    }
-    return <FileText className={`h-5 w-5 ${iconColors[category] || 'text-gray-600'}`} />
+  const getCategoryStyle = (category: string) => {
+    const cat = CATEGORIES.find(c => c.value === category)
+    return cat || CATEGORIES[CATEGORIES.length - 1]
   }
 
   // Filter documents
@@ -212,253 +195,345 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-slate-500">Loading documents...</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* Page Title */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-text-primary">My Documents</h2>
-          <p className="text-text-muted">Access and upload your documents</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Documents</h1>
+          <p className="text-slate-500 mt-1">Access, download, and upload your documents securely</p>
         </div>
-        <Button onClick={() => setShowUploadModal(true)}>
+        <Button onClick={() => setShowUploadModal(true)} className="bg-primary hover:bg-primary-dark text-white">
           <Upload className="h-4 w-4 mr-2" />
           Upload Document
         </Button>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>Document Library</CardTitle>
-              <CardDescription>View, download, and upload your documents</CardDescription>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {categoryCounts.map(cat => (
+          <button
+            key={cat.value}
+            onClick={() => setFilterCategory(filterCategory === cat.value ? 'ALL' : cat.value)}
+            className={`p-4 rounded-xl border transition-all text-left ${
+              filterCategory === cat.value
+                ? `${cat.bgColor} ${cat.borderColor} border-2 shadow-sm`
+                : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm'
+            }`}
+          >
+            <p className={`text-2xl font-bold ${filterCategory === cat.value ? cat.textColor : 'text-slate-900'}`}>
+              {cat.count}
+            </p>
+            <p className={`text-xs font-medium ${filterCategory === cat.value ? cat.textColor : 'text-slate-500'}`}>
+              {cat.label}
+            </p>
+          </button>
+        ))}
+      </div>
+
+      {/* Search and Filters */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search documents by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
+              />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search documents..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+            <div className="flex gap-3">
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-white"
+              >
+                <option value="ALL">All Categories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+              <div className="hidden sm:flex border border-slate-200 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2.5 ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2.5 ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Grid className="h-4 w-4" />
+                </button>
               </div>
             </div>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">All Categories</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Documents List */}
-          {filteredDocuments.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents yet</h3>
-              <p className="text-gray-600 mb-6">
-                Your documents will appear here. You can also upload documents for our team.
+      {/* Documents Display */}
+      {filteredDocuments.length === 0 ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="py-16">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-6">
+                <FileText className="h-10 w-10 text-slate-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">No documents found</h3>
+              <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                {searchTerm || filterCategory !== 'ALL'
+                  ? 'Try adjusting your search or filter criteria'
+                  : 'Your documents will appear here. Upload documents for our team to review.'}
               </p>
-              <Button onClick={() => setShowUploadModal(true)}>
+              <Button onClick={() => setShowUploadModal(true)} className="bg-primary hover:bg-primary-dark text-white">
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Document
+                Upload Your First Document
               </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Document
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Size
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredDocuments.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-gray-50">
+          </CardContent>
+        </Card>
+      ) : viewMode === 'list' ? (
+        <Card className="border-0 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Document
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Size
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-100">
+                {filteredDocuments.map((doc) => {
+                  const catStyle = getCategoryStyle(doc.category)
+                  return (
+                    <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          {getCategoryIcon(doc.category)}
-                          <div className="ml-3">
-                            <p className="text-sm font-medium text-gray-900">{doc.title}</p>
-                            <p className="text-sm text-gray-500">{doc.fileName}</p>
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-lg ${catStyle.bgColor} flex items-center justify-center`}>
+                            <FileText className={`h-5 w-5 ${catStyle.textColor}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">{doc.title}</p>
+                            <p className="text-xs text-slate-500 truncate max-w-[200px]">{doc.fileName}</p>
                             {doc.uploadedBy === 'CLIENT' && (
-                              <span className="text-xs text-blue-600">Uploaded by you</span>
+                              <span className="inline-flex items-center text-xs text-blue-600 mt-0.5">
+                                <Upload className="h-3 w-3 mr-1" />
+                                Uploaded by you
+                              </span>
                             )}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
-                          {doc.category.replace('_', ' ')}
+                        <span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${catStyle.bgColor} ${catStyle.textColor}`}>
+                          {catStyle.label}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
+                      <td className="px-6 py-4 text-sm text-slate-500">
                         {formatFileSize(doc.fileSize)}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
+                        <div className="flex items-center text-sm text-slate-500">
+                          <Calendar className="h-4 w-4 mr-2 text-slate-400" />
+                          {format(new Date(doc.createdAt), 'dd MMM yyyy')}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
+                          <a
+                            href={`/api/documents/${doc.id}/download?view=true`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-primary transition-colors"
                             title="View"
                           >
-                            <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
-                              <Eye className="h-4 w-4" />
-                            </a>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
+                            <Eye className="h-4 w-4" />
+                          </a>
+                          <a
+                            href={`/api/documents/${doc.id}/download`}
+                            className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-green-600 transition-colors"
                             title="Download"
                           >
-                            <a href={`/api/documents/${doc.id}/download`}>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
+                            <Download className="h-4 w-4" />
+                          </a>
                           {doc.uploadedBy === 'CLIENT' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
                               onClick={() => handleDelete(doc.id, doc.uploadedBy)}
-                              className="text-red-600 hover:text-red-800"
+                              className="p-2 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="h-4 w-4" />
-                            </Button>
+                            </button>
                           )}
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Category Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {categoryCounts.slice(0, 3).map(cat => (
-          <Card key={cat.value} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterCategory(cat.value)}>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className={`h-5 w-5 text-${cat.color}-600`} />
-                {cat.label}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{cat.count}</p>
-              <p className="text-sm text-text-muted mt-1">Documents</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredDocuments.map((doc) => {
+            const catStyle = getCategoryStyle(doc.category)
+            return (
+              <Card key={doc.id} className="border-0 shadow-sm hover:shadow-md transition-all group">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className={`w-12 h-12 rounded-xl ${catStyle.bgColor} flex items-center justify-center flex-shrink-0`}>
+                      <FileText className={`h-6 w-6 ${catStyle.textColor}`} />
+                    </div>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={`/api/documents/${doc.id}/download?view=true`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </a>
+                      <a
+                        href={`/api/documents/${doc.id}/download`}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-green-600 transition-colors"
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
+                      {doc.uploadedBy === 'CLIENT' && (
+                        <button
+                          onClick={() => handleDelete(doc.id, doc.uploadedBy)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <h3 className="font-medium text-slate-900 truncate" title={doc.title}>{doc.title}</h3>
+                    <p className="text-xs text-slate-500 truncate mt-0.5">{doc.fileName}</p>
+                  </div>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
+                    <span className={`inline-flex px-2.5 py-1 text-xs font-medium rounded-full ${catStyle.bgColor} ${catStyle.textColor}`}>
+                      {catStyle.label}
+                    </span>
+                    <span className="text-xs text-slate-400">{format(new Date(doc.createdAt), 'dd MMM')}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
 
       {/* Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Upload Document</h2>
-                <button onClick={() => setShowUploadModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="h-6 w-6" />
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Upload Document</h2>
+                  <p className="text-sm text-slate-500 mt-1">Add a new document to your account</p>
+                </div>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
               {uploadSuccess ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900">Document Uploaded!</h3>
-                  <p className="text-gray-600">Your document has been uploaded successfully.</p>
+                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900">Upload Successful!</h3>
+                  <p className="text-slate-500 mt-2">Your document has been uploaded successfully.</p>
                 </div>
               ) : (
-                <form onSubmit={handleUpload} className="space-y-4">
+                <form onSubmit={handleUpload} className="space-y-5">
                   {uploadError && (
-                    <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-                      <AlertCircle className="h-5 w-5" />
-                      {uploadError}
+                    <div className="flex items-center gap-3 p-4 bg-red-50 text-red-700 rounded-xl">
+                      <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                      <p className="text-sm">{uploadError}</p>
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      File *
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Select File <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handleFileSelect}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      required
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Allowed: PDF, Word, Excel, Images, Text, CSV (Max 10MB)
-                    </p>
+                    <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center hover:border-primary/50 transition-colors">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        onChange={handleFileSelect}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv"
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <label htmlFor="file-upload" className="cursor-pointer">
+                        <Upload className="h-8 w-8 text-slate-400 mx-auto mb-3" />
+                        <p className="text-sm font-medium text-slate-700">
+                          {uploadForm.file ? uploadForm.file.name : 'Click to select a file'}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          PDF, Word, Excel, Images (Max 10MB)
+                        </p>
+                      </label>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Document Title *
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Document Title <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={uploadForm.title}
                       onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm"
                       placeholder="e.g., Bank Statement March 2024"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Category <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={uploadForm.category}
                       onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white text-sm"
                       required
                     >
                       {CATEGORIES.map(cat => (
@@ -468,19 +543,19 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       Description (Optional)
                     </label>
                     <textarea
                       value={uploadForm.description}
                       onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm"
                       rows={3}
                       placeholder="Add any notes about this document..."
                     />
                   </div>
 
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-3 pt-2">
                     <Button
                       type="button"
                       variant="outline"
@@ -489,7 +564,11 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
                     >
                       Cancel
                     </Button>
-                    <Button type="submit" className="flex-1" disabled={uploading}>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-primary hover:bg-primary-dark text-white"
+                      disabled={uploading}
+                    >
                       {uploading ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
