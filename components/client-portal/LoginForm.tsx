@@ -51,23 +51,41 @@ export default function LoginForm() {
     setError('')
 
     try {
+      // First validate credentials via our custom API for proper error messages
+      const validateResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: data.identifier,
+          password: data.password,
+        }),
+      })
+
+      const validateResult = await validateResponse.json()
+
+      if (!validateResult.success) {
+        // Check if this is a multi-account scenario
+        if (validateResult.multiAccount) {
+          setAvailableAccounts(validateResult.accounts as UserAccount[])
+          setSavedCredentials({ identifier: data.identifier, password: data.password })
+          setShowAccountSelector(true)
+          return
+        }
+        // Show the actual error message
+        setError(validateResult.error || 'Login failed')
+        return
+      }
+
+      // Credentials are valid, now sign in with NextAuth
       const result = await signIn('credentials', {
         identifier: data.identifier,
         password: data.password,
+        selectedUserId: validateResult.userId,
         redirect: false,
       })
 
       if (result?.error) {
-        // Check if this is a multi-account error
-        if (result.error.startsWith('MULTI_ACCOUNT:')) {
-          const accountsJson = result.error.replace('MULTI_ACCOUNT:', '')
-          const accounts = JSON.parse(accountsJson) as UserAccount[]
-          setAvailableAccounts(accounts)
-          setSavedCredentials({ identifier: data.identifier, password: data.password })
-          setShowAccountSelector(true)
-        } else {
-          setError(result.error)
-        }
+        setError('Login failed. Please try again.')
       } else if (result?.ok) {
         router.push(callbackUrl)
         router.refresh()
@@ -86,6 +104,25 @@ export default function LoginForm() {
     setError('')
 
     try {
+      // First validate the selected account via our custom API
+      const validateResponse = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: savedCredentials.identifier,
+          password: savedCredentials.password,
+          selectedUserId: userId,
+        }),
+      })
+
+      const validateResult = await validateResponse.json()
+
+      if (!validateResult.success) {
+        setError(validateResult.error || 'Login failed')
+        return
+      }
+
+      // Credentials are valid, now sign in with NextAuth
       const result = await signIn('credentials', {
         identifier: savedCredentials.identifier,
         password: savedCredentials.password,
@@ -94,7 +131,7 @@ export default function LoginForm() {
       })
 
       if (result?.error) {
-        setError(result.error)
+        setError('Login failed. Please try again.')
       } else if (result?.ok) {
         router.push(callbackUrl)
         router.refresh()
@@ -127,8 +164,8 @@ export default function LoginForm() {
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <p className="text-sm">{error}</p>
+          <Alert variant="destructive" className="bg-red-500/20 border-red-500/50">
+            <p className="text-sm text-white font-medium">{error}</p>
           </Alert>
         )}
 
@@ -190,8 +227,8 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {error && (
-        <Alert variant="destructive">
-          <p className="text-sm">{error}</p>
+        <Alert variant="destructive" className="bg-red-500/20 border-red-500/50">
+          <p className="text-sm text-white font-medium">{error}</p>
         </Alert>
       )}
 
