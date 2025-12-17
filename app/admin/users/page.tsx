@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -59,6 +60,10 @@ interface UserData {
 }
 
 export default function UsersPage() {
+  const { data: session } = useSession()
+  const currentUserRole = session?.user?.role as 'ADMIN' | 'STAFF' | 'CLIENT' | undefined
+  const isStaff = currentUserRole === 'STAFF'
+
   const [users, setUsers] = useState<UserData[]>([])
   const [groups, setGroups] = useState<ClientGroup[]>([])
   const [loading, setLoading] = useState(true)
@@ -134,10 +139,13 @@ export default function UsersPage() {
     setAddError('')
 
     try {
+      // Staff users can only create CLIENT users
+      const userToCreate = isStaff ? { ...newUser, role: 'CLIENT' as const } : newUser
+
       const response = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
+        body: JSON.stringify(userToCreate),
       })
 
       const data = await response.json()
@@ -295,17 +303,26 @@ export default function UsersPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <select
-                  id="role"
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="CLIENT">Client</option>
-                  <option value="STAFF">Staff</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-                {newUser.role === 'STAFF' && (
+                {isStaff ? (
+                  <>
+                    <div className="w-full h-10 px-3 rounded-md border border-input bg-gray-100 text-sm flex items-center">
+                      Client
+                    </div>
+                    <p className="text-xs text-text-muted">Staff can only create client users</p>
+                  </>
+                ) : (
+                  <select
+                    id="role"
+                    value={newUser.role}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="CLIENT">Client</option>
+                    <option value="STAFF">Staff</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                )}
+                {newUser.role === 'STAFF' && !isStaff && (
                   <p className="text-xs text-amber-600">Staff can only manage users and documents</p>
                 )}
               </div>
@@ -548,17 +565,28 @@ export default function UsersPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-role">Role</Label>
-                <select
-                  id="edit-role"
-                  value={editingUser.role}
-                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="CLIENT">Client</option>
-                  <option value="STAFF">Staff</option>
-                  <option value="ADMIN">Admin</option>
-                </select>
-                {editingUser.role === 'STAFF' && (
+                {isStaff ? (
+                  <>
+                    <div className="w-full h-10 px-3 rounded-md border border-input bg-gray-100 text-sm flex items-center">
+                      {editingUser.role === 'CLIENT' ? 'Client' : editingUser.role === 'STAFF' ? 'Staff' : 'Admin'}
+                    </div>
+                    {editingUser.role !== 'CLIENT' && (
+                      <p className="text-xs text-amber-600">Staff cannot change roles of Admin/Staff users</p>
+                    )}
+                  </>
+                ) : (
+                  <select
+                    id="edit-role"
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as 'ADMIN' | 'STAFF' | 'CLIENT' })}
+                    className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="CLIENT">Client</option>
+                    <option value="STAFF">Staff</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                )}
+                {editingUser.role === 'STAFF' && !isStaff && (
                   <p className="text-xs text-amber-600">Staff can only manage users and documents</p>
                 )}
               </div>
