@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const category = searchParams.get('category')
+    const folderId = searchParams.get('folderId')
 
     // Build where clause based on role and filters
     const whereClause: any = {}
@@ -52,12 +53,22 @@ export async function GET(request: NextRequest) {
       whereClause.category = category
     }
 
+    // Filter by folder
+    if (folderId === 'root') {
+      whereClause.folderId = null
+    } else if (folderId) {
+      whereClause.folderId = folderId
+    }
+
     const documents = await prisma.document.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         user: {
           select: { name: true, email: true }
+        },
+        folder: {
+          select: { id: true, name: true }
         }
       }
     })
@@ -96,6 +107,7 @@ export async function POST(request: NextRequest) {
     const description = formData.get('description') as string
     const category = formData.get('category') as string
     const targetUserId = formData.get('userId') as string // For admin uploading to client
+    const folderId = formData.get('folderId') as string | null // Optional folder
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -120,6 +132,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
       }
       documentUserId = targetUserId
+    }
+
+    // Validate folder if provided
+    let validFolderId: string | null = null
+    if (folderId && folderId !== 'null' && folderId !== '') {
+      const folder = await prisma.documentFolder.findUnique({
+        where: { id: folderId }
+      })
+      if (!folder) {
+        return NextResponse.json({ error: 'Folder not found' }, { status: 404 })
+      }
+      if (folder.userId !== documentUserId) {
+        return NextResponse.json({ error: 'Folder does not belong to the target user' }, { status: 400 })
+      }
+      validFolderId = folderId
     }
 
     // Validate file type
@@ -183,12 +210,16 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         fileType: file.type,
         category: category as any,
+        folderId: validFolderId,
         uploadedBy: currentUser.role === 'ADMIN' || currentUser.role === 'STAFF' ? 'ADMIN' : 'CLIENT',
         userId: documentUserId,
       },
       include: {
         user: {
           select: { name: true, email: true }
+        },
+        folder: {
+          select: { id: true, name: true }
         }
       }
     })

@@ -7,9 +7,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import {
   FileText, Upload, Download, Trash2, Eye, Search,
-  X, CheckCircle, AlertCircle, Loader2, User, Calendar
+  X, CheckCircle, AlertCircle, Loader2, User, Calendar,
+  Folder, FolderPlus, ChevronRight, Home, MoreVertical, Pencil
 } from 'lucide-react'
 import { format } from 'date-fns'
+import DocumentUploadDropzone from '@/components/admin/DocumentUploadDropzone'
+
+interface DocumentFolder {
+  id: string
+  name: string
+  parentId: string | null
+  userId: string
+  createdAt: string
+  _count: {
+    documents: number
+    children: number
+  }
+}
 
 interface Document {
   id: string
@@ -20,6 +34,7 @@ interface Document {
   fileSize: number
   fileType: string
   category: string
+  folderId: string | null
   uploadedBy: string
   userId: string
   createdAt: string
@@ -27,12 +42,21 @@ interface Document {
     name: string | null
     email: string
   }
+  folder?: {
+    id: string
+    name: string
+  } | null
 }
 
 interface UserOption {
   id: string
   name: string | null
   email: string
+}
+
+interface BreadcrumbItem {
+  id: string | null
+  name: string
 }
 
 const CATEGORIES = [
@@ -50,13 +74,28 @@ export default function AdminDocumentsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [documents, setDocuments] = useState<Document[]>([])
+  const [folders, setFolders] = useState<DocumentFolder[]>([])
   const [users, setUsers] = useState<UserOption[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false)
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('ALL')
   const [filterUser, setFilterUser] = useState('ALL')
+
+  // Folder navigation state
+  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: null, name: 'Root' }])
+
+  // New folder form
+  const [newFolderName, setNewFolderName] = useState('')
+  const [folderError, setFolderError] = useState('')
+
+  // Edit folder state
+  const [editingFolder, setEditingFolder] = useState<DocumentFolder | null>(null)
+  const [editFolderName, setEditFolderName] = useState('')
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -71,17 +110,43 @@ export default function AdminDocumentsPage() {
 
   useEffect(() => {
     if (status === 'loading') return
-    if (!session || session.user?.role !== 'ADMIN') {
+    if (!session || (session.user?.role !== 'ADMIN' && session.user?.role !== 'STAFF')) {
       router.push('/client-portal/login')
       return
     }
-    fetchDocuments()
     fetchUsers()
   }, [session, status])
 
+  useEffect(() => {
+    if (filterUser && filterUser !== 'ALL') {
+      fetchFolders()
+      fetchDocuments()
+    } else {
+      setFolders([])
+      fetchDocuments()
+    }
+  }, [filterUser, currentFolderId])
+
   const fetchDocuments = async () => {
     try {
-      const response = await fetch('/api/documents')
+      setLoading(true)
+      let url = '/api/documents'
+      const params = new URLSearchParams()
+
+      if (filterUser && filterUser !== 'ALL') {
+        params.append('userId', filterUser)
+        if (currentFolderId) {
+          params.append('folderId', currentFolderId)
+        } else {
+          params.append('folderId', 'root')
+        }
+      }
+
+      if (params.toString()) {
+        url += '?' + params.toString()
+      }
+
+      const response = await fetch(url)
       if (response.ok) {
         const data = await response.json()
         setDocuments(data)
@@ -90,6 +155,29 @@ export default function AdminDocumentsPage() {
       console.error('Failed to fetch documents:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchFolders = async () => {
+    if (!filterUser || filterUser === 'ALL') {
+      setFolders([])
+      return
+    }
+
+    try {
+      const params = new URLSearchParams()
+      params.append('userId', filterUser)
+      if (currentFolderId) {
+        params.append('parentId', currentFolderId)
+      }
+
+      const response = await fetch('/api/folders?' + params.toString())
+      if (response.ok) {
+        const data = await response.json()
+        setFolders(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch folders:', error)
     }
   }
 
@@ -102,6 +190,120 @@ export default function AdminDocumentsPage() {
       }
     } catch (error) {
       console.error('Failed to fetch users:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreateFolder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setFolderError('')
+
+    if (!newFolderName.trim()) {
+      setFolderError('Folder name is required')
+      return
+    }
+
+    if (!filterUser || filterUser === 'ALL') {
+      setFolderError('Please select a client first')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newFolderName.trim(),
+          parentId: currentFolderId,
+          userId: filterUser,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setNewFolderName('')
+        setShowCreateFolderModal(false)
+        fetchFolders()
+      } else {
+        setFolderError(data.error || 'Failed to create folder')
+      }
+    } catch (error) {
+      setFolderError('Failed to create folder')
+    }
+  }
+
+  const handleCreateFolderForUpload = async (name: string, parentId?: string): Promise<string> => {
+    const response = await fetch('/api/folders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        parentId: parentId || currentFolderId,
+        userId: filterUser,
+      }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error || 'Failed to create folder')
+    }
+
+    const folder = await response.json()
+    return folder.id
+  }
+
+  const handleRenameFolder = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingFolder || !editFolderName.trim()) return
+
+    try {
+      const response = await fetch(`/api/folders/${editingFolder.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editFolderName.trim() }),
+      })
+
+      if (response.ok) {
+        setEditingFolder(null)
+        setEditFolderName('')
+        fetchFolders()
+      }
+    } catch (error) {
+      console.error('Failed to rename folder:', error)
+    }
+  }
+
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm('Are you sure you want to delete this folder? Documents inside will be moved to the root folder.')) return
+
+    try {
+      const response = await fetch(`/api/folders/${folderId}`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        fetchFolders()
+        fetchDocuments()
+      }
+    } catch (error) {
+      console.error('Failed to delete folder:', error)
+    }
+  }
+
+  const navigateToFolder = async (folderId: string | null, folderName: string) => {
+    setCurrentFolderId(folderId)
+
+    if (folderId === null) {
+      setBreadcrumbs([{ id: null, name: 'Root' }])
+    } else {
+      const existingIndex = breadcrumbs.findIndex(b => b.id === folderId)
+      if (existingIndex >= 0) {
+        setBreadcrumbs(breadcrumbs.slice(0, existingIndex + 1))
+      } else {
+        setBreadcrumbs([...breadcrumbs, { id: folderId, name: folderName }])
+      }
     }
   }
 
@@ -143,6 +345,9 @@ export default function AdminDocumentsPage() {
       formData.append('description', uploadForm.description)
       formData.append('category', uploadForm.category)
       formData.append('userId', uploadForm.userId)
+      if (currentFolderId) {
+        formData.append('folderId', currentFolderId)
+      }
 
       const response = await fetch('/api/documents', {
         method: 'POST',
@@ -157,7 +362,7 @@ export default function AdminDocumentsPage() {
           title: '',
           description: '',
           category: 'OTHER',
-          userId: '',
+          userId: uploadForm.userId,
           file: null,
         })
         if (fileInputRef.current) {
@@ -216,18 +421,20 @@ export default function AdminDocumentsPage() {
     return colors[category] || colors.OTHER
   }
 
-  // Filter documents
+  // Filter documents by search
   const filteredDocuments = documents.filter(doc => {
     const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.user?.email.toLowerCase().includes(searchTerm.toLowerCase())
+      doc.fileName.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = filterCategory === 'ALL' || doc.category === filterCategory
-    const matchesUser = filterUser === 'ALL' || doc.userId === filterUser
-    return matchesSearch && matchesCategory && matchesUser
+    return matchesSearch && matchesCategory
   })
 
-  if (status === 'loading' || loading) {
+  // Filter folders by search
+  const filteredFolders = folders.filter(folder =>
+    folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  if (status === 'loading' || (loading && users.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -241,12 +448,26 @@ export default function AdminDocumentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600">Manage client documents</p>
+          <p className="text-gray-600">Manage client documents and folders</p>
         </div>
-        <Button onClick={() => setShowUploadModal(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Document
-        </Button>
+        <div className="flex gap-2">
+          {filterUser && filterUser !== 'ALL' && (
+            <>
+              <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
+                <FolderPlus className="h-4 w-4 mr-2" />
+                New Folder
+              </Button>
+              <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Upload
+              </Button>
+            </>
+          )}
+          <Button onClick={() => setShowUploadModal(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload Document
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -258,13 +479,29 @@ export default function AdminDocumentsPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search documents..."
+                  placeholder="Search documents and folders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
+            <select
+              value={filterUser}
+              onChange={(e) => {
+                setFilterUser(e.target.value)
+                setCurrentFolderId(null)
+                setBreadcrumbs([{ id: null, name: 'Root' }])
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="ALL">All Clients</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.name || user.email}
+                </option>
+              ))}
+            </select>
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -275,144 +512,392 @@ export default function AdminDocumentsPage() {
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
               ))}
             </select>
-            <select
-              value={filterUser}
-              onChange={(e) => setFilterUser(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">All Clients</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.email}
-                </option>
-              ))}
-            </select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Documents Table */}
+      {/* Breadcrumbs - Only show when a client is selected */}
+      {filterUser && filterUser !== 'ALL' && (
+        <div className="flex items-center gap-2 text-sm">
+          {breadcrumbs.map((crumb, index) => (
+            <div key={crumb.id || 'root'} className="flex items-center">
+              {index > 0 && <ChevronRight className="h-4 w-4 text-gray-400 mx-1" />}
+              <button
+                onClick={() => navigateToFolder(crumb.id, crumb.name)}
+                className={`flex items-center gap-1 hover:text-blue-600 ${
+                  index === breadcrumbs.length - 1 ? 'font-medium text-gray-900' : 'text-gray-500'
+                }`}
+              >
+                {index === 0 && <Home className="h-4 w-4" />}
+                {crumb.name}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Documents & Folders */}
       <Card>
         <CardHeader>
-          <CardTitle>All Documents ({filteredDocuments.length})</CardTitle>
-          <CardDescription>Documents uploaded for clients</CardDescription>
+          <CardTitle>
+            {filterUser && filterUser !== 'ALL'
+              ? `${users.find(u => u.id === filterUser)?.name || 'Client'}'s Files`
+              : `All Documents (${filteredDocuments.length})`
+            }
+          </CardTitle>
+          <CardDescription>
+            {filterUser && filterUser !== 'ALL'
+              ? `${filteredFolders.length} folder(s), ${filteredDocuments.length} document(s)`
+              : 'Select a client to manage their documents and folders'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {filteredDocuments.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents found</h3>
-              <p className="text-gray-600 mb-6">Upload documents for your clients to access.</p>
-              <Button onClick={() => setShowUploadModal(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload First Document
-              </Button>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Document
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Client
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Size
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Uploaded
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredDocuments.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <FileText className="h-5 w-5 text-gray-400 mr-3" />
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{doc.title}</p>
-                            <p className="text-sm text-gray-500">{doc.fileName}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 text-gray-400 mr-2" />
-                          <div>
-                            <p className="text-sm text-gray-900">{doc.user?.name || 'N/A'}</p>
-                            <p className="text-xs text-gray-500">{doc.user?.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
-                          {doc.category.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {formatFileSize(doc.fileSize)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Calendar className="h-4 w-4 mr-1" />
-                          {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
-                        </div>
-                        <p className="text-xs text-gray-400">
-                          By: {doc.uploadedBy}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                            title="View"
-                          >
-                            <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
-                              <Eye className="h-4 w-4" />
-                            </a>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                            title="Download"
-                          >
-                            <a href={`/api/documents/${doc.id}/download`}>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(doc.id)}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+          ) : filterUser === 'ALL' ? (
+            // Show all documents across clients
+            filteredDocuments.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents found</h3>
+                <p className="text-gray-600 mb-6">Upload documents for your clients to access.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredDocuments.map((doc) => (
+                      <tr key={doc.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{doc.title}</p>
+                              <p className="text-sm text-gray-500">{doc.fileName}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                            <div>
+                              <p className="text-sm text-gray-900">{doc.user?.name || 'N/A'}</p>
+                              <p className="text-xs text-gray-500">{doc.user?.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
+                            {doc.category.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500">{formatFileSize(doc.fileSize)}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Calendar className="h-4 w-4 mr-1" />
+                            {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="ghost" size="sm" asChild title="View">
+                              <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
+                                <Eye className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild title="Download">
+                              <a href={`/api/documents/${doc.id}/download`}>
+                                <Download className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="text-red-600 hover:text-red-800">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            // Show folders and documents for selected client
+            <div className="space-y-4">
+              {/* Folders Grid */}
+              {filteredFolders.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {filteredFolders.map((folder) => (
+                    <div
+                      key={folder.id}
+                      className="group relative border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      onDoubleClick={() => navigateToFolder(folder.id, folder.name)}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <Folder className="h-12 w-12 text-yellow-500 mb-2" />
+                        <p className="text-sm font-medium text-gray-900 truncate w-full">{folder.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {folder._count.documents} files, {folder._count.children} folders
+                        </p>
+                      </div>
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="relative">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditingFolder(folder)
+                              setEditFolderName(folder.name)
+                            }}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
+
+              {/* Documents Table */}
+              {filteredDocuments.length > 0 ? (
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredDocuments.map((doc) => (
+                        <tr key={doc.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center">
+                              <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{doc.title}</p>
+                                <p className="text-sm text-gray-500">{doc.fileName}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
+                              {doc.category.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-500">{formatFileSize(doc.fileSize)}</td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center text-sm text-gray-500">
+                              <Calendar className="h-4 w-4 mr-1" />
+                              {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="sm" asChild title="View">
+                                <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
+                                  <Eye className="h-4 w-4" />
+                                </a>
+                              </Button>
+                              <Button variant="ghost" size="sm" asChild title="Download">
+                                <a href={`/api/documents/${doc.id}/download`}>
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="text-red-600 hover:text-red-800">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : filteredFolders.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No files in this folder</h3>
+                  <p className="text-gray-600 mb-6">Upload documents or create subfolders.</p>
+                  <div className="flex justify-center gap-3">
+                    <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Create Folder
+                    </Button>
+                    <Button onClick={() => setShowBulkUploadModal(true)}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Files
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Upload Modal */}
+      {/* Create Folder Modal */}
+      {showCreateFolderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Create New Folder</h2>
+                <button onClick={() => setShowCreateFolderModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateFolder} className="space-y-4">
+                {folderError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+                    <AlertCircle className="h-5 w-5" />
+                    {folderError}
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Folder Name</label>
+                  <input
+                    type="text"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter folder name"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCreateFolderModal(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="flex-1">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Create Folder
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Folder Modal */}
+      {editingFolder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Edit Folder</h2>
+                <button onClick={() => setEditingFolder(null)} className="text-gray-500 hover:text-gray-700">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRenameFolder} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Folder Name</label>
+                  <input
+                    type="text"
+                    value={editFolderName}
+                    onChange={(e) => setEditFolderName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => {
+                      handleDeleteFolder(editingFolder.id)
+                      setEditingFolder(null)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                  <div className="flex-1" />
+                  <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Rename
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal with Drag & Drop */}
+      {showBulkUploadModal && filterUser && filterUser !== 'ALL' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Bulk Upload Documents</h2>
+                <button onClick={() => setShowBulkUploadModal(false)} className="text-gray-500 hover:text-gray-700">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>Client:</strong> {users.find(u => u.id === filterUser)?.name || users.find(u => u.id === filterUser)?.email}
+                </p>
+                {currentFolderId && (
+                  <p className="text-sm text-blue-700">
+                    <strong>Current Folder:</strong> {breadcrumbs[breadcrumbs.length - 1]?.name}
+                  </p>
+                )}
+              </div>
+
+              <DocumentUploadDropzone
+                userId={filterUser}
+                folderId={currentFolderId}
+                onUploadComplete={() => {
+                  fetchDocuments()
+                  fetchFolders()
+                }}
+                onCreateFolder={handleCreateFolderForUpload}
+              />
+
+              <div className="mt-6 flex justify-end">
+                <Button variant="outline" onClick={() => setShowBulkUploadModal(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Single Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
@@ -440,9 +925,7 @@ export default function AdminDocumentsPage() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Select Client *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Client *</label>
                     <select
                       value={uploadForm.userId}
                       onChange={(e) => setUploadForm({ ...uploadForm, userId: e.target.value })}
@@ -459,9 +942,7 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      File *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">File *</label>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -470,15 +951,11 @@ export default function AdminDocumentsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Allowed: PDF, Word, Excel, Images, Text, CSV (Max 10MB)
-                    </p>
+                    <p className="text-xs text-gray-500 mt-1">Allowed: PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Document Title *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Document Title *</label>
                     <input
                       type="text"
                       value={uploadForm.title}
@@ -490,9 +967,7 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
                     <select
                       value={uploadForm.category}
                       onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
@@ -506,9 +981,7 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description (Optional)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
                     <textarea
                       value={uploadForm.description}
                       onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
@@ -519,12 +992,7 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div className="flex gap-3 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setShowUploadModal(false)}
-                    >
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowUploadModal(false)}>
                       Cancel
                     </Button>
                     <Button type="submit" className="flex-1" disabled={uploading}>

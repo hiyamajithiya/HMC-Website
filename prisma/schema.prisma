@@ -39,11 +39,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  documents     Document[]
-  appointments  Appointment[]
-  toolPurchases ToolPurchase[]
-  sessions      Session[]
-  blogPosts     BlogPost[]
+  documents       Document[]
+  documentFolders DocumentFolder[]
+  appointments    Appointment[]
+  toolPurchases   ToolPurchase[]
+  sessions        Session[]
+  blogPosts       BlogPost[]
 }
 
 enum UserRole {
@@ -68,6 +69,22 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// Document folders for organizing documents
+model DocumentFolder {
+  id          String       @id @default(cuid())
+  name        String
+  parentId    String?
+  parent      DocumentFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    DocumentFolder[] @relation("FolderHierarchy")
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents   Document[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([name, parentId, userId])
+}
+
 // Documents for client portal
 model Document {
   id          String       @id @default(cuid())
@@ -78,6 +95,8 @@ model Document {
   fileSize    Int
   fileType    String
   category    DocCategory
+  folderId    String?
+  folder      DocumentFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   uploadedBy  String
   userId      String
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
