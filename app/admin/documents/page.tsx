@@ -377,8 +377,9 @@ export default function AdminDocumentsPage() {
                             variant="ghost"
                             size="sm"
                             asChild
+                            title="View"
                           >
-                            <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
+                            <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
                               <Eye className="h-4 w-4" />
                             </a>
                           </Button>
@@ -386,8 +387,9 @@ export default function AdminDocumentsPage() {
                             variant="ghost"
                             size="sm"
                             asChild
+                            title="Download"
                           >
-                            <a href={`/api/documents/${doc.id}/download`} download={doc.fileName}>
+                            <a href={`/api/documents/${doc.id}/download`}>
                               <Download className="h-4 w-4" />
                             </a>
                           </Button>

@@ -7,7 +7,8 @@ import { existsSync } from 'fs'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Securely download a document
+// GET - Securely download or view a document
+// Use ?view=true to view inline, otherwise downloads as attachment
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -19,6 +20,8 @@ export async function GET(
     }
 
     const { id } = await params
+    const { searchParams } = new URL(request.url)
+    const viewMode = searchParams.get('view') === 'true'
 
     // Get user from database
     const currentUser = await prisma.user.findUnique({
@@ -67,12 +70,21 @@ export async function GET(
     // Set content type
     response.headers.set('Content-Type', document.fileType || 'application/octet-stream')
 
-    // Set content disposition for download with original filename
+    // Set content disposition based on mode (view inline or download as attachment)
     const encodedFilename = encodeURIComponent(document.fileName)
-    response.headers.set(
-      'Content-Disposition',
-      `attachment; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
-    )
+    if (viewMode) {
+      // View inline in browser (for PDFs, images, etc.)
+      response.headers.set(
+        'Content-Disposition',
+        `inline; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
+      )
+    } else {
+      // Force download
+      response.headers.set(
+        'Content-Disposition',
+        `attachment; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
+      )
+    }
 
     // Set content length
     response.headers.set('Content-Length', fileBuffer.length.toString())
