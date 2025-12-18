@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -13,7 +13,15 @@ import {
   Eye,
   EyeOff,
   Download,
-  Wrench
+  Wrench,
+  Package,
+  TrendingUp,
+  Shield,
+  FileCode,
+  Database,
+  Calculator,
+  CheckCircle,
+  ExternalLink
 } from 'lucide-react'
 
 interface Tool {
@@ -34,6 +42,8 @@ export default function ToolsListPage() {
   const [tools, setTools] = useState<Tool[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [licenseFilter, setLicenseFilter] = useState('all')
 
   useEffect(() => {
     fetchTools()
@@ -85,158 +95,333 @@ export default function ToolsListPage() {
     }
   }
 
-  const filteredTools = tools.filter((tool) =>
-    tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tool.category.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredTools = tools.filter((tool) => {
+    const matchesSearch = tool.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tool.shortDesc.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesCategory = categoryFilter === 'all' || tool.category === categoryFilter
+    const matchesLicense = licenseFilter === 'all' || tool.licenseType === licenseFilter
+    return matchesSearch && matchesCategory && matchesLicense
+  })
 
-  const categoryColors: Record<string, string> = {
-    DOCUMENT_AUTOMATION: 'bg-blue-100 text-blue-700',
-    DATA_PROCESSING: 'bg-green-100 text-green-700',
-    REDACTION: 'bg-purple-100 text-purple-700',
-    TAX_TOOLS: 'bg-orange-100 text-orange-700',
-    COMPLIANCE: 'bg-red-100 text-red-700',
-    UTILITY: 'bg-gray-100 text-gray-700',
+  const categories = ['all', ...Array.from(new Set(tools.map(t => t.category)))]
+  const licenses = ['all', ...Array.from(new Set(tools.map(t => t.licenseType)))]
+
+  const totalDownloads = tools.reduce((sum, tool) => sum + tool.downloadCount, 0)
+  const activeTools = tools.filter(t => t.isActive).length
+  const freeTools = tools.filter(t => t.licenseType === 'FREE').length
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'DOCUMENT_AUTOMATION': return FileCode
+      case 'DATA_PROCESSING': return Database
+      case 'REDACTION': return Shield
+      case 'TAX_TOOLS': return Calculator
+      case 'COMPLIANCE': return CheckCircle
+      default: return Package
+    }
   }
 
-  const licenseColors: Record<string, string> = {
-    FREE: 'bg-green-100 text-green-700',
-    ONE_TIME: 'bg-blue-100 text-blue-700',
-    ANNUAL: 'bg-purple-100 text-purple-700',
-    MONTHLY: 'bg-orange-100 text-orange-700',
+  const categoryColors: Record<string, { bg: string; text: string; border: string }> = {
+    DOCUMENT_AUTOMATION: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    DATA_PROCESSING: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' },
+    REDACTION: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    TAX_TOOLS: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' },
+    COMPLIANCE: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' },
+    UTILITY: { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200' },
+  }
+
+  const licenseColors: Record<string, { bg: string; text: string; border: string }> = {
+    FREE: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+    ONE_TIME: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+    ANNUAL: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    MONTHLY: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+  }
+
+  const formatCategoryName = (category: string) => {
+    return category.split('_').map(word =>
+      word.charAt(0) + word.slice(1).toLowerCase()
+    ).join(' ')
+  }
+
+  const formatLicenseName = (license: string) => {
+    return license.split('_').map(word =>
+      word.charAt(0) + word.slice(1).toLowerCase()
+    ).join(' ')
   }
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-heading font-bold text-text-primary">Tools</h1>
-          <p className="text-text-muted mt-1">Manage your automation tools</p>
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-slate-900">Tools</h1>
+          <p className="text-slate-500 mt-1">Manage your automation tools and utilities</p>
         </div>
         <Link href="/admin/tools/new">
-          <Button className="bg-primary hover:bg-primary-light">
+          <Button className="bg-primary hover:bg-primary/90 text-white shadow-sm">
             <Plus className="h-4 w-4 mr-2" />
-            Add Tool
+            Add New Tool
           </Button>
         </Link>
       </div>
 
-      {/* Search */}
-      <Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-blue-100/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm">
+                <Wrench className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-blue-600">Total Tools</p>
+                <p className="text-2xl font-bold text-slate-900">{tools.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-emerald-100/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
+                <Eye className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Active Tools</p>
+                <p className="text-2xl font-bold text-slate-900">{activeTools}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-sm">
+                <Download className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-purple-600">Total Downloads</p>
+                <p className="text-2xl font-bold text-slate-900">{totalDownloads.toLocaleString()}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-amber-100/50">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shadow-sm">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-amber-600">Free Tools</p>
+                <p className="text-2xl font-bold text-slate-900">{freeTools}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-            <Input
-              placeholder="Search tools..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search tools by name or description..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-slate-50 border-slate-200 focus:bg-white"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+              {categories.slice(0, 5).map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setCategoryFilter(category)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                    categoryFilter === category
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {category === 'all' ? 'All Categories' : formatCategoryName(category)}
+                </button>
+              ))}
+            </div>
+
+            {/* License Filter */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+              {licenses.map((license) => (
+                <button
+                  key={license}
+                  onClick={() => setLicenseFilter(license)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                    licenseFilter === license
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  {license === 'all' ? 'All Licenses' : formatLicenseName(license)}
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Tools List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Tools ({filteredTools.length})</CardTitle>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">All Tools</CardTitle>
+              <CardDescription>
+                {filteredTools.length} {filteredTools.length === 1 ? 'tool' : 'tools'} found
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-text-muted">Loading tools...</p>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+              <p className="mt-4 text-slate-500">Loading tools...</p>
             </div>
           ) : filteredTools.length === 0 ? (
             <div className="text-center py-12">
-              <Wrench className="h-16 w-16 mx-auto text-text-muted opacity-50" />
-              <h3 className="mt-4 text-lg font-semibold text-text-primary">No tools yet</h3>
-              <p className="text-text-muted mt-1">Add your first automation tool</p>
-              <Link href="/admin/tools/new">
-                <Button className="mt-4">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Tool
-                </Button>
-              </Link>
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto">
+                <Wrench className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">No tools found</h3>
+              <p className="text-slate-500 mt-1">
+                {searchQuery || categoryFilter !== 'all' || licenseFilter !== 'all'
+                  ? 'Try adjusting your filters'
+                  : 'Add your first automation tool'}
+              </p>
+              {!searchQuery && categoryFilter === 'all' && licenseFilter === 'all' && (
+                <Link href="/admin/tools/new">
+                  <Button className="mt-4 bg-primary hover:bg-primary/90">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Tool
+                  </Button>
+                </Link>
+              )}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-6">
+              <table className="w-full min-w-[800px]">
                 <thead>
-                  <tr className="border-b border-border-light">
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">Tool</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">Category</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">Type</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">License</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">Downloads</th>
-                    <th className="text-left py-3 px-4 font-semibold text-text-primary">Status</th>
-                    <th className="text-right py-3 px-4 font-semibold text-text-primary">Actions</th>
+                  <tr className="border-b border-slate-100">
+                    <th className="text-left py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Tool</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">License</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Downloads</th>
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="text-right py-3 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredTools.map((tool) => (
-                    <tr key={tool.id} className="border-b border-border-light hover:bg-bg-secondary">
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="font-medium text-text-primary">{tool.name}</p>
-                          <p className="text-sm text-text-muted truncate max-w-xs">{tool.shortDesc}</p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[tool.category] || 'bg-gray-100 text-gray-700'}`}>
-                          {tool.category.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-text-muted text-sm">
-                        {tool.toolType}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${licenseColors[tool.licenseType] || 'bg-gray-100 text-gray-700'}`}>
-                          {tool.licenseType}
-                          {tool.price && tool.price > 0 && ` - ₹${tool.price}`}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className="inline-flex items-center gap-1 text-text-muted">
-                          <Download className="h-4 w-4" />
-                          {tool.downloadCount}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                          tool.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {tool.isActive ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                          {tool.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/admin/tools/${tool.id}`}>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
+                <tbody className="divide-y divide-slate-100">
+                  {filteredTools.map((tool) => {
+                    const CategoryIcon = getCategoryIcon(tool.category)
+                    const catColors = categoryColors[tool.category] || categoryColors.UTILITY
+                    const licColors = licenseColors[tool.licenseType] || licenseColors.FREE
+
+                    return (
+                      <tr key={tool.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg ${catColors.bg} flex items-center justify-center`}>
+                              <CategoryIcon className={`h-5 w-5 ${catColors.text}`} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-slate-900">{tool.name}</p>
+                              <p className="text-sm text-slate-500 truncate max-w-[250px]">{tool.shortDesc}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${catColors.bg} ${catColors.text} ${catColors.border}`}>
+                            {formatCategoryName(tool.category)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${licColors.bg} ${licColors.text} ${licColors.border}`}>
+                              {formatLicenseName(tool.licenseType)}
+                            </span>
+                            {tool.price && tool.price > 0 && (
+                              <span className="text-xs font-semibold text-slate-700">₹{tool.price.toLocaleString()}</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <Download className="h-4 w-4 text-slate-400" />
+                            <span className="font-medium text-slate-700">{tool.downloadCount.toLocaleString()}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
+                            tool.isActive
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {tool.isActive ? (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                Inactive
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex items-center justify-end gap-1">
+                            <Link href={`/tools/${tool.slug}`} target="_blank">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700">
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Link href={`/admin/tools/${tool.id}`}>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-700"
+                              onClick={() => toggleActive(tool.id, tool.isActive)}
+                            >
+                              {tool.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
-                          </Link>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleActive(tool.id, tool.isActive)}
-                          >
-                            {tool.isActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => deleteTool(tool.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => deleteTool(tool.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

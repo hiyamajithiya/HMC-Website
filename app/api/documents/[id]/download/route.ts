@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
+import { decryptDocument } from '@/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,8 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Check access: Admin/Staff can access all, clients only their own documents
+    // SECURITY CHECK: Admin/Staff can access all, clients can ONLY access their own documents
+    // This is critical - clients should NEVER be able to access other clients' documents
     if (currentUser.role !== 'ADMIN' && currentUser.role !== 'STAFF' && document.userId !== currentUser.id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
@@ -62,40 +64,56 @@ export async function GET(
     }
 
     // Read file
-    const fileBuffer = await readFile(filePath)
+    let fileBuffer: Buffer = Buffer.from(await readFile(filePath))
 
-    // Create response with proper headers for download
-    const response = new NextResponse(fileBuffer)
+    // Check if file is encrypted (ends with .enc)
+    const isEncrypted = document.filePath.endsWith('.enc')
 
-    // Set content type
-    response.headers.set('Content-Type', document.fileType || 'application/octet-stream')
+    if (isEncrypted) {
+      try {
+        // Decrypt the file before serving
+        fileBuffer = decryptDocument(fileBuffer)
+      } catch (decryptError: any) {
+        console.error('Decryption failed:', decryptError)
 
-    // Set content disposition based on mode (view inline or download as attachment)
-    const encodedFilename = encodeURIComponent(document.fileName)
-    if (viewMode) {
-      // View inline in browser (for PDFs, images, etc.)
-      response.headers.set(
-        'Content-Disposition',
-        `inline; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
-      )
-    } else {
-      // Force download
-      response.headers.set(
-        'Content-Disposition',
-        `attachment; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
-      )
+        // If decryption key is missing, try serving as-is (might be legacy unencrypted file with .enc extension)
+        if (decryptError.message?.includes('DOCUMENT_ENCRYPTION_KEY')) {
+          console.warn('Warning: DOCUMENT_ENCRYPTION_KEY not set. Cannot decrypt document.')
+          return NextResponse.json(
+            { error: 'Document encryption key not configured. Please contact administrator.' },
+            { status: 500 }
+          )
+        }
+
+        // Other decryption errors (corrupted file, wrong key, etc.)
+        return NextResponse.json(
+          { error: 'Failed to decrypt document. The file may be corrupted.' },
+          { status: 500 }
+        )
+      }
     }
 
-    // Set content length
-    response.headers.set('Content-Length', fileBuffer.length.toString())
+    // Create response with proper headers for download
+    const encodedFilename = encodeURIComponent(document.fileName)
+    const contentDisposition = viewMode
+      ? `inline; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
+      : `attachment; filename="${document.fileName}"; filename*=UTF-8''${encodedFilename}`
 
-    // Security headers
-    response.headers.set('X-Content-Type-Options', 'nosniff')
-    response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate')
-    response.headers.set('Pragma', 'no-cache')
-    response.headers.set('Expires', '0')
+    // Convert Buffer to Uint8Array for Response compatibility
+    const responseBody = new Uint8Array(fileBuffer)
 
-    return response
+    return new Response(responseBody, {
+      status: 200,
+      headers: {
+        'Content-Type': document.fileType || 'application/octet-stream',
+        'Content-Disposition': contentDisposition,
+        'Content-Length': fileBuffer.length.toString(),
+        'X-Content-Type-Options': 'nosniff',
+        'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    })
   } catch (error) {
     console.error('Failed to download document:', error)
     return NextResponse.json(

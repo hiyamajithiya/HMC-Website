@@ -5,10 +5,12 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   FileText, Upload, Download, Trash2, Eye, Search,
   X, CheckCircle, AlertCircle, Loader2, User, Calendar,
-  Folder, FolderPlus, ChevronRight, Home, MoreVertical, Pencil
+  Folder, FolderPlus, ChevronRight, Home, MoreVertical, Pencil,
+  FolderOpen, HardDrive, Filter
 } from 'lucide-react'
 import { format } from 'date-fns'
 import DocumentUploadDropzone from '@/components/admin/DocumentUploadDropzone'
@@ -114,6 +116,16 @@ export default function AdminDocumentsPage() {
   // Edit folder state
   const [editingFolder, setEditingFolder] = useState<DocumentFolder | null>(null)
   const [editFolderName, setEditFolderName] = useState('')
+
+  // Edit document state
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null)
+  const [editDocumentForm, setEditDocumentForm] = useState({
+    title: '',
+    description: '',
+    category: 'OTHER',
+  })
+  const [editDocumentError, setEditDocumentError] = useState('')
+  const [editDocumentSaving, setEditDocumentSaving] = useState(false)
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -315,6 +327,53 @@ export default function AdminDocumentsPage() {
     }
   }
 
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc)
+    setEditDocumentForm({
+      title: doc.title,
+      description: doc.description || '',
+      category: doc.category,
+    })
+    setEditDocumentError('')
+  }
+
+  const handleUpdateDocument = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingDocument) return
+
+    setEditDocumentError('')
+    setEditDocumentSaving(true)
+
+    try {
+      const response = await fetch(`/api/documents/${editingDocument.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editDocumentForm.title,
+          description: editDocumentForm.description || null,
+          category: editDocumentForm.category,
+        }),
+      })
+
+      if (response.ok) {
+        // Update local state
+        setDocuments(documents.map(doc =>
+          doc.id === editingDocument.id
+            ? { ...doc, title: editDocumentForm.title, description: editDocumentForm.description, category: editDocumentForm.category }
+            : doc
+        ))
+        setEditingDocument(null)
+      } else {
+        const data = await response.json()
+        setEditDocumentError(data.error || 'Failed to update document')
+      }
+    } catch (error) {
+      setEditDocumentError('Failed to update document')
+    } finally {
+      setEditDocumentSaving(false)
+    }
+  }
+
   const navigateToFolder = async (folderId: string | null, folderName: string) => {
     setCurrentFolderId(folderId)
 
@@ -438,12 +497,12 @@ export default function AdminDocumentsPage() {
 
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      TAX_RETURNS: 'bg-blue-100 text-blue-800',
-      AUDIT_REPORTS: 'bg-purple-100 text-purple-800',
-      GST_RETURNS: 'bg-green-100 text-green-800',
-      COMPLIANCE: 'bg-orange-100 text-orange-800',
-      INVOICES: 'bg-yellow-100 text-yellow-800',
-      OTHER: 'bg-gray-100 text-gray-800',
+      TAX_RETURNS: 'bg-blue-50 text-blue-700 border border-blue-200',
+      AUDIT_REPORTS: 'bg-purple-50 text-purple-700 border border-purple-200',
+      GST_RETURNS: 'bg-green-50 text-green-700 border border-green-200',
+      COMPLIANCE: 'bg-orange-50 text-orange-700 border border-orange-200',
+      INVOICES: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+      OTHER: 'bg-slate-50 text-slate-700 border border-slate-200',
     }
     return colors[category] || colors.OTHER
   }
@@ -464,7 +523,10 @@ export default function AdminDocumentsPage() {
   if (status === 'loading' || (loading && users.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary/20 rounded-full border-t-primary animate-spin mx-auto"></div>
+          <p className="mt-4 text-slate-500">Loading documents...</p>
+        </div>
       </div>
     )
   }
@@ -474,93 +536,153 @@ export default function AdminDocumentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-          <p className="text-gray-600">Manage client documents and folders</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Documents</h1>
+          <p className="text-slate-500 mt-1">Manage client documents and folders</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {filterUser && filterUser !== 'ALL' && (
-            <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
+            <Button variant="outline" onClick={() => setShowCreateFolderModal(true)} className="border-slate-200">
               <FolderPlus className="h-4 w-4 mr-2" />
               New Folder
             </Button>
           )}
-          <Button variant="outline" onClick={() => setShowBulkUploadModal(true)}>
+          <Button variant="outline" onClick={() => setShowBulkUploadModal(true)} className="border-slate-200">
             <Upload className="h-4 w-4 mr-2" />
             Bulk Upload
           </Button>
-          <Button onClick={() => setShowUploadModal(true)}>
+          <Button onClick={() => setShowUploadModal(true)} className="bg-primary hover:bg-primary-dark text-white">
             <Upload className="h-4 w-4 mr-2" />
             Upload Document
           </Button>
         </div>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{documents.length}</p>
+                <p className="text-sm text-slate-500">Documents</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center">
+                <Folder className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{folders.length}</p>
+                <p className="text-sm text-slate-500">Folders</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+                <User className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">{users.length}</p>
+                <p className="text-sm text-slate-500">Clients</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
+                <HardDrive className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-900">
+                  {formatFileSize(documents.reduce((acc, doc) => acc + doc.fileSize, 0))}
+                </p>
+                <p className="text-sm text-slate-500">Total Size</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
                   type="text"
                   placeholder="Search documents and folders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="pl-10 rounded-xl border-slate-200 focus:ring-primary/20 focus:border-primary"
                 />
               </div>
             </div>
-            <select
-              value={filterUser}
-              onChange={(e) => {
-                setFilterUser(e.target.value)
-                setCurrentFolderId(null)
-                setBreadcrumbs([{ id: null, name: 'Root' }])
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">All Clients</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.name || user.email}
-                </option>
-              ))}
-            </select>
-            <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">All Categories</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat.value} value={cat.value}>{cat.label}</option>
-              ))}
-            </select>
-            <select
-              value={filterFinancialYear}
-              onChange={(e) => setFilterFinancialYear(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="ALL">All Years</option>
-              {financialYearOptions.map(fy => (
-                <option key={fy} value={fy}>FY {fy}</option>
-              ))}
-            </select>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={filterUser}
+                onChange={(e) => {
+                  setFilterUser(e.target.value)
+                  setCurrentFolderId(null)
+                  setBreadcrumbs([{ id: null, name: 'Root' }])
+                }}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+              >
+                <option value="ALL">All Clients</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.email}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+              >
+                <option value="ALL">All Categories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
+                ))}
+              </select>
+              <select
+                value={filterFinancialYear}
+                onChange={(e) => setFilterFinancialYear(e.target.value)}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+              >
+                <option value="ALL">All Years</option>
+                {financialYearOptions.map(fy => (
+                  <option key={fy} value={fy}>FY {fy}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Breadcrumbs - Only show when a client is selected */}
       {filterUser && filterUser !== 'ALL' && (
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm bg-slate-50 p-3 rounded-xl">
           {breadcrumbs.map((crumb, index) => (
             <div key={crumb.id || 'root'} className="flex items-center">
-              {index > 0 && <ChevronRight className="h-4 w-4 text-gray-400 mx-1" />}
+              {index > 0 && <ChevronRight className="h-4 w-4 text-slate-400 mx-1" />}
               <button
                 onClick={() => navigateToFolder(crumb.id, crumb.name)}
-                className={`flex items-center gap-1 hover:text-blue-600 ${
-                  index === breadcrumbs.length - 1 ? 'font-medium text-gray-900' : 'text-gray-500'
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-white transition-colors ${
+                  index === breadcrumbs.length - 1 ? 'font-medium text-slate-900 bg-white shadow-sm' : 'text-slate-500'
                 }`}
               >
                 {index === 0 && <Home className="h-4 w-4" />}
@@ -572,103 +694,120 @@ export default function AdminDocumentsPage() {
       )}
 
       {/* Documents & Folders */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {filterUser && filterUser !== 'ALL'
-              ? `${users.find(u => u.id === filterUser)?.name || 'Client'}'s Files`
-              : `All Documents (${filteredDocuments.length})`
-            }
-          </CardTitle>
-          <CardDescription>
-            {filterUser && filterUser !== 'ALL'
-              ? `${filteredFolders.length} folder(s), ${filteredDocuments.length} document(s)`
-              : 'Select a client to manage their documents and folders'
-            }
-          </CardDescription>
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FolderOpen className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">
+                {filterUser && filterUser !== 'ALL'
+                  ? `${users.find(u => u.id === filterUser)?.name || 'Client'}'s Files`
+                  : `All Documents`
+                }
+              </CardTitle>
+              <CardDescription>
+                {filterUser && filterUser !== 'ALL'
+                  ? `${filteredFolders.length} folder(s), ${filteredDocuments.length} document(s)`
+                  : `${filteredDocuments.length} documents total`
+                }
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-primary/20 rounded-full border-t-primary animate-spin mx-auto"></div>
+                <p className="mt-4 text-slate-500">Loading...</p>
+              </div>
             </div>
           ) : filterUser === 'ALL' ? (
             // Show all documents across clients
             filteredDocuments.length === 0 ? (
               <div className="text-center py-12">
-                <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents found</h3>
-                <p className="text-gray-600 mb-6">Upload documents for your clients to access.</p>
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-8 w-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-2">No documents found</h3>
+                <p className="text-slate-500 mb-6">Upload documents for your clients to access.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-y border-slate-100">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Document</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Client</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">FY</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Uploaded</th>
+                      <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-slate-100">
                     {filteredDocuments.map((doc) => (
-                      <tr key={doc.id} className="hover:bg-gray-50">
+                      <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                              <FileText className="h-5 w-5 text-blue-600" />
+                            </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-900">{doc.title}</p>
-                              <p className="text-sm text-gray-500">{doc.fileName}</p>
+                              <p className="text-sm font-medium text-slate-900">{doc.title}</p>
+                              <p className="text-xs text-slate-500">{doc.fileName}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 text-gray-400 mr-2" />
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-slate-400" />
                             <div>
-                              <p className="text-sm text-gray-900">{doc.user?.name || 'N/A'}</p>
-                              <p className="text-xs text-gray-500">{doc.user?.email}</p>
+                              <p className="text-sm text-slate-900">{doc.user?.name || 'N/A'}</p>
+                              <p className="text-xs text-slate-500">{doc.user?.email}</p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4">
                           {doc.financialYear ? (
-                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                            <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
                               {doc.financialYear}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400">-</span>
+                            <span className="text-xs text-slate-400">-</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg ${getCategoryColor(doc.category)}`}>
                             {doc.category.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">{formatFileSize(doc.fileSize)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{formatFileSize(doc.fileSize)}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center text-sm text-gray-500">
-                            <Calendar className="h-4 w-4 mr-1" />
+                          <div className="flex items-center gap-1 text-sm text-slate-500">
+                            <Calendar className="h-3.5 w-3.5" />
                             {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="sm" asChild title="View">
-                              <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                              <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer" title="View">
                                 <Eye className="h-4 w-4" />
                               </a>
                             </Button>
-                            <Button variant="ghost" size="sm" asChild title="Download">
-                              <a href={`/api/documents/${doc.id}/download`}>
+                            <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                              <a href={`/api/documents/${doc.id}/download`} title="Download">
                                 <Download className="h-4 w-4" />
                               </a>
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="text-red-600 hover:text-red-800">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditDocument(doc)} className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Edit">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -681,38 +820,36 @@ export default function AdminDocumentsPage() {
             )
           ) : (
             // Show folders and documents for selected client
-            <div className="space-y-4">
+            <div className="p-6 space-y-6">
               {/* Folders Grid */}
               {filteredFolders.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {filteredFolders.map((folder) => (
                     <div
                       key={folder.id}
-                      className="group relative border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="group relative border border-slate-200 rounded-xl p-4 hover:bg-slate-50 hover:border-primary/30 cursor-pointer transition-all"
                       onDoubleClick={() => navigateToFolder(folder.id, folder.name)}
                     >
                       <div className="flex flex-col items-center text-center">
-                        <Folder className="h-12 w-12 text-yellow-500 mb-2" />
-                        <p className="text-sm font-medium text-gray-900 truncate w-full">{folder.name}</p>
-                        <p className="text-xs text-gray-500">
+                        <Folder className="h-12 w-12 text-amber-500 mb-2" />
+                        <p className="text-sm font-medium text-slate-900 truncate w-full">{folder.name}</p>
+                        <p className="text-xs text-slate-500">
                           {folder._count.documents} files, {folder._count.children} folders
                         </p>
                       </div>
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="relative">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingFolder(folder)
-                              setEditFolderName(folder.name)
-                            }}
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 bg-white shadow-sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingFolder(folder)
+                            setEditFolderName(folder.name)
+                          }}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -721,64 +858,69 @@ export default function AdminDocumentsPage() {
 
               {/* Documents Table */}
               {filteredDocuments.length > 0 ? (
-                <div className="overflow-x-auto border rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FY</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Uploaded</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Document</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">FY</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Category</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Size</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Uploaded</th>
+                        <th className="text-right px-6 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="divide-y divide-slate-100">
                       {filteredDocuments.map((doc) => (
-                        <tr key={doc.id} className="hover:bg-gray-50">
+                        <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4">
-                            <div className="flex items-center">
-                              <FileText className="h-5 w-5 text-gray-400 mr-3" />
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-blue-600" />
+                              </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-900">{doc.title}</p>
-                                <p className="text-sm text-gray-500">{doc.fileName}</p>
+                                <p className="text-sm font-medium text-slate-900">{doc.title}</p>
+                                <p className="text-xs text-slate-500">{doc.fileName}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             {doc.financialYear ? (
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
+                              <span className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
                                 {doc.financialYear}
                               </span>
                             ) : (
-                              <span className="text-xs text-gray-400">-</span>
+                              <span className="text-xs text-slate-400">-</span>
                             )}
                           </td>
                           <td className="px-6 py-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getCategoryColor(doc.category)}`}>
+                            <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg ${getCategoryColor(doc.category)}`}>
                               {doc.category.replace('_', ' ')}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-sm text-gray-500">{formatFileSize(doc.fileSize)}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{formatFileSize(doc.fileSize)}</td>
                           <td className="px-6 py-4">
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Calendar className="h-4 w-4 mr-1" />
+                            <div className="flex items-center gap-1 text-sm text-slate-500">
+                              <Calendar className="h-3.5 w-3.5" />
                               {format(new Date(doc.createdAt), 'MMM dd, yyyy')}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="ghost" size="sm" asChild title="View">
-                                <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                                <a href={`/api/documents/${doc.id}/download?view=true`} target="_blank" rel="noopener noreferrer" title="View">
                                   <Eye className="h-4 w-4" />
                                 </a>
                               </Button>
-                              <Button variant="ghost" size="sm" asChild title="Download">
-                                <a href={`/api/documents/${doc.id}/download`}>
+                              <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                                <a href={`/api/documents/${doc.id}/download`} title="Download">
                                   <Download className="h-4 w-4" />
                                 </a>
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="text-red-600 hover:text-red-800">
+                              <Button variant="ghost" size="sm" onClick={() => handleEditDocument(doc)} className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Edit">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(doc.id)} className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50">
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -790,15 +932,17 @@ export default function AdminDocumentsPage() {
                 </div>
               ) : filteredFolders.length === 0 ? (
                 <div className="text-center py-12">
-                  <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No files in this folder</h3>
-                  <p className="text-gray-600 mb-6">Upload documents or create subfolders.</p>
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <FileText className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">No files in this folder</h3>
+                  <p className="text-slate-500 mb-6">Upload documents or create subfolders.</p>
                   <div className="flex justify-center gap-3">
-                    <Button variant="outline" onClick={() => setShowCreateFolderModal(true)}>
+                    <Button variant="outline" onClick={() => setShowCreateFolderModal(true)} className="border-slate-200">
                       <FolderPlus className="h-4 w-4 mr-2" />
                       Create Folder
                     </Button>
-                    <Button onClick={() => setShowBulkUploadModal(true)}>
+                    <Button onClick={() => setShowBulkUploadModal(true)} className="bg-primary hover:bg-primary-dark text-white">
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Files
                     </Button>
@@ -812,118 +956,144 @@ export default function AdminDocumentsPage() {
 
       {/* Create Folder Modal */}
       {showCreateFolderModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Create New Folder</h2>
-                <button onClick={() => setShowCreateFolderModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                    <FolderPlus className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Create New Folder</h2>
+                    <p className="text-sm text-slate-500">Add a new folder for organization</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowCreateFolderModal(false)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-
-              <form onSubmit={handleCreateFolder} className="space-y-4">
-                {folderError && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
-                    <AlertCircle className="h-5 w-5" />
-                    {folderError}
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Folder Name</label>
-                  <input
-                    type="text"
-                    value={newFolderName}
-                    onChange={(e) => setNewFolderName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter folder name"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button type="button" variant="outline" className="flex-1" onClick={() => setShowCreateFolderModal(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="flex-1">
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Create Folder
-                  </Button>
-                </div>
-              </form>
             </div>
+
+            <form onSubmit={handleCreateFolder} className="p-6 space-y-4">
+              {folderError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100">
+                  <AlertCircle className="h-5 w-5" />
+                  {folderError}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Folder Name</label>
+                <Input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="rounded-xl border-slate-200 focus:ring-primary/20 focus:border-primary"
+                  placeholder="Enter folder name"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" className="flex-1 rounded-xl border-slate-200" onClick={() => setShowCreateFolderModal(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl">
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Create Folder
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Edit Folder Modal */}
       {editingFolder && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Edit Folder</h2>
-                <button onClick={() => setEditingFolder(null)} className="text-gray-500 hover:text-gray-700">
-                  <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <Pencil className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Edit Folder</h2>
+                    <p className="text-sm text-slate-500">Rename or delete folder</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingFolder(null)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
-
-              <form onSubmit={handleRenameFolder} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Folder Name</label>
-                  <input
-                    type="text"
-                    value={editFolderName}
-                    onChange={(e) => setEditFolderName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => {
-                      handleDeleteFolder(editingFolder.id)
-                      setEditingFolder(null)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                  <div className="flex-1" />
-                  <Button type="button" variant="outline" onClick={() => setEditingFolder(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    <Pencil className="h-4 w-4 mr-2" />
-                    Rename
-                  </Button>
-                </div>
-              </form>
             </div>
+
+            <form onSubmit={handleRenameFolder} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Folder Name</label>
+                <Input
+                  type="text"
+                  value={editFolderName}
+                  onChange={(e) => setEditFolderName(e.target.value)}
+                  className="rounded-xl border-slate-200 focus:ring-primary/20 focus:border-primary"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-red-200 text-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    handleDeleteFolder(editingFolder.id)
+                    setEditingFolder(null)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </Button>
+                <div className="flex-1" />
+                <Button type="button" variant="outline" className="border-slate-200" onClick={() => setEditingFolder(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-primary hover:bg-primary-dark text-white">
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Rename
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
       {/* Bulk Upload Modal with Drag & Drop */}
       {showBulkUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Bulk Upload Documents</h2>
-                <button onClick={() => setShowBulkUploadModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Bulk Upload Documents</h2>
+                    <p className="text-sm text-slate-500">Upload multiple files at once</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowBulkUploadModal(false)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
+            </div>
 
+            <div className="p-6">
               {filterUser && filterUser !== 'ALL' ? (
                 <>
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-100">
                     <p className="text-sm text-blue-700">
                       <strong>Client:</strong> {users.find(u => u.id === filterUser)?.name || users.find(u => u.id === filterUser)?.email}
                     </p>
@@ -946,9 +1116,11 @@ export default function AdminDocumentsPage() {
                 </>
               ) : (
                 <div className="text-center py-8">
-                  <User className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Client First</h3>
-                  <p className="text-gray-600 mb-6">Please select a client from the dropdown filter to upload documents.</p>
+                  <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                    <User className="h-8 w-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2">Select a Client First</h3>
+                  <p className="text-slate-500 mb-6">Please select a client from the dropdown filter to upload documents.</p>
                   <select
                     value={filterUser}
                     onChange={(e) => {
@@ -956,7 +1128,7 @@ export default function AdminDocumentsPage() {
                       setCurrentFolderId(null)
                       setBreadcrumbs([{ id: null, name: 'Root' }])
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[250px]"
+                    className="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white min-w-[250px]"
                   >
                     <option value="ALL">Choose a client...</option>
                     {users.map(user => (
@@ -969,7 +1141,7 @@ export default function AdminDocumentsPage() {
               )}
 
               <div className="mt-6 flex justify-end">
-                <Button variant="outline" onClick={() => setShowBulkUploadModal(false)}>
+                <Button variant="outline" onClick={() => setShowBulkUploadModal(false)} className="border-slate-200">
                   Close
                 </Button>
               </div>
@@ -980,37 +1152,49 @@ export default function AdminDocumentsPage() {
 
       {/* Single Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Upload Document</h2>
-                <button onClick={() => setShowUploadModal(false)} className="text-gray-500 hover:text-gray-700">
-                  <X className="h-6 w-6" />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Upload className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Upload Document</h2>
+                    <p className="text-sm text-slate-500">Add a new document</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowUploadModal(false)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <X className="h-5 w-5" />
                 </button>
               </div>
+            </div>
 
+            <div className="p-6">
               {uploadSuccess ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900">Document Uploaded!</h3>
-                  <p className="text-gray-600">The document has been uploaded successfully.</p>
+                  <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-900">Document Uploaded!</h3>
+                  <p className="text-slate-500">The document has been uploaded successfully.</p>
                 </div>
               ) : (
                 <form onSubmit={handleUpload} className="space-y-4">
                   {uploadError && (
-                    <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-lg">
+                    <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100">
                       <AlertCircle className="h-5 w-5" />
                       {uploadError}
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Client *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Select Client *</label>
                     <select
                       value={uploadForm.userId}
                       onChange={(e) => setUploadForm({ ...uploadForm, userId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
                       required
                     >
                       <option value="">Choose a client...</option>
@@ -1023,10 +1207,10 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">File *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">File *</label>
                     <div
-                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer hover:border-blue-400 ${
-                        uploadForm.file ? 'border-green-400 bg-green-50' : 'border-gray-300'
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer hover:border-primary/50 ${
+                        uploadForm.file ? 'border-green-400 bg-green-50' : 'border-slate-300'
                       }`}
                       onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
                       onDragEnter={(e) => { e.preventDefault(); e.stopPropagation() }}
@@ -1048,8 +1232,8 @@ export default function AdminDocumentsPage() {
                         <div className="flex items-center justify-center gap-3">
                           <FileText className="h-8 w-8 text-green-600" />
                           <div className="text-left">
-                            <p className="text-sm font-medium text-gray-900">{uploadForm.file.name}</p>
-                            <p className="text-xs text-gray-500">{formatFileSize(uploadForm.file.size)}</p>
+                            <p className="text-sm font-medium text-slate-900">{uploadForm.file.name}</p>
+                            <p className="text-xs text-slate-500">{formatFileSize(uploadForm.file.size)}</p>
                           </div>
                           <button
                             type="button"
@@ -1058,42 +1242,20 @@ export default function AdminDocumentsPage() {
                               setUploadForm(prev => ({ ...prev, file: null }))
                               if (fileInputRef.current) fileInputRef.current.value = ''
                             }}
-                            className="ml-2 p-1 hover:bg-gray-200 rounded"
+                            className="ml-2 p-1 hover:bg-slate-200 rounded"
                           >
-                            <X className="h-4 w-4 text-gray-500" />
+                            <X className="h-4 w-4 text-slate-500" />
                           </button>
                         </div>
                       ) : (
                         <>
-                          <Upload className="h-10 w-10 mx-auto text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-600 mb-1">Drag and drop a file here</p>
-                          <p className="text-xs text-gray-400 mb-3">PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
-                          <div className="flex justify-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                fileInputRef.current?.click()
-                              }}
-                            >
-                              <FileText className="h-4 w-4 mr-1" />
-                              Select File
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                folderInputRef.current?.click()
-                              }}
-                            >
-                              <Folder className="h-4 w-4 mr-1" />
-                              Select Folder
-                            </Button>
-                          </div>
+                          <Upload className="h-10 w-10 mx-auto text-slate-400 mb-2" />
+                          <p className="text-sm text-slate-600 mb-1">Drag and drop a file here</p>
+                          <p className="text-xs text-slate-400 mb-3">PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
+                          <Button type="button" variant="outline" size="sm" className="border-slate-200" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>
+                            <FileText className="h-4 w-4 mr-1" />
+                            Select File
+                          </Button>
                         </>
                       )}
                     </div>
@@ -1115,23 +1277,23 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Document Title *</label>
-                    <input
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Document Title *</label>
+                    <Input
                       type="text"
                       value={uploadForm.title}
                       onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="rounded-xl border-slate-200 focus:ring-primary/20 focus:border-primary"
                       placeholder="e.g., ITR FY 2023-24"
                       required
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Category *</label>
                     <select
                       value={uploadForm.category}
                       onChange={(e) => setUploadForm({ ...uploadForm, category: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
                       required
                     >
                       {CATEGORIES.map(cat => (
@@ -1141,11 +1303,11 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Financial Year *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Financial Year *</label>
                     <select
                       value={uploadForm.financialYear}
                       onChange={(e) => setUploadForm({ ...uploadForm, financialYear: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
                       required
                     >
                       {financialYearOptions.map(fy => (
@@ -1155,21 +1317,21 @@ export default function AdminDocumentsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
                     <textarea
                       value={uploadForm.description}
                       onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
                       rows={3}
                       placeholder="Add any notes about this document..."
                     />
                   </div>
 
                   <div className="flex gap-3 pt-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowUploadModal(false)}>
+                    <Button type="button" variant="outline" className="flex-1 border-slate-200 rounded-xl" onClick={() => setShowUploadModal(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" className="flex-1" disabled={uploading}>
+                    <Button type="submit" className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl" disabled={uploading}>
                       {uploading ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1186,6 +1348,105 @@ export default function AdminDocumentsPage() {
                 </form>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Document Modal */}
+      {editingDocument && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <Pencil className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">Edit Document</h2>
+                    <p className="text-sm text-slate-500">Update document title and description</p>
+                  </div>
+                </div>
+                <button onClick={() => setEditingDocument(null)} className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateDocument} className="p-6 space-y-4">
+              {editDocumentError && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100">
+                  <AlertCircle className="h-5 w-5" />
+                  {editDocumentError}
+                </div>
+              )}
+
+              {/* Current File Info */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900">{editingDocument.fileName}</p>
+                  <p className="text-xs text-slate-500">{formatFileSize(editingDocument.fileSize)} • {format(new Date(editingDocument.createdAt), 'MMM dd, yyyy')}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Document Title *</label>
+                <Input
+                  type="text"
+                  value={editDocumentForm.title}
+                  onChange={(e) => setEditDocumentForm({ ...editDocumentForm, title: e.target.value })}
+                  className="rounded-xl border-slate-200 focus:ring-primary/20 focus:border-primary"
+                  placeholder="Enter document title"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <select
+                  value={editDocumentForm.category}
+                  onChange={(e) => setEditDocumentForm({ ...editDocumentForm, category: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white"
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description (Optional)</label>
+                <textarea
+                  value={editDocumentForm.description}
+                  onChange={(e) => setEditDocumentForm({ ...editDocumentForm, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                  rows={3}
+                  placeholder="Add any notes about this document..."
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button type="button" variant="outline" className="flex-1 rounded-xl border-slate-200" onClick={() => setEditingDocument(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 bg-primary hover:bg-primary-dark text-white rounded-xl" disabled={editDocumentSaving}>
+                  {editDocumentSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

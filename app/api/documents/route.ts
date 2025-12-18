@@ -5,6 +5,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 import crypto from 'crypto'
+import { encryptDocument } from '@/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,14 +40,14 @@ export async function GET(request: NextRequest) {
     const whereClause: any = {}
 
     // Admin and Staff can see all documents, or filter by specific user
-    // Clients can only see their own documents
+    // Clients can ONLY see their own documents - this is critical for security
     if (currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') {
       if (userId) {
         whereClause.userId = userId
       }
       // If no userId specified, admin/staff sees ALL documents
     } else {
-      // Client can only see their own documents
+      // CLIENT can ONLY see their own documents - enforced at database level
       whereClause.userId = currentUser.id
     }
 
@@ -196,13 +197,67 @@ export async function POST(request: NextRequest) {
     const timestamp = Date.now()
     const randomHash = crypto.randomBytes(16).toString('hex')
     const extension = path.extname(file.name)
-    const secureFileName = `${timestamp}_${randomHash}${extension}`
+    // Add .enc extension to indicate encrypted file
+    const secureFileName = `${timestamp}_${randomHash}${extension}.enc`
     const filePath = path.join(uploadsDir, secureFileName)
 
-    // Save file to secure location
+    // Read file and encrypt it before saving
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
+
+    // Encrypt the document for secure storage
+    let dataToSave: Buffer
+    try {
+      dataToSave = encryptDocument(buffer)
+    } catch (encryptError: any) {
+      console.error('Encryption failed:', encryptError)
+      // If encryption key is not set, save unencrypted (for development)
+      if (encryptError.message?.includes('DOCUMENT_ENCRYPTION_KEY')) {
+        console.warn('Warning: DOCUMENT_ENCRYPTION_KEY not set. Saving document without encryption.')
+        dataToSave = buffer
+        // Save without .enc extension
+        const unencryptedFileName = `${timestamp}_${randomHash}${extension}`
+        const unencryptedFilePath = path.join(uploadsDir, unencryptedFileName)
+        await writeFile(unencryptedFilePath, dataToSave)
+
+        // Store path without .enc
+        const securePath = `private/documents/${documentUserId}/${unencryptedFileName}`
+
+        // Create document record in database
+        const document = await prisma.document.create({
+          data: {
+            title,
+            description: description || null,
+            fileName: file.name,
+            filePath: securePath,
+            fileSize: file.size,
+            fileType: file.type,
+            category: category as any,
+            financialYear: financialYear || null,
+            folderId: validFolderId,
+            uploadedBy: currentUser.role === 'ADMIN' || currentUser.role === 'STAFF' ? 'ADMIN' : 'CLIENT',
+            userId: documentUserId,
+          },
+          include: {
+            user: {
+              select: { name: true, email: true }
+            },
+            folder: {
+              select: { id: true, name: true }
+            }
+          }
+        })
+
+        return NextResponse.json({
+          success: true,
+          message: 'Document uploaded successfully',
+          document
+        })
+      }
+      throw encryptError
+    }
+
+    await writeFile(filePath, dataToSave)
 
     // Store secure path (not publicly accessible)
     const securePath = `private/documents/${documentUserId}/${secureFileName}`
