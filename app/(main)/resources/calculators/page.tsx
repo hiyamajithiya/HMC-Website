@@ -18,9 +18,9 @@ const calculators = [
     comingSoon: false,
   },
   {
-    id: "gst",
-    title: "GST Calculator",
-    description: "Calculate GST amount, exclusive and inclusive of tax",
+    id: "gst-ffmc",
+    title: "GST on FFMC Services",
+    description: "Calculate GST on Full Fledged Money Changer services (SAC 997157)",
     icon: FileText,
     color: "bg-green-500/10 text-green-600",
     comingSoon: false,

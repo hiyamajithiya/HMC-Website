@@ -11,7 +11,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours (max session length if browser stays open)
+    // Session expires when browser closes (session cookie)
+    // maxAge is still needed for JWT validation, but cookie won't persist
+    maxAge: 24 * 60 * 60, // 24 hours max if browser stays open
   },
   cookies: {
     sessionToken: {
@@ -21,7 +23,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        // No maxAge = session cookie (deleted when browser closes)
+        // IMPORTANT: No maxAge means session cookie - deleted when browser closes
+        // This ensures user must re-login after closing browser
+      },
+    },
+    // Also make callback token a session cookie
+    callbackUrl: {
+      name: 'authjs.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    // CSRF token as session cookie
+    csrfToken: {
+      name: 'authjs.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
       },
     },
   },
