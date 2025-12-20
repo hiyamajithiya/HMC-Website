@@ -35,6 +35,10 @@ yarn-error.log*
 /public/uploads
 /private
 
+# public downloads - uploaded files (keep .gitkeep but ignore actual files)
+/public/downloads/*
+!/public/downloads/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
