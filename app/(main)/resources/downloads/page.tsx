@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Download, FileText, FileSpreadsheet, File, BookOpen, ClipboardList, Wrench, FolderOpen } from "lucide-react"
 import { prisma } from "@/lib/prisma"
+import { DownloadButton } from "@/components/downloads/DownloadButton"
 
 export const metadata: Metadata = {
   title: "Downloads",
@@ -233,23 +234,3 @@ export default async function DownloadsPage() {
   )
 }
 
-// Client component for download button with tracking
-function DownloadButton({ id, filePath }: { id: string; filePath: string }) {
-  const handleDownload = async () => {
-    // Track download
-    try {
-      await fetch(`/api/downloads/${id}`, { method: 'POST' })
-    } catch (error) {
-      console.error('Failed to track download:', error)
-    }
-  }
-
-  return (
-    <a href={filePath} download onClick={handleDownload}>
-      <Button size="sm" variant="outline" className="text-primary border-primary/50 hover:bg-primary/10">
-        <Download className="h-4 w-4 mr-2" />
-        Download
-      </Button>
-    </a>
-  )
-}
