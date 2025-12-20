@@ -2,8 +2,9 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, ArrowLeft, Share2 } from "lucide-react"
+import { Calendar, Clock, ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
+import { ShareButton } from "@/components/blog/ShareButton"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -169,10 +170,7 @@ export default async function BlogPostPage({ params }: Props) {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to all articles
                 </Link>
-                <button className="flex items-center text-text-muted hover:text-primary transition-colors">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share
-                </button>
+                <ShareButton title={post.title} />
               </div>
             </div>
           </div>
