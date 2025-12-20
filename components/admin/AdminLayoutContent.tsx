@@ -22,7 +22,8 @@ import {
   Bell,
   Search,
   Shield,
-  ChevronDown
+  ChevronDown,
+  Download
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { signOut } from 'next-auth/react'
@@ -36,6 +37,7 @@ const allSidebarItems = [
   { name: 'Contacts', href: '/admin/contacts', icon: Mail, roles: ['ADMIN'], description: 'Form submissions' },
   { name: 'Appointments', href: '/admin/appointments', icon: Calendar, roles: ['ADMIN'], description: 'Bookings' },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['ADMIN', 'STAFF'], description: 'Manage accounts' },
+  { name: 'Downloads', href: '/admin/downloads', icon: Download, roles: ['ADMIN'], description: 'Manage files' },
   { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['ADMIN'], description: 'Site config' },
 ]
 
@@ -138,7 +140,7 @@ export function AdminLayoutContent({
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+        <nav className="p-4 space-y-1 overflow-y-auto h-[calc(100vh-100px)]">
           {sidebarItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href ||
@@ -169,29 +171,38 @@ export function AdminLayoutContent({
               </Link>
             )
           })}
-        </nav>
 
-        {/* Bottom Actions */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-primary-dark/50 backdrop-blur-sm">
+          {/* Divider */}
+          <div className="my-3 border-t border-white/10"></div>
+
+          {/* View Website */}
           <Link
             href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all no-underline border-none"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all no-underline border-none group"
           >
-            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-white/10">
               <Home className="h-5 w-5" />
             </div>
-            <span className="font-medium">View Website</span>
+            <div className="flex-1 min-w-0">
+              <span className="block font-medium">View Website</span>
+              <span className="text-xs text-white/50">Open public site</span>
+            </div>
           </Link>
+
+          {/* Sign Out */}
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300 transition-all border-none mt-1"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-red-500/20 hover:text-red-300 transition-all border-none group"
           >
-            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center group-hover:bg-red-500/20">
               <LogOut className="h-5 w-5" />
             </div>
-            <span className="font-medium">Sign Out</span>
+            <div className="flex-1 min-w-0 text-left">
+              <span className="block font-medium">Sign Out</span>
+              <span className="text-xs text-white/50">End your session</span>
+            </div>
           </button>
-        </div>
+        </nav>
       </aside>
 
       {/* Main Content */}

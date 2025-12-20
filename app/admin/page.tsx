@@ -29,6 +29,13 @@ import {
   Sunset
 } from 'lucide-react'
 
+interface RecentActivity {
+  type: string
+  text: string
+  time: string
+  id: string
+}
+
 interface DashboardStats {
   totalBlogPosts: number
   publishedPosts: number
@@ -38,6 +45,8 @@ interface DashboardStats {
   pendingAppointments: number
   totalUsers: number
   totalDocuments?: number
+  totalDownloads?: number
+  recentActivities?: RecentActivity[]
 }
 
 export default function AdminDashboard() {
@@ -60,6 +69,8 @@ export default function AdminDashboard() {
     pendingAppointments: 0,
     totalUsers: 0,
     totalDocuments: 0,
+    totalDownloads: 0,
+    recentActivities: [],
   })
   const [loading, setLoading] = useState(true)
 
@@ -150,12 +161,32 @@ export default function AdminDashboard() {
     { title: 'Manage Users', description: 'View all accounts', href: '/admin/users', icon: Users, color: 'from-purple-500 to-purple-600' },
   ]
 
-  const recentActivities = [
-    { type: 'user', text: 'New user registered', time: '2 hours ago', icon: Users },
-    { type: 'contact', text: 'New contact form submission', time: '5 hours ago', icon: Mail },
-    { type: 'document', text: 'Document uploaded', time: '1 day ago', icon: FolderOpen },
-    { type: 'appointment', text: 'Appointment confirmed', time: '2 days ago', icon: Calendar },
-  ]
+  // Get icon based on activity type
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'user': return Users
+      case 'contact': return Mail
+      case 'document': return FolderOpen
+      case 'appointment': return Calendar
+      default: return Activity
+    }
+  }
+
+  // Format relative time
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Just now'
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  }
 
   return (
     <div className="space-y-6">
@@ -300,24 +331,42 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentActivities.map((activity, index) => {
-                const Icon = activity.icon
-                return (
-                  <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
-                      <Icon className="h-5 w-5 text-slate-500" />
+              {loading ? (
+                // Loading skeleton
+                [...Array(4)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-4 p-3 rounded-xl animate-pulse">
+                    <div className="w-10 h-10 rounded-lg bg-slate-200"></div>
+                    <div className="flex-1">
+                      <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-slate-100 rounded w-1/4"></div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-900">{activity.text}</p>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                        <Clock className="h-3 w-3" />
-                        {activity.time}
-                      </div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400" />
                   </div>
-                )
-              })}
+                ))
+              ) : stats.recentActivities && stats.recentActivities.length > 0 ? (
+                stats.recentActivities.map((activity, index) => {
+                  const Icon = getActivityIcon(activity.type)
+                  return (
+                    <div key={activity.id || index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                        <Icon className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900">{activity.text}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {formatRelativeTime(activity.time)}
+                        </div>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  <Activity className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No recent activity</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

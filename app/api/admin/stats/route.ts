@@ -28,6 +28,12 @@ export async function GET() {
       unreadContacts,
       pendingAppointments,
       totalUsers,
+      totalDocuments,
+      totalDownloads,
+      recentUsers,
+      recentContacts,
+      recentDocuments,
+      recentAppointments,
     ] = await Promise.all([
       prisma.blogPost.count(),
       prisma.blogPost.count({ where: { isPublished: true } }),
@@ -36,7 +42,59 @@ export async function GET() {
       prisma.contactSubmission.count({ where: { isRead: false } }),
       prisma.appointment.count({ where: { status: 'PENDING' } }),
       prisma.user.count({ where: { role: 'CLIENT' } }),
+      prisma.document.count(),
+      prisma.download.count(),
+      // Recent activities
+      prisma.user.findMany({
+        where: { role: 'CLIENT' },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, name: true, createdAt: true }
+      }),
+      prisma.contactSubmission.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, name: true, createdAt: true }
+      }),
+      prisma.document.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, title: true, createdAt: true }
+      }),
+      prisma.appointment.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: { id: true, name: true, status: true, createdAt: true }
+      }),
     ])
+
+    // Combine and sort recent activities
+    const recentActivities = [
+      ...recentUsers.map(u => ({
+        type: 'user',
+        text: `New user registered: ${u.name || 'Unknown'}`,
+        time: u.createdAt,
+        id: u.id
+      })),
+      ...recentContacts.map(c => ({
+        type: 'contact',
+        text: `New contact from: ${c.name}`,
+        time: c.createdAt,
+        id: c.id
+      })),
+      ...recentDocuments.map(d => ({
+        type: 'document',
+        text: `Document uploaded: ${d.title}`,
+        time: d.createdAt,
+        id: d.id
+      })),
+      ...recentAppointments.map(a => ({
+        type: 'appointment',
+        text: `Appointment ${a.status.toLowerCase()}: ${a.name}`,
+        time: a.createdAt,
+        id: a.id
+      })),
+    ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5)
 
     return NextResponse.json({
       totalBlogPosts,
@@ -46,6 +104,9 @@ export async function GET() {
       unreadContacts,
       pendingAppointments,
       totalUsers,
+      totalDocuments,
+      totalDownloads,
+      recentActivities,
     })
   } catch (error) {
     console.error('Failed to fetch admin stats:', error)

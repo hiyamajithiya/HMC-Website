@@ -13,6 +13,7 @@ type TDSCategory = {
   rate: number | string
   section: string
   isSalary?: boolean
+  isProperty?: boolean
 }
 
 const tdsCategories: TDSCategory[] = [
@@ -26,6 +27,7 @@ const tdsCategories: TDSCategory[] = [
   { name: "Interest Other Than Securities", rate: 10, section: "194A" },
   { name: "Dividend", rate: 10, section: "194" },
   { name: "Winnings from Lottery", rate: 30, section: "194B" },
+  { name: "Purchase of Property (>₹50L)", rate: 1, section: "194-IA", isProperty: true },
 ]
 
 export default function TDSCalculator() {
@@ -34,11 +36,15 @@ export default function TDSCalculator() {
   const [annualSalary, setAnnualSalary] = useState("")
   const [deductions, setDeductions] = useState("")
   const [panAvailable, setPanAvailable] = useState(true)
+  // Property specific fields
+  const [sellerPanAvailable, setSellerPanAvailable] = useState(true)
+  const [propertyType, setPropertyType] = useState<"residential" | "commercial">("residential")
   const [result, setResult] = useState<{
     grossAmount: number
     tdsRate: number
     tdsAmount: number
     netAmount: number
+    isPropertyBelow50L?: boolean
   } | null>(null)
 
   const calculateIncomeTax = (taxableIncome: number) => {
@@ -68,6 +74,7 @@ export default function TDSCalculator() {
     const grossAmount = parseFloat(amount) || 0
     let tdsAmount = 0
     let tdsRate = 0
+    let isPropertyBelow50L = false
 
     if (selectedCategory.isSalary) {
       // For salary, calculate based on income tax slabs
@@ -81,6 +88,27 @@ export default function TDSCalculator() {
       // Monthly TDS
       tdsAmount = annualTax / 12
       tdsRate = yearly > 0 ? ((annualTax / yearly) * 100) : 0
+    } else if (selectedCategory.isProperty) {
+      // TDS on Property Purchase - Section 194-IA
+      // Applicable only if property value > Rs. 50 lakhs
+      const threshold = 5000000 // Rs. 50 lakhs
+
+      if (grossAmount < threshold) {
+        // No TDS applicable for property below Rs. 50 lakhs
+        tdsRate = 0
+        tdsAmount = 0
+        isPropertyBelow50L = true
+      } else {
+        // TDS @ 1% on total property value
+        tdsRate = 1
+
+        // If seller's PAN not available, TDS @ 20%
+        if (!sellerPanAvailable) {
+          tdsRate = 20
+        }
+
+        tdsAmount = (grossAmount * tdsRate) / 100
+      }
     } else {
       // For other categories, use fixed rate
       tdsRate = typeof selectedCategory.rate === 'number' ? selectedCategory.rate : 0
@@ -100,6 +128,7 @@ export default function TDSCalculator() {
       tdsRate,
       tdsAmount,
       netAmount,
+      isPropertyBelow50L,
     })
   }
 
@@ -206,6 +235,63 @@ export default function TDSCalculator() {
                         </p>
                       </div>
                     </>
+                  ) : selectedCategory.isProperty ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="propertyValue">Property Value / Sale Consideration (₹)</Label>
+                        <Input
+                          id="propertyValue"
+                          type="number"
+                          placeholder="e.g., 7500000"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-text-muted">
+                          Total sale consideration of the property
+                        </p>
+                      </div>
+
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-blue-900 text-sm mb-2">Section 194-IA Applicability</h4>
+                        <ul className="text-xs text-blue-800 space-y-1">
+                          <li>• TDS applicable only if property value exceeds <strong>Rs. 50 Lakhs</strong></li>
+                          <li>• TDS Rate: <strong>1%</strong> of total sale consideration</li>
+                          <li>• Buyer is responsible to deduct and deposit TDS</li>
+                          <li>• TDS to be deposited within 30 days from end of month</li>
+                        </ul>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Seller&apos;s PAN Status</Label>
+                        <div className="flex gap-4">
+                          <button
+                            onClick={() => setSellerPanAvailable(true)}
+                            className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                              sellerPanAvailable
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border-light hover:border-primary/50"
+                            }`}
+                          >
+                            PAN Available
+                          </button>
+                          <button
+                            onClick={() => setSellerPanAvailable(false)}
+                            className={`flex-1 py-3 px-4 rounded-lg border-2 transition-colors ${
+                              !sellerPanAvailable
+                                ? "border-primary bg-primary/10 text-primary font-semibold"
+                                : "border-border-light hover:border-primary/50"
+                            }`}
+                          >
+                            No PAN
+                          </button>
+                        </div>
+                        {!sellerPanAvailable && (
+                          <p className="text-xs text-red-600">
+                            Note: TDS will be deducted at 20% if seller&apos;s PAN is not available
+                          </p>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <div className="space-y-2">
                       <Label htmlFor="amount">Payment Amount (₹)</Label>
@@ -219,8 +305,8 @@ export default function TDSCalculator() {
                     </div>
                   )}
 
-                  {/* PAN Availability - Not for Salary */}
-                  {!selectedCategory.isSalary && (
+                  {/* PAN Availability - Not for Salary or Property (Property has seller's PAN separately) */}
+                  {!selectedCategory.isSalary && !selectedCategory.isProperty && (
                     <div className="space-y-2">
                       <Label>PAN Status</Label>
                       <div className="flex gap-4">
@@ -272,19 +358,35 @@ export default function TDSCalculator() {
                         <div className="font-semibold text-blue-900">{selectedCategory.name}</div>
                         <div className="text-xs text-blue-700 mt-1">
                           Section {selectedCategory.section} | Rate: {selectedCategory.rate}%
-                          {!panAvailable && " (20% due to no PAN)"}
+                          {!panAvailable && !selectedCategory.isProperty && " (20% due to no PAN)"}
+                          {selectedCategory.isProperty && !sellerPanAvailable && " (20% due to seller's PAN not available)"}
                         </div>
                       </div>
 
+                      {/* Special message for property below Rs. 50 lakhs */}
+                      {result.isPropertyBelow50L && (
+                        <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r">
+                          <h4 className="font-semibold text-green-800 mb-1">No TDS Applicable</h4>
+                          <p className="text-sm text-green-700">
+                            TDS under Section 194-IA is not applicable as the property value is below Rs. 50 Lakhs.
+                            The buyer can pay the full amount to the seller without any TDS deduction.
+                          </p>
+                        </div>
+                      )}
+
                       <div className="space-y-4">
                         <div className="flex justify-between items-center pb-2 border-b">
-                          <span className="text-text-secondary">Gross Payment</span>
+                          <span className="text-text-secondary">
+                            {selectedCategory.isProperty ? "Property Value" : "Gross Payment"}
+                          </span>
                           <span className="font-semibold">{formatCurrency(result.grossAmount)}</span>
                         </div>
 
                         <div className="flex justify-between items-center pb-2 border-b">
                           <span className="text-text-secondary">TDS Rate</span>
-                          <span className="font-semibold">{result.tdsRate}%</span>
+                          <span className="font-semibold">
+                            {result.isPropertyBelow50L ? "N/A" : `${result.tdsRate}%`}
+                          </span>
                         </div>
 
                         <div className="flex justify-between items-center pb-2 border-b bg-red-50 -mx-4 px-4 py-3 rounded">
@@ -295,7 +397,9 @@ export default function TDSCalculator() {
                         </div>
 
                         <div className="flex justify-between items-center pt-4 border-t-2 border-primary/20">
-                          <span className="text-lg font-semibold text-primary">Net Payment</span>
+                          <span className="text-lg font-semibold text-primary">
+                            {selectedCategory.isProperty ? "Net Payable to Seller" : "Net Payment"}
+                          </span>
                           <span className="text-2xl font-bold text-primary">
                             {formatCurrency(result.netAmount)}
                           </span>
@@ -303,14 +407,31 @@ export default function TDSCalculator() {
                       </div>
 
                       <div className="bg-green-50 p-4 rounded-lg mt-6">
-                        <h4 className="font-semibold text-green-900 mb-2">Payment Breakdown</h4>
+                        <h4 className="font-semibold text-green-900 mb-2">
+                          {selectedCategory.isProperty ? "Property Transaction Breakdown" : "Payment Breakdown"}
+                        </h4>
                         <div className="text-sm text-green-800 space-y-1">
-                          <div>• Gross Payment: {formatCurrency(result.grossAmount)}</div>
+                          <div>• {selectedCategory.isProperty ? "Property Value" : "Gross Payment"}: {formatCurrency(result.grossAmount)}</div>
                           <div>• TDS Deducted: {formatCurrency(result.tdsAmount)}</div>
-                          <div>• Net Paid to Payee: {formatCurrency(result.netAmount)}</div>
-                          <div>• TDS to be deposited to Govt: {formatCurrency(result.tdsAmount)}</div>
+                          <div>• Net Paid to {selectedCategory.isProperty ? "Seller" : "Payee"}: {formatCurrency(result.netAmount)}</div>
+                          {result.tdsAmount > 0 && (
+                            <div>• TDS to be deposited to Govt: {formatCurrency(result.tdsAmount)}</div>
+                          )}
                         </div>
                       </div>
+
+                      {/* Property-specific Form 26QB reminder */}
+                      {selectedCategory.isProperty && result.tdsAmount > 0 && (
+                        <div className="bg-amber-50 p-4 rounded-lg">
+                          <h4 className="font-semibold text-amber-900 mb-2">Form 26QB Compliance</h4>
+                          <div className="text-sm text-amber-800 space-y-1">
+                            <div>• File Form 26QB within 30 days from end of month of deduction</div>
+                            <div>• Issue Form 16B to the seller after filing 26QB</div>
+                            <div>• TDS deposited via TRACES portal using Challan 26QB</div>
+                            <div>• Both buyer &amp; seller PANs are mandatory for filing</div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12 text-text-muted">

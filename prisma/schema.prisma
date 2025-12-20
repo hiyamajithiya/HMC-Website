@@ -305,3 +305,28 @@ model SiteSetting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// Downloadable resources for public downloads page
+model Download {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  fileName    String
+  filePath    String
+  fileSize    Int
+  fileType    String           // PDF, Excel, Word, etc.
+  category    DownloadCategory
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  downloadCount Int            @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+enum DownloadCategory {
+  GUIDES_TEMPLATES
+  FORMS
+  CHECKLISTS
+  TOOLS
+  OTHER
+}
