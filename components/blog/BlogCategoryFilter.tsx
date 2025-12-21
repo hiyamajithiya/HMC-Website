@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+// Using img tag for uploaded images as they're served directly by nginx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, BookOpen, ImageIcon } from "lucide-react"
@@ -98,11 +98,10 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
                     {/* Cover Image */}
                     {post.coverImage ? (
                       <div className="relative w-full h-48 overflow-hidden">
-                        <Image
+                        <img
                           src={post.coverImage}
                           alt={post.title}
-                          fill
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                         <div className="absolute top-3 left-3">
                           <Badge variant="secondary" className="text-xs bg-white/90 text-primary">

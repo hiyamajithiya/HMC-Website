@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
+// Using img tag for uploaded images as they're served directly by nginx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -350,11 +350,10 @@ export default function EditBlogPostPage() {
               {formData.coverImage ? (
                 <div className="relative">
                   <div className="relative aspect-video rounded-lg overflow-hidden bg-slate-100">
-                    <Image
+                    <img
                       src={formData.coverImage}
                       alt="Cover preview"
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <button
