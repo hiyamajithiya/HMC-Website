@@ -22,6 +22,7 @@ async function getBlogPosts() {
         slug: true,
         excerpt: true,
         category: true,
+        coverImage: true,
         publishedAt: true,
         viewCount: true,
       },

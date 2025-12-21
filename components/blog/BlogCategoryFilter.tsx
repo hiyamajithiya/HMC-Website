@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, BookOpen } from "lucide-react"
+import { Calendar, Clock, BookOpen, ImageIcon } from "lucide-react"
 
 interface BlogPost {
   id: string
@@ -12,6 +13,7 @@ interface BlogPost {
   slug: string
   excerpt: string
   category: string
+  coverImage: string | null
   publishedAt: Date | null
   viewCount: number
 }
@@ -92,34 +94,56 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
               {filteredPosts.map((post) => (
                 <Link key={post.id} href={`/resources/blog/${post.slug}`}>
-                  <Card className="card-hover flex flex-col h-full">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-3">
-                        <Badge variant="secondary" className="text-xs">
-                          {categoryLabels[post.category] || post.category}
-                        </Badge>
+                  <Card className="card-hover flex flex-col h-full overflow-hidden">
+                    {/* Cover Image */}
+                    {post.coverImage ? (
+                      <div className="relative w-full h-48 overflow-hidden">
+                        <Image
+                          src={post.coverImage}
+                          alt={post.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <Badge variant="secondary" className="text-xs bg-white/90 text-primary">
+                            {categoryLabels[post.category] || post.category}
+                          </Badge>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                        <ImageIcon className="h-12 w-12 text-primary/30" />
+                        <div className="absolute top-3 left-3">
+                          <Badge variant="secondary" className="text-xs">
+                            {categoryLabels[post.category] || post.category}
+                          </Badge>
+                        </div>
+                      </div>
+                    )}
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center text-xs text-text-muted">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          }) : 'Recently'}
+                        </div>
                         <div className="flex items-center text-xs text-text-muted">
                           <Clock className="h-3 w-3 mr-1" />
                           {estimateReadTime(post.excerpt)}
                         </div>
                       </div>
-                      <CardTitle className="text-xl font-heading line-clamp-2">
+                      <CardTitle className="text-lg font-heading line-clamp-2">
                         {post.title}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1 flex flex-col">
-                      <p className="text-text-secondary text-sm mb-4 line-clamp-3">
+                    <CardContent className="flex-1 flex flex-col pt-0">
+                      <p className="text-text-secondary text-sm mb-4 line-clamp-2">
                         {post.excerpt}
                       </p>
                       <div className="mt-auto">
-                        <div className="flex items-center text-xs text-text-muted mb-3">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString('en-IN', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          }) : 'Recently'}
-                        </div>
                         <div className="text-primary font-medium text-sm">
                           Read Article →
                         </div>

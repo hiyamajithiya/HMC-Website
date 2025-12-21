@@ -32,8 +32,11 @@ yarn-error.log*
 .vercel
 
 # uploads - secure document storage (private folder not accessible via web)
-/public/uploads
 /private
+
+# public uploads - blog images (keep .gitkeep but ignore actual files)
+/public/uploads/blog/*
+!/public/uploads/blog/.gitkeep
 
 # public downloads - uploaded files (keep .gitkeep but ignore actual files)
 /public/downloads/*
