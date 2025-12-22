@@ -43,7 +43,7 @@ export default function HomePage() {
       <section className="gradient-navy text-white py-20 md:py-32">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold mb-6">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-heading font-bold mb-6">
               {SITE_INFO.name}
             </h1>
             <p className="text-xl md:text-2xl mb-4 text-white/90">
@@ -110,7 +110,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {SERVICES.map((service) => {
               const Icon = iconMap[service.icon] || Briefcase
               return (
@@ -148,7 +148,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             <Card className="card-hover">
               <CardHeader>
                 <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center mb-4">

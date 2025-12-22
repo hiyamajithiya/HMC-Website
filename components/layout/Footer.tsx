@@ -9,7 +9,7 @@ export function Footer() {
   return (
     <footer className="bg-primary text-white">
       <div className="container-custom section-padding">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 md:gap-12">
           {/* Firm Info */}
           <div>
             <h3 className="text-xl font-heading font-bold mb-4 text-secondary-light">
@@ -189,7 +189,7 @@ export function Footer() {
             &copy; {currentYear} {SITE_INFO.name}. All rights reserved.
           </p>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
             <Link href="/privacy-policy" className="hover:text-secondary-light transition-colors">
               Privacy Policy
             </Link>

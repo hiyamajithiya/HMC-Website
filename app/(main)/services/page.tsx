@@ -25,7 +25,7 @@ export default function ServicesPage() {
       <section className="bg-primary text-white py-16">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-heading font-bold mb-4">
               Areas of Practice
             </h1>
             <p className="text-xl text-white/90">
@@ -38,7 +38,7 @@ export default function ServicesPage() {
       {/* Services Grid */}
       <section className="section-padding">
         <div className="container-custom">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {SERVICES.map((service) => {
               const Icon = iconMap[service.icon] || Briefcase
               return (
@@ -73,7 +73,7 @@ export default function ServicesPage() {
             <h2 className="text-3xl font-heading font-bold text-primary mb-8 text-center">
               Service Features
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <Card>
                 <CardContent className="p-6 text-center">
                   <div className="text-4xl font-bold text-primary mb-2">17+</div>

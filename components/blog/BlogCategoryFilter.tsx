@@ -67,7 +67,7 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
               <Badge
                 key={category}
                 variant={activeCategory === category ? "default" : "outline"}
-                className={`cursor-pointer px-4 py-2 transition-all ${
+                className={`cursor-pointer px-3 py-1.5 sm:px-4 sm:py-2 text-sm transition-all ${
                   activeCategory === category
                     ? "bg-primary hover:bg-primary-light text-white"
                     : "hover:bg-primary/10 hover:border-primary"
@@ -91,13 +91,13 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
       <section className="section-padding">
         <div className="container-custom">
           {filteredPosts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
               {filteredPosts.map((post) => (
                 <Link key={post.id} href={`/resources/blog/${post.slug}`}>
                   <Card className="card-hover flex flex-col h-full overflow-hidden">
                     {/* Cover Image */}
                     {post.coverImage ? (
-                      <div className="relative w-full h-48 overflow-hidden">
+                      <div className="relative w-full h-40 sm:h-48 overflow-hidden">
                         <img
                           src={post.coverImage}
                           alt={post.title}
@@ -110,7 +110,7 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
                         </div>
                       </div>
                     ) : (
-                      <div className="relative w-full h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                      <div className="relative w-full h-40 sm:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
                         <ImageIcon className="h-12 w-12 text-primary/30" />
                         <div className="absolute top-3 left-3">
                           <Badge variant="secondary" className="text-xs">

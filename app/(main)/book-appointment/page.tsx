@@ -104,7 +104,7 @@ export default function BookAppointmentPage() {
         <div className="container-custom">
           <div className="max-w-3xl mx-auto text-center">
             <Calendar className="h-16 w-16 mx-auto mb-6 opacity-90" />
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
               Book Your Appointment
             </h1>
             <p className="text-xl text-white/90">
@@ -117,7 +117,7 @@ export default function BookAppointmentPage() {
       {/* Benefits Section */}
       <section className="py-12 bg-white">
         <div className="container-custom">
-          <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto">
             <div className="text-center">
               <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Clock className="h-8 w-8 text-primary" />
@@ -383,7 +383,7 @@ export default function BookAppointmentPage() {
               What to Expect
             </h2>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
               <div>
                 <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-primary" />
@@ -449,7 +449,7 @@ export default function BookAppointmentPage() {
               If you have urgent queries or prefer to speak with us directly, feel free to reach out:
             </p>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="bg-white p-6 rounded-lg shadow-sm">
                 <Phone className="h-8 w-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Phone</h3>

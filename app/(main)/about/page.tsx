@@ -186,7 +186,8 @@ export default function AboutPage() {
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3671.0869477824666!2d72.50884931496281!3d23.046858384941774!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e9b4e5d5d5d5d%3A0x5d5d5d5d5d5d5d5d!2sMaple%20Trade%20Centre!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin"
                 width="100%"
-                height="450"
+                height="300"
+                className="w-full h-[300px] md:h-[450px]"
                 style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"

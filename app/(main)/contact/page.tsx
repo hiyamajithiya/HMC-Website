@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Metadata } from "next"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -309,7 +308,7 @@ export default function ContactPage() {
             </h2>
             <Card>
               <CardContent className="p-0">
-                <div className="w-full h-[450px] rounded-lg overflow-hidden">
+                <div className="w-full h-[300px] md:h-[450px] rounded-lg overflow-hidden">
                   <iframe
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3671.3627419693564!2d72.51234137539418!3d23.04632197916259!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e9b4b8b8b8b8b%3A0x8b8b8b8b8b8b8b8b!2sMaple%20Trade%20Centre!5e0!3m2!1sen!2sin!4v1234567890123!5m2!1sen!2sin"
                     width="100%"
@@ -389,42 +388,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* Professional Memberships */}
-      <section className="section-padding bg-bg-secondary">
-        <div className="container-custom">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl font-heading font-bold text-primary mb-6">
-              Professional Memberships
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="font-semibold text-primary mb-1">ICAI</div>
-                  <div className="text-sm text-text-muted">
-                    Membership No: {SITE_INFO.memberships.icai}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="font-semibold text-primary mb-1">WIRC</div>
-                  <div className="text-sm text-text-muted">
-                    Registration No: {SITE_INFO.memberships.wirc}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-6">
-                  <div className="font-semibold text-primary mb-1">AHCA</div>
-                  <div className="text-sm text-text-muted">
-                    Member since {SITE_INFO.yearEstablished}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

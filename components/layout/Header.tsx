@@ -145,21 +145,23 @@ export function Header() {
 
           {/* Mobile Menu Button */}
           <button
-            className="lg:hidden p-2 text-primary"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            aria-label="Toggle menu"
+            type="button"
+            className="lg:hidden p-3 -mr-2 text-primary cursor-pointer select-none"
+            onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? (
-              <X className="h-6 w-6" />
+              <X className="h-7 w-7" />
             ) : (
-              <Menu className="h-6 w-6" />
+              <Menu className="h-7 w-7" />
             )}
           </button>
         </div>
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="lg:hidden fixed inset-x-0 top-[60px] bottom-0 bg-white overflow-y-auto animate-slide-down z-50">
+          <div className="lg:hidden absolute left-0 right-0 top-full bg-white shadow-lg overflow-y-auto max-h-[calc(100vh-80px)] z-50">
             <nav className="flex flex-col space-y-3 p-4 pb-8">
               {NAV_ITEMS.map((item) =>
                 item.submenu ? (
