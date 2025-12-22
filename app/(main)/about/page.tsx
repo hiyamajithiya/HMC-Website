@@ -193,7 +193,6 @@ export default function AboutPage() {
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
                 title="Office Location - Maple Trade Centre, Thaltej, Ahmedabad"
-                className="w-full"
               />
             </div>
             <div className="mt-6 text-center">
