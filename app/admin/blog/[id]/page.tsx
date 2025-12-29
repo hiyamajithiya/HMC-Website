@@ -133,9 +133,9 @@ export default function EditBlogPostPage() {
       return
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('File too large. Maximum size is 5MB.')
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File too large. Maximum size is 10MB.')
       return
     }
 
@@ -401,7 +401,7 @@ export default function EditBlogPostPage() {
                   )}
                 </Button>
                 <p className="text-xs text-text-muted text-center">
-                  JPG, PNG, GIF, WebP (max 5MB)
+                  JPG, PNG, GIF, WebP (max 10MB)
                 </p>
               </div>
 
