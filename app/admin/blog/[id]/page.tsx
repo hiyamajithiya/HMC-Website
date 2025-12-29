@@ -428,6 +428,55 @@ export default function EditBlogPostPage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Markdown Help</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-text-muted space-y-3">
+                <div>
+                  <p className="font-semibold mb-1">Text Formatting:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><code># Heading 1</code></li>
+                    <li><code>## Heading 2</code></li>
+                    <li><code>**bold text**</code></li>
+                    <li><code>*italic text*</code></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Lists:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><code>- Bullet item</code></li>
+                    <li><code>1. Numbered item</code></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Links & Images:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><code>[Link](url)</code></li>
+                    <li><code>![Image](url)</code></li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Tables:</p>
+                  <pre className="text-xs bg-slate-100 p-2 rounded overflow-x-auto">
+{`| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |`}
+                  </pre>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Other:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><code>&gt; Blockquote</code></li>
+                    <li><code>`inline code`</code></li>
+                    <li><code>---</code> (horizontal line)</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {formData.isPublished && (
             <Card>
               <CardHeader>

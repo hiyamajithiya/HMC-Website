@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { ShareButton } from "@/components/blog/ShareButton"
+import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -140,10 +141,7 @@ export default async function BlogPostPage({ params }: Props) {
 
             {/* Article Content */}
             <article className="prose prose-lg max-w-none">
-              <div
-                className="text-text-secondary leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, '<br/>') }}
-              />
+              <MarkdownRenderer content={post.content} />
             </article>
 
             {/* Tags */}
