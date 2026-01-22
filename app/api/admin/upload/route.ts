@@ -5,6 +5,10 @@ import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
+// Increase body size limit for this route (100MB)
+export const maxDuration = 60 // seconds
+export const fetchCache = 'force-no-store'
+
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()

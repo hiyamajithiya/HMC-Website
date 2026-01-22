@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Download, FileText, Table, Calculator, Bot, Zap, ArrowRight, Code } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering to always fetch fresh data from database
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Automation Tools",
   description: "Download professional automation tools for accounting, tax compliance, and data processing developed by CA Himanshu Majithiya.",
