@@ -72,14 +72,14 @@ export default function DocumentUploadDropzone({
     'text/csv',
   ]
 
-  const maxFileSize = 10 * 1024 * 1024 // 10MB
+  const maxFileSize = 25 * 1024 * 1024 // 25MB
 
   const validateFile = (file: File): string | null => {
     if (!allowedTypes.includes(file.type)) {
       return 'File type not allowed'
     }
     if (file.size > maxFileSize) {
-      return 'File too large (max 10MB)'
+      return 'File too large (max 25MB)'
     }
     return null
   }
@@ -416,7 +416,7 @@ export default function DocumentUploadDropzone({
           {...({ webkitdirectory: '', directory: '' } as any)}
         />
         <p className="text-xs text-gray-400 mt-4">
-          Supported: PDF, Word, Excel, Images, Text, CSV (Max 10MB per file)
+          Supported: PDF, Word, Excel, Images, Text, CSV (Max 25MB per file)
         </p>
       </div>
 

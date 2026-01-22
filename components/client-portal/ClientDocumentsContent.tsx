@@ -506,7 +506,7 @@ export default function ClientDocumentsContent({ userId }: ClientDocumentsConten
                           {uploadForm.file ? uploadForm.file.name : 'Click to select a file'}
                         </p>
                         <p className="text-xs text-slate-500 mt-1">
-                          PDF, Word, Excel, Images (Max 10MB)
+                          PDF, Word, Excel, Images (Max 25MB)
                         </p>
                       </label>
                     </div>

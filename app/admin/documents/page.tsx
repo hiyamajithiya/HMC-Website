@@ -1251,7 +1251,7 @@ export default function AdminDocumentsPage() {
                         <>
                           <Upload className="h-10 w-10 mx-auto text-slate-400 mb-2" />
                           <p className="text-sm text-slate-600 mb-1">Drag and drop a file here</p>
-                          <p className="text-xs text-slate-400 mb-3">PDF, Word, Excel, Images, Text, CSV (Max 10MB)</p>
+                          <p className="text-xs text-slate-400 mb-3">PDF, Word, Excel, Images, Text, CSV (Max 25MB)</p>
                           <Button type="button" variant="outline" size="sm" className="border-slate-200" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>
                             <FileText className="h-4 w-4 mr-1" />
                             Select File
