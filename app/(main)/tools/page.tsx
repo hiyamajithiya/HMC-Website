@@ -212,21 +212,23 @@ export default async function ToolsPage() {
                         Coming Soon
                       </div>
                     )}
-                    <CardHeader>
-                      <div className={`w-16 h-16 ${color} rounded-lg flex items-center justify-center mb-4`}>
-                        <Icon className="h-8 w-8" />
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2 text-xs text-text-muted">
-                          <span className="bg-bg-secondary px-2 py-1 rounded">
-                            {categoryLabels[tool.category] || tool.category}
-                          </span>
-                          <span>•</span>
-                          <span>{toolTypeLabels[tool.toolType] || tool.toolType}</span>
+                    <Link href={`/tools/${tool.slug}`}>
+                      <CardHeader className="cursor-pointer">
+                        <div className={`w-16 h-16 ${color} rounded-lg flex items-center justify-center mb-4`}>
+                          <Icon className="h-8 w-8" />
                         </div>
-                        <CardTitle className="text-xl font-heading">{tool.name}</CardTitle>
-                      </div>
-                    </CardHeader>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2 text-xs text-text-muted">
+                            <span className="bg-bg-secondary px-2 py-1 rounded">
+                              {categoryLabels[tool.category] || tool.category}
+                            </span>
+                            <span>•</span>
+                            <span>{toolTypeLabels[tool.toolType] || tool.toolType}</span>
+                          </div>
+                          <CardTitle className="text-xl font-heading hover:text-primary transition-colors">{tool.name}</CardTitle>
+                        </div>
+                      </CardHeader>
+                    </Link>
                     <CardContent>
                       <CardDescription className="text-text-secondary mb-4">
                         {tool.shortDescription}
@@ -257,19 +259,22 @@ export default async function ToolsPage() {
                           <Button variant="outline" disabled className="w-full">
                             Coming Soon
                           </Button>
-                        ) : tool.downloadUrl ? (
-                          <Link href={tool.downloadUrl} target="_blank">
-                            <Button className="w-full bg-primary hover:bg-primary-light text-white">
-                              <Download className="h-4 w-4 mr-2" />
-                              Download Tool
-                            </Button>
-                          </Link>
                         ) : (
-                          <Link href={`/tools/${tool.slug}`}>
-                            <Button className="w-full bg-primary hover:bg-primary-light text-white">
-                              View Details
-                            </Button>
-                          </Link>
+                          <div className="flex gap-2">
+                            <Link href={`/tools/${tool.slug}`} className="flex-1">
+                              <Button variant="outline" className="w-full">
+                                View Details
+                              </Button>
+                            </Link>
+                            {tool.downloadUrl && (
+                              <Link href={tool.downloadUrl} target="_blank" className="flex-1">
+                                <Button className="w-full bg-primary hover:bg-primary-light text-white">
+                                  <Download className="h-4 w-4 mr-2" />
+                                  Download
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
                         )}
                       </div>
                     </CardContent>
