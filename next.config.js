@@ -8,13 +8,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // Increase body size limit for file uploads (100MB)
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '100mb',
-    },
-  },
-
   // Image optimization
   images: {
     domains: ['localhost'],
