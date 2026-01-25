@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2 } from 'lucide-react'
 
 const categories = [
   { value: 'DOCUMENT_AUTOMATION', label: 'Document Automation' },
@@ -37,9 +37,12 @@ export default function EditToolPage() {
   const router = useRouter()
   const params = useParams()
   const toolId = params.id as string
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadedFile, setUploadedFile] = useState<{ name: string; path: string; size: number } | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -145,6 +148,61 @@ export default function EditToolPage() {
     } catch (error) {
       console.error('Failed to delete tool:', error)
     }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file size (100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      alert('File size exceeds 100MB limit. Please choose a smaller file.')
+      return
+    }
+
+    setUploading(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('type', 'tools')
+
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUploadedFile({
+          name: file.name,
+          path: data.filePath,
+          size: data.fileSize,
+        })
+        setFormData({ ...formData, downloadUrl: data.filePath })
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to upload file')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      alert('Failed to upload file')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeUploadedFile = () => {
+    setUploadedFile(null)
+    setFormData({ ...formData, downloadUrl: '' })
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   }
 
   if (loading) {
@@ -402,9 +460,91 @@ export default function EditToolPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Download</CardTitle>
+              <CardTitle>Tool File Upload</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Current File Info */}
+              {formData.downloadUrl && !uploadedFile && (
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-700 font-medium">Current file:</p>
+                  <p className="text-xs text-blue-600 truncate">{formData.downloadUrl}</p>
+                </div>
+              )}
+
+              {/* File Upload Area */}
+              {!uploadedFile ? (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    uploading
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border-light hover:border-primary hover:bg-primary/5'
+                  }`}
+                  onClick={() => !uploading && fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    accept=".zip,.rar,.7z,.py,.xlsx,.xls,.exe,.msi"
+                  />
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-10 w-10 mx-auto text-primary animate-spin" />
+                      <p className="mt-2 text-sm text-text-muted">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-10 w-10 mx-auto text-text-muted" />
+                      <p className="mt-2 text-sm font-medium text-text-primary">
+                        {formData.downloadUrl ? 'Click to replace file' : 'Click to upload file'}
+                      </p>
+                      <p className="text-xs text-text-muted mt-1">
+                        ZIP, RAR, 7Z, PY, XLSX, EXE (max 100MB)
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-border-light rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <File className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-text-primary text-sm truncate max-w-[180px]">
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-text-muted">
+                          {formatFileSize(uploadedFile.size)}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeUploadedFile}
+                      className="text-text-muted hover:text-red-500 transition-colors"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <div className="mt-3 p-2 bg-green-50 rounded text-xs text-green-700">
+                    New file uploaded! Click Save to apply changes.
+                  </div>
+                </div>
+              )}
+
+              {/* Manual URL Input */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border-light" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-text-muted">Or enter URL manually</span>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="downloadUrl">Download URL</Label>
                 <Input
@@ -413,9 +553,6 @@ export default function EditToolPage() {
                   onChange={(e) => setFormData({ ...formData, downloadUrl: e.target.value })}
                   placeholder="/downloads/tool-name.zip"
                 />
-                <p className="text-xs text-text-muted">
-                  Upload the file to /public/downloads/ and enter the path here
-                </p>
               </div>
             </CardContent>
           </Card>
