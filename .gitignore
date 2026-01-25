@@ -57,3 +57,9 @@ node_modules/.cache
 .env.local
 .env.production
 .env.development
+
+# Persistent uploads folder
+/uploads/
+
+# Environment backup
+.env.backup
