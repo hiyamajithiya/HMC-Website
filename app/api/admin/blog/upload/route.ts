@@ -6,6 +6,18 @@ import { existsSync } from 'fs'
 
 export const dynamic = 'force-dynamic'
 
+// Get uploads directory - use UPLOADS_PATH env var for persistent storage
+// If not set, defaults to public/uploads (will be lost on rebuild)
+function getUploadsDir(): string {
+  const persistentPath = process.env.UPLOADS_PATH
+  if (persistentPath) {
+    // Use persistent path (e.g., /var/www/uploads/blog)
+    return path.join(persistentPath, 'blog')
+  }
+  // Default to app directory (not persistent across rebuilds)
+  return path.join(process.cwd(), 'public', 'uploads', 'blog')
+}
+
 // POST - Upload blog image
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'blog')
+    const uploadsDir = getUploadsDir()
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }
@@ -58,7 +70,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Return the public URL
+    // Return the public URL (nginx should serve /uploads from persistent storage)
     const publicUrl = `/uploads/blog/${fileName}`
 
     return NextResponse.json({

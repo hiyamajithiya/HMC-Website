@@ -14,6 +14,18 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
   },
 
+  // Webpack configuration for better Windows compatibility
+  webpack: (config, { dev, isServer }) => {
+    if (dev) {
+      // Use polling for file watching on Windows
+      config.watchOptions = {
+        poll: 1000,
+        aggregateTimeout: 300,
+      }
+    }
+    return config
+  },
+
   // Security headers
   async headers() {
     return [

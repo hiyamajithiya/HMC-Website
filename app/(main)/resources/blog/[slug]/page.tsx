@@ -6,6 +6,7 @@ import { Calendar, Clock, ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { ShareButton } from "@/components/blog/ShareButton"
 import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer"
+import { BlogCoverImage } from "@/components/blog/BlogCoverImage"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -128,15 +129,9 @@ export default async function BlogPostPage({ params }: Props) {
       <section className="section-padding">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto">
-            {/* Cover Image */}
+            {/* Cover Image with error handling */}
             {post.coverImage && (
-              <div className="mb-8 rounded-xl overflow-hidden">
-                <img
-                  src={post.coverImage}
-                  alt={post.title}
-                  className="w-full h-auto"
-                />
-              </div>
+              <BlogCoverImage src={post.coverImage} alt={post.title} />
             )}
 
             {/* Article Content */}

@@ -9,6 +9,22 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // seconds
 export const fetchCache = 'force-no-store'
 
+// Get uploads directory - use UPLOADS_PATH env var for persistent storage
+// If not set, defaults to public directory (will be lost on rebuild)
+function getUploadDir(type: string): string {
+  const persistentPath = process.env.UPLOADS_PATH
+  if (persistentPath) {
+    // Use persistent path (e.g., /var/www/uploads)
+    return type === 'images'
+      ? path.join(persistentPath, 'images')
+      : path.join(persistentPath, 'downloads')
+  }
+  // Default to app directory (not persistent across rebuilds)
+  return type === 'images'
+    ? path.join(process.cwd(), 'public', 'uploads', 'images')
+    : path.join(process.cwd(), 'public', 'downloads')
+}
+
 // Helper to check admin status
 async function checkAdmin() {
   const session = await auth()
@@ -46,10 +62,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File size exceeds 100MB limit' }, { status: 400 })
     }
 
-    // Determine upload directory
-    const uploadDir = type === 'images'
-      ? path.join(process.cwd(), 'public', 'uploads', 'images')
-      : path.join(process.cwd(), 'public', 'downloads')
+    // Determine upload directory (supports persistent storage via UPLOADS_PATH)
+    const uploadDir = getUploadDir(type)
 
     // Ensure directory exists
     await mkdir(uploadDir, { recursive: true })
@@ -65,7 +79,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Return the public URL path
+    // Return the public URL path (nginx should serve from persistent storage)
     const publicPath = type === 'images'
       ? `/uploads/images/${fileName}`
       : `/downloads/${fileName}`

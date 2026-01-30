@@ -7,6 +7,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, BookOpen, ImageIcon } from "lucide-react"
 
+// Blog card image component with error handling
+function BlogCardImage({ src, alt, category, categoryLabel }: {
+  src: string | null;
+  alt: string;
+  category: string;
+  categoryLabel: string;
+}) {
+  const [imageError, setImageError] = useState(false)
+
+  if (!src || imageError) {
+    return (
+      <div className="relative w-full h-40 sm:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+        <ImageIcon className="h-12 w-12 text-primary/30" />
+        <div className="absolute top-3 left-3">
+          <Badge variant="secondary" className="text-xs">
+            {categoryLabel}
+          </Badge>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-full h-40 sm:h-48 overflow-hidden">
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        onError={() => setImageError(true)}
+      />
+      <div className="absolute top-3 left-3">
+        <Badge variant="secondary" className="text-xs bg-white/90 text-primary">
+          {categoryLabel}
+        </Badge>
+      </div>
+    </div>
+  )
+}
+
 interface BlogPost {
   id: string
   title: string
@@ -95,30 +134,13 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
               {filteredPosts.map((post) => (
                 <Link key={post.id} href={`/resources/blog/${post.slug}`}>
                   <Card className="card-hover flex flex-col h-full overflow-hidden">
-                    {/* Cover Image */}
-                    {post.coverImage ? (
-                      <div className="relative w-full h-40 sm:h-48 overflow-hidden">
-                        <img
-                          src={post.coverImage}
-                          alt={post.title}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute top-3 left-3">
-                          <Badge variant="secondary" className="text-xs bg-white/90 text-primary">
-                            {categoryLabels[post.category] || post.category}
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="relative w-full h-40 sm:h-48 bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                        <ImageIcon className="h-12 w-12 text-primary/30" />
-                        <div className="absolute top-3 left-3">
-                          <Badge variant="secondary" className="text-xs">
-                            {categoryLabels[post.category] || post.category}
-                          </Badge>
-                        </div>
-                      </div>
-                    )}
+                    {/* Cover Image with error handling */}
+                    <BlogCardImage
+                      src={post.coverImage}
+                      alt={post.title}
+                      category={post.category}
+                      categoryLabel={categoryLabels[post.category] || post.category}
+                    />
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center text-xs text-text-muted">

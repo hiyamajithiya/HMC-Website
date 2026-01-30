@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Download, ArrowLeft, CheckCircle, Monitor, Calendar, Tag } from "lucide-react"
 import { prisma } from "@/lib/prisma"
+import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer"
 
 export const dynamic = 'force-dynamic'
 
@@ -116,9 +117,9 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
                   <Card>
                     <CardContent className="p-6">
                       <h2 className="text-xl font-semibold text-primary mb-4">Description</h2>
-                      <div className="prose prose-sm max-w-none text-text-secondary whitespace-pre-line">
-                        {tool.longDescription}
-                      </div>
+                      <article className="prose prose-sm max-w-none">
+                        <MarkdownRenderer content={tool.longDescription} />
+                      </article>
                     </CardContent>
                   </Card>
                 )}
@@ -162,9 +163,9 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
                   <Card>
                     <CardContent className="p-6">
                       <h2 className="text-xl font-semibold text-primary mb-4">Setup Guide</h2>
-                      <div className="prose prose-sm max-w-none text-text-secondary whitespace-pre-line">
-                        {tool.setupGuide}
-                      </div>
+                      <article className="prose prose-sm max-w-none">
+                        <MarkdownRenderer content={tool.setupGuide} />
+                      </article>
                     </CardContent>
                   </Card>
                 )}
