@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, Clock, ArrowLeft } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { ShareButton } from "@/components/blog/ShareButton"
-import { MarkdownRenderer } from "@/components/blog/MarkdownRenderer"
+import { ContentRenderer } from "@/components/content/ContentRenderer"
 import { BlogCoverImage } from "@/components/blog/BlogCoverImage"
 
 interface Props {
@@ -136,7 +136,7 @@ export default async function BlogPostPage({ params }: Props) {
 
             {/* Article Content */}
             <article className="prose prose-lg max-w-none">
-              <MarkdownRenderer content={post.content} />
+              <ContentRenderer content={post.content} />
             </article>
 
             {/* Tags */}

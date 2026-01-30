@@ -3,11 +3,25 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Save, Eye, Upload, File, X, Loader2 } from 'lucide-react'
+
+// Dynamic import for RichTextEditor to avoid SSR issues
+const RichTextEditor = dynamic(
+  () => import('@/components/editor/RichTextEditor').then(mod => mod.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-48 border border-border-light rounded-md flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+)
 
 const categories = [
   { value: 'DOCUMENT_AUTOMATION', label: 'Document Automation' },
@@ -259,13 +273,11 @@ export default function NewToolPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="longDescription">Full Description</Label>
-                <textarea
-                  id="longDescription"
-                  value={formData.longDescription}
-                  onChange={(e) => setFormData({ ...formData, longDescription: e.target.value })}
+                <RichTextEditor
+                  content={formData.longDescription}
+                  onChange={(html) => setFormData({ ...formData, longDescription: html })}
                   placeholder="Detailed description of the tool..."
-                  rows={6}
-                  className="w-full px-3 py-2 border border-border-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="min-h-[200px]"
                 />
               </div>
 
@@ -295,15 +307,30 @@ export default function NewToolPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="setupGuide">Setup Guide</Label>
-                <textarea
-                  id="setupGuide"
-                  value={formData.setupGuide}
-                  onChange={(e) => setFormData({ ...formData, setupGuide: e.target.value })}
+                <RichTextEditor
+                  content={formData.setupGuide}
+                  onChange={(html) => setFormData({ ...formData, setupGuide: html })}
                   placeholder="Step-by-step installation instructions..."
-                  rows={5}
-                  className="w-full px-3 py-2 border border-border-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="min-h-[200px]"
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Editor Tips Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Editor Tips</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-text-muted space-y-2">
+              <p><strong>Rich Text Editor:</strong> Use the toolbar to format your content.</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>Copy-paste from Word with formatting preserved</li>
+                <li>Add headings, bold, italic, underline</li>
+                <li>Insert tables and lists</li>
+                <li>Add links and images</li>
+                <li>Highlight important text</li>
+              </ul>
             </CardContent>
           </Card>
         </div>

@@ -3,12 +3,22 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 // Using img tag for uploaded images as they're served directly by nginx
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, X, Loader2, ImageIcon } from 'lucide-react'
+
+// Dynamically import RichTextEditor to avoid SSR issues
+const RichTextEditor = dynamic(
+  () => import('@/components/editor/RichTextEditor').then(mod => mod.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => <div className="border rounded-lg p-4 min-h-[300px] bg-gray-50 animate-pulse">Loading editor...</div>
+  }
+)
 
 const categories = [
   { value: 'TAX_UPDATES', label: 'Tax Updates' },
@@ -290,15 +300,12 @@ export default function EditBlogPostPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="content">Content *</Label>
-                <textarea
-                  id="content"
-                  value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                <RichTextEditor
+                  content={formData.content}
+                  onChange={(html) => setFormData({ ...formData, content: html })}
                   placeholder="Write your blog post content here..."
-                  rows={20}
-                  className="w-full px-3 py-2 border border-border-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
-                  required
                 />
+                <p className="text-xs text-text-muted">Use the toolbar above to format text, add headings, lists, tables, and more. You can also copy-paste from Word.</p>
               </div>
             </CardContent>
           </Card>
@@ -430,47 +437,32 @@ export default function EditBlogPostPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Markdown Help</CardTitle>
+              <CardTitle>Editor Tips</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-sm text-text-muted space-y-3">
                 <div>
-                  <p className="font-semibold mb-1">Text Formatting:</p>
+                  <p className="font-semibold mb-1">Copy from Word:</p>
+                  <p className="text-xs">Simply copy content from Microsoft Word and paste it directly. Tables and formatting will be preserved.</p>
+                </div>
+                <div>
+                  <p className="font-semibold mb-1">Toolbar Features:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><code># Heading 1</code></li>
-                    <li><code>## Heading 2</code></li>
-                    <li><code>**bold text**</code></li>
-                    <li><code>*italic text*</code></li>
+                    <li>Bold, Italic, Underline, Highlight</li>
+                    <li>Headings (H1, H2, H3)</li>
+                    <li>Bullet & numbered lists</li>
+                    <li>Text alignment</li>
+                    <li>Links and images</li>
+                    <li>Tables</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="font-semibold mb-1">Lists:</p>
+                  <p className="font-semibold mb-1">Keyboard Shortcuts:</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><code>- Bullet item</code></li>
-                    <li><code>1. Numbered item</code></li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Links & Images:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><code>[Link](url)</code></li>
-                    <li><code>![Image](url)</code></li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Tables:</p>
-                  <pre className="text-xs bg-slate-100 p-2 rounded overflow-x-auto">
-{`| Header 1 | Header 2 |
-|----------|----------|
-| Cell 1   | Cell 2   |`}
-                  </pre>
-                </div>
-                <div>
-                  <p className="font-semibold mb-1">Other:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><code>&gt; Blockquote</code></li>
-                    <li><code>`inline code`</code></li>
-                    <li><code>---</code> (horizontal line)</li>
+                    <li><code>Ctrl+B</code> - Bold</li>
+                    <li><code>Ctrl+I</code> - Italic</li>
+                    <li><code>Ctrl+U</code> - Underline</li>
+                    <li><code>Ctrl+Z</code> - Undo</li>
                   </ul>
                 </div>
               </div>
