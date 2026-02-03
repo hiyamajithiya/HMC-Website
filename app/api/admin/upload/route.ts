@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 
 export const dynamic = 'force-dynamic'
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const file = formData.get('file') as File
     const type = formData.get('type') as string || 'tools' // 'tools' or 'images'
+    const oldFilePath = formData.get('oldFilePath') as string | null // Path to delete after upload
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
@@ -78,6 +79,22 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
+
+    // Delete old file if provided (after successful upload)
+    if (oldFilePath) {
+      try {
+        // Extract filename from the URL path (e.g., /downloads/123-file.zip -> 123-file.zip)
+        const oldFileName = oldFilePath.split('/').pop()
+        if (oldFileName) {
+          const oldFileFullPath = path.join(uploadDir, oldFileName)
+          await unlink(oldFileFullPath)
+          console.log(`Deleted old file: ${oldFileFullPath}`)
+        }
+      } catch (deleteError) {
+        // Log but don't fail if old file deletion fails (file might not exist)
+        console.warn('Could not delete old file:', deleteError)
+      }
+    }
 
     // Return the public URL path (nginx should serve from persistent storage)
     const publicPath = type === 'images'

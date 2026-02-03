@@ -197,7 +197,14 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
 
                       {/* Download Button */}
                       {tool.downloadUrl ? (
-                        <Link href={tool.downloadUrl} target="_blank" className="block">
+                        <Link
+                          href={tool.downloadUrl.startsWith('/downloads/')
+                            ? `/api/download/${tool.downloadUrl.replace('/downloads/', '')}`
+                            : tool.downloadUrl
+                          }
+                          target="_blank"
+                          className="block"
+                        >
                           <Button className="w-full bg-primary hover:bg-primary-light text-white" size="lg">
                             <Download className="h-5 w-5 mr-2" />
                             Download Now

@@ -179,6 +179,10 @@ export default function EditToolPage() {
       const uploadFormData = new FormData()
       uploadFormData.append('file', file)
       uploadFormData.append('type', 'tools')
+      // Send old file path so it can be deleted after successful upload
+      if (formData.downloadUrl) {
+        uploadFormData.append('oldFilePath', formData.downloadUrl)
+      }
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
