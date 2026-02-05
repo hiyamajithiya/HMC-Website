@@ -1,28 +1,8 @@
-import { auth } from '@/auth'
-import { NextResponse } from 'next/server'
+import NextAuth from 'next-auth'
+import { authConfig } from './auth.config'
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl
-  const isAuth = !!req.auth
-
-  // Public client portal routes (no auth required)
-  const publicClientPortalRoutes = [
-    '/client-portal/login',
-    '/client-portal/forgot-password',
-    '/client-portal/reset-password'
-  ]
-
-  // Protect client portal routes (except public pages)
-  if (pathname.startsWith('/client-portal') && !publicClientPortalRoutes.includes(pathname)) {
-    if (!isAuth) {
-      const loginUrl = new URL('/client-portal/login', req.url)
-      loginUrl.searchParams.set('callbackUrl', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
-  }
-
-  return NextResponse.next()
-})
+// Use the Edge-compatible auth config for middleware
+export default NextAuth(authConfig).auth
 
 export const config = {
   matcher: ['/client-portal/:path*'],

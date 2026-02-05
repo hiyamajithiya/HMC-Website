@@ -3,62 +3,21 @@ import Credentials from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@auth/prisma-adapter'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { authConfig } from './auth.config'
 
 const prisma = new PrismaClient()
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   // @ts-ignore - Type conflict between adapter versions
   adapter: PrismaAdapter(prisma),
-  session: {
-    strategy: 'jwt',
-    // Session expires when browser closes (session cookie)
-    // maxAge is still needed for JWT validation, but cookie won't persist
-    maxAge: 24 * 60 * 60, // 24 hours max if browser stays open
-  },
-  cookies: {
-    sessionToken: {
-      name: 'authjs.session-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-        // IMPORTANT: No maxAge means session cookie - deleted when browser closes
-        // This ensures user must re-login after closing browser
-      },
-    },
-    // Also make callback token a session cookie
-    callbackUrl: {
-      name: 'authjs.callback-url',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-    // CSRF token as session cookie
-    csrfToken: {
-      name: 'authjs.csrf-token',
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
-  },
-  pages: {
-    signIn: '/client-portal/login',
-    error: '/client-portal/login',
-  },
   providers: [
     Credentials({
       name: 'Credentials',
       credentials: {
         identifier: { label: 'Login ID or Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
-        selectedUserId: { label: 'Selected User ID', type: 'text' }, // For multi-account selection
+        selectedUserId: { label: 'Selected User ID', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.identifier || !credentials?.password) {
@@ -133,7 +92,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }
 
           // Multiple users with this email - need account selection
-          // First verify password matches at least one account
           let validUsers = []
           for (const user of usersWithEmail) {
             if (user.isActive) {
@@ -184,20 +142,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.role = user.role
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-      }
-      return session
-    },
-  },
 })
