@@ -175,7 +175,7 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
               {/* Sidebar */}
               <div className="space-y-6">
                 {/* Download Card */}
-                <Card className="sticky top-24">
+                <Card className="sticky top-24 z-10 bg-white">
                   <CardContent className="p-6">
                     <div className="space-y-4">
                       {/* Price */}
