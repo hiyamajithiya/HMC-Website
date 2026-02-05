@@ -39,12 +39,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Helper to normalize download URL to API format
+    const normalizeDownloadUrl = (url: string | null): string | null => {
+      if (!url) return null
+      // Already in correct API format
+      if (url.startsWith('/api/download/')) return url
+      // Old format: /downloads/filename
+      if (url.startsWith('/downloads/')) {
+        return `/api/download/${url.replace('/downloads/', '')}`
+      }
+      // Just filename - prepend API path
+      if (!url.startsWith('/') && !url.startsWith('http')) {
+        return `/api/download/${url}`
+      }
+      // Return as-is for external URLs
+      return url
+    }
+
     // Check if already verified
     if (lead.verified) {
       // Return download URL directly
-      const downloadUrl = lead.tool.downloadUrl?.startsWith('/downloads/')
-        ? `/api/download/${lead.tool.downloadUrl.replace('/downloads/', '')}`
-        : lead.tool.downloadUrl
+      const downloadUrl = normalizeDownloadUrl(lead.tool.downloadUrl)
 
       return NextResponse.json({
         success: true,
@@ -89,10 +104,8 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Construct download URL
-    const downloadUrl = lead.tool.downloadUrl?.startsWith('/downloads/')
-      ? `/api/download/${lead.tool.downloadUrl.replace('/downloads/', '')}`
-      : lead.tool.downloadUrl
+    // Construct download URL using the same normalizer
+    const downloadUrl = normalizeDownloadUrl(lead.tool.downloadUrl)
 
     return NextResponse.json({
       success: true,
