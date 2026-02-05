@@ -7,6 +7,15 @@ import { existsSync } from 'fs'
 
 export const dynamic = 'force-dynamic'
 
+// Get uploads directory - use UPLOADS_PATH for persistent storage
+function getDownloadsDir(): string {
+  const persistentPath = process.env.UPLOADS_PATH
+  if (persistentPath) {
+    return path.join(persistentPath, 'resources')
+  }
+  return path.join(process.cwd(), 'public', 'downloads')
+}
+
 // GET - Fetch all downloads
 export async function GET() {
   try {
@@ -93,8 +102,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create downloads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), 'public', 'downloads')
+    // Create downloads directory if it doesn't exist (uses UPLOADS_PATH for persistence)
+    const uploadsDir = getDownloadsDir()
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }
@@ -124,13 +133,13 @@ export async function POST(request: NextRequest) {
       return typeMap[mimeType] || 'File'
     }
 
-    // Create download record
+    // Create download record (served via API route)
     const download = await prisma.download.create({
       data: {
         title,
         description: description || null,
         fileName: file.name,
-        filePath: `/downloads/${fileName}`,
+        filePath: `/api/uploads/resources/${fileName}`,
         fileSize: file.size,
         fileType: getFileTypeDisplay(file.type),
         category: category as any,

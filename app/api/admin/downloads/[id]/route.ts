@@ -1,11 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { unlink, writeFile } from 'fs/promises'
+import { unlink, writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
 
 export const dynamic = 'force-dynamic'
+
+// Get uploads directory - use UPLOADS_PATH for persistent storage
+function getDownloadsDir(): string {
+  const persistentPath = process.env.UPLOADS_PATH
+  if (persistentPath) {
+    return path.join(persistentPath, 'resources')
+  }
+  return path.join(process.cwd(), 'public', 'downloads')
+}
+
+// Get full file path from stored path
+function getFullFilePath(storedPath: string): string {
+  const persistentPath = process.env.UPLOADS_PATH
+  if (persistentPath) {
+    // New format: /api/uploads/resources/filename
+    if (storedPath.includes('/api/uploads/resources/')) {
+      const fileName = storedPath.split('/').pop()
+      return path.join(persistentPath, 'resources', fileName || '')
+    }
+    // Old format: /downloads/filename
+    const fileName = storedPath.split('/').pop()
+    return path.join(process.cwd(), 'public', 'downloads', fileName || '')
+  }
+  return path.join(process.cwd(), 'public', storedPath)
+}
 
 // GET - Fetch single download
 export async function GET(
@@ -97,13 +122,21 @@ export async function PATCH(
 
       if (file && file.size > 0) {
         // Delete old file
-        const oldFilePath = path.join(process.cwd(), 'public', existingDownload.filePath)
+        const oldFilePath = getFullFilePath(existingDownload.filePath)
         if (existsSync(oldFilePath)) {
-          await unlink(oldFilePath)
+          try {
+            await unlink(oldFilePath)
+          } catch (err) {
+            console.warn('Could not delete old file:', err)
+          }
         }
 
-        // Save new file
-        const uploadsDir = path.join(process.cwd(), 'public', 'downloads')
+        // Save new file to persistent storage
+        const uploadsDir = getDownloadsDir()
+        if (!existsSync(uploadsDir)) {
+          await mkdir(uploadsDir, { recursive: true })
+        }
+
         const timestamp = Date.now()
         const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
         const fileName = `${timestamp}-${sanitizedFileName}`
@@ -129,7 +162,7 @@ export async function PATCH(
         updateData = {
           ...updateData,
           fileName: file.name,
-          filePath: `/downloads/${fileName}`,
+          filePath: `/api/uploads/resources/${fileName}`,
           fileSize: file.size,
           fileType: getFileTypeDisplay(file.type),
         }
@@ -198,9 +231,13 @@ export async function DELETE(
     }
 
     // Delete file from disk
-    const filePath = path.join(process.cwd(), 'public', download.filePath)
+    const filePath = getFullFilePath(download.filePath)
     if (existsSync(filePath)) {
-      await unlink(filePath)
+      try {
+        await unlink(filePath)
+      } catch (err) {
+        console.warn('Could not delete file:', err)
+      }
     }
 
     // Delete from database
