@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,6 +17,12 @@ interface DownloadModalProps {
 type Step = 'form' | 'otp' | 'success'
 
 export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadModalProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
   const [step, setStep] = useState<Step>('form')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -138,9 +145,9 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     onClose()
   }
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
@@ -344,4 +351,6 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }
