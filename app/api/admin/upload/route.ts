@@ -96,10 +96,10 @@ export async function POST(request: Request) {
       }
     }
 
-    // Return the public URL path (nginx should serve from persistent storage)
+    // Return the public URL path (served via API routes)
     const publicPath = type === 'images'
-      ? `/uploads/images/${fileName}`
-      : `/downloads/${fileName}`
+      ? `/api/uploads/images/${fileName}`
+      : `/api/download/${fileName}`
 
     return NextResponse.json({
       success: true,

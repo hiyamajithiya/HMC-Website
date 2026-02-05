@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // Return the public URL (nginx should serve /uploads from persistent storage)
-    const publicUrl = `/uploads/blog/${fileName}`
+    // Return the public URL (served via API route)
+    const publicUrl = `/api/uploads/blog/${fileName}`
 
     return NextResponse.json({
       success: true,
