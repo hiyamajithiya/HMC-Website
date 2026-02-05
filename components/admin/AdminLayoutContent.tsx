@@ -23,7 +23,8 @@ import {
   Search,
   Shield,
   ChevronDown,
-  Download
+  Download,
+  UserCheck
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { signOut } from 'next-auth/react'
@@ -33,6 +34,7 @@ const allSidebarItems = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, roles: ['ADMIN'], description: 'Overview & stats' },
   { name: 'Blog Posts', href: '/admin/blog', icon: FileText, roles: ['ADMIN'], description: 'Manage articles' },
   { name: 'Tools', href: '/admin/tools', icon: Wrench, roles: ['ADMIN'], description: 'Automation tools' },
+  { name: 'Tool Leads', href: '/admin/leads', icon: UserCheck, roles: ['ADMIN'], description: 'Download requests' },
   { name: 'Documents', href: '/admin/documents', icon: FolderOpen, roles: ['ADMIN', 'STAFF'], description: 'Client files' },
   { name: 'Contacts', href: '/admin/contacts', icon: Mail, roles: ['ADMIN'], description: 'Form submissions' },
   { name: 'Appointments', href: '/admin/appointments', icon: Calendar, roles: ['ADMIN'], description: 'Bookings' },
