@@ -8,6 +8,15 @@ import { decryptDocument } from '@/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
+// Get the base directory for document storage
+function getDocumentsBaseDir(): string {
+  const uploadsPath = process.env.UPLOADS_PATH
+  if (uploadsPath) {
+    return uploadsPath
+  }
+  return process.cwd()
+}
+
 // GET - Securely download or view a document
 // Use ?view=true to view inline, otherwise downloads as attachment
 export async function GET(
@@ -49,9 +58,33 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // Determine file path (handle both new private and legacy public paths)
+    // Determine file path (handle both UPLOADS_PATH and legacy paths)
     let filePath: string
-    if (document.filePath.startsWith('private/')) {
+    const uploadsPath = process.env.UPLOADS_PATH
+
+    if (document.filePath.startsWith('private/documents/')) {
+      // Document path format: private/documents/{userId}/{fileName}
+      // Extract the documents/{userId}/{fileName} part
+      const relativePath = document.filePath.replace('private/', '')
+
+      // Try UPLOADS_PATH first (persistent storage), then fallback to process.cwd()
+      if (uploadsPath) {
+        const uploadsPathFile = path.join(uploadsPath, relativePath)
+        const cwdPathFile = path.join(process.cwd(), document.filePath)
+
+        if (existsSync(uploadsPathFile)) {
+          filePath = uploadsPathFile
+        } else if (existsSync(cwdPathFile)) {
+          // Fallback to old location for existing documents
+          filePath = cwdPathFile
+        } else {
+          filePath = uploadsPathFile // Will trigger "file not found" error
+        }
+      } else {
+        filePath = path.join(process.cwd(), document.filePath)
+      }
+    } else if (document.filePath.startsWith('private/')) {
+      // Other private paths
       filePath = path.join(process.cwd(), document.filePath)
     } else {
       // Legacy path in public folder

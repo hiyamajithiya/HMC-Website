@@ -9,8 +9,15 @@ import { encryptDocument } from '@/lib/encryption'
 
 export const dynamic = 'force-dynamic'
 
-// Secure storage directory - OUTSIDE public folder
-const SECURE_UPLOADS_DIR = path.join(process.cwd(), 'private', 'documents')
+// Secure storage directory - uses UPLOADS_PATH for persistent storage
+function getSecureUploadsDir(): string {
+  const uploadsPath = process.env.UPLOADS_PATH
+  if (uploadsPath) {
+    return path.join(uploadsPath, 'documents')
+  }
+  // Fallback to local directory for development
+  return path.join(process.cwd(), 'private', 'documents')
+}
 
 // GET - Fetch documents for a user
 export async function GET(request: NextRequest) {
@@ -187,8 +194,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create secure uploads directory if it doesn't exist (OUTSIDE public folder)
-    const uploadsDir = path.join(SECURE_UPLOADS_DIR, documentUserId)
+    // Create secure uploads directory if it doesn't exist (uses UPLOADS_PATH for persistence)
+    const uploadsDir = path.join(getSecureUploadsDir(), documentUserId)
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }

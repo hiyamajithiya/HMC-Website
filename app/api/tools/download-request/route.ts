@@ -93,10 +93,21 @@ export async function POST(request: NextRequest) {
         toolName: tool.name,
         otp,
       })
-    } catch (emailError) {
+    } catch (emailError: any) {
       console.error('Failed to send OTP email:', emailError)
+      // Provide more specific error message
+      let errorMessage = 'Failed to send OTP email. '
+      if (emailError.message?.includes('SMTP settings not configured')) {
+        errorMessage += 'SMTP is not configured. Please configure email settings in admin panel or set SMTP environment variables.'
+      } else if (emailError.message?.includes('Invalid login') || emailError.message?.includes('auth')) {
+        errorMessage += 'SMTP authentication failed. Please check your email credentials.'
+      } else if (emailError.message?.includes('ENCRYPTION_KEY')) {
+        errorMessage += 'Encryption key issue. Please check ENCRYPTION_KEY environment variable.'
+      } else {
+        errorMessage += emailError.message || 'Please try again.'
+      }
       return NextResponse.json(
-        { error: 'Failed to send OTP email. Please try again.' },
+        { error: errorMessage },
         { status: 500 }
       )
     }

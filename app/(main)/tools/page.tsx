@@ -2,8 +2,9 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, FileText, Table, Calculator, Bot, Zap, ArrowRight, Code } from "lucide-react"
+import { FileText, Table, Calculator, Bot, Zap, ArrowRight, Code } from "lucide-react"
 import { prisma } from "@/lib/prisma"
+import { ToolDownloadButton } from "@/components/tools/ToolDownloadButton"
 
 // Force dynamic rendering to always fetch fresh data from database
 export const dynamic = 'force-dynamic'
@@ -267,12 +268,14 @@ export default async function ToolsPage() {
                               </Button>
                             </Link>
                             {tool.downloadUrl && (
-                              <Link href={tool.downloadUrl} target="_blank" className="flex-1">
-                                <Button className="w-full bg-primary hover:bg-primary-light text-white">
-                                  <Download className="h-4 w-4 mr-2" />
-                                  Download
-                                </Button>
-                              </Link>
+                              <div className="flex-1">
+                                <ToolDownloadButton
+                                  toolId={tool.id}
+                                  toolName={tool.name}
+                                  hasDownloadUrl={!!tool.downloadUrl}
+                                  variant="compact"
+                                />
+                              </div>
                             )}
                           </div>
                         )}
