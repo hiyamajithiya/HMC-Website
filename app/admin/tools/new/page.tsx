@@ -90,9 +90,9 @@ export default function NewToolPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    // Validate file size (100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      alert('File size exceeds 100MB limit. Please choose a smaller file.')
+    // Validate file size (500MB)
+    if (file.size > 500 * 1024 * 1024) {
+      alert('File size exceeds 500MB limit. Please choose a smaller file.')
       return
     }
 
@@ -446,7 +446,7 @@ export default function NewToolPage() {
                         Click to upload tool file
                       </p>
                       <p className="text-xs text-text-muted mt-1">
-                        ZIP, RAR, 7Z, PY, XLSX, EXE (max 100MB)
+                        ZIP, RAR, 7Z, PY, XLSX, EXE (max 500MB)
                       </p>
                     </>
                   )}

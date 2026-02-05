@@ -5,8 +5,8 @@ import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
-// Increase body size limit for this route (100MB)
-export const maxDuration = 60 // seconds
+// Increase body size limit for this route (500MB)
+export const maxDuration = 300 // seconds (5 minutes for large files)
 export const fetchCache = 'force-no-store'
 
 // Get uploads directory - use UPLOADS_PATH env var for persistent storage
@@ -57,10 +57,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
-    // Validate file size (max 100MB)
-    const maxSize = 100 * 1024 * 1024 // 100MB
+    // Validate file size (max 500MB)
+    const maxSize = 500 * 1024 * 1024 // 500MB
     if (file.size > maxSize) {
-      return NextResponse.json({ error: 'File size exceeds 100MB limit' }, { status: 400 })
+      return NextResponse.json({ error: 'File size exceeds 500MB limit' }, { status: 400 })
     }
 
     // Determine upload directory (supports persistent storage via UPLOADS_PATH)
