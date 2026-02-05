@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Download, ArrowLeft, CheckCircle, Monitor, Calendar, Tag } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { ContentRenderer } from "@/components/content/ContentRenderer"
+import { DownloadButton } from "@/components/tools/DownloadButton"
 
 export const dynamic = 'force-dynamic'
 
@@ -197,19 +198,11 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
 
                       {/* Download Button */}
                       {tool.downloadUrl ? (
-                        <Link
-                          href={tool.downloadUrl.startsWith('/downloads/')
-                            ? `/api/download/${tool.downloadUrl.replace('/downloads/', '')}`
-                            : tool.downloadUrl
-                          }
-                          target="_blank"
-                          className="block"
-                        >
-                          <Button className="w-full bg-primary hover:bg-primary-light text-white" size="lg">
-                            <Download className="h-5 w-5 mr-2" />
-                            Download Now
-                          </Button>
-                        </Link>
+                        <DownloadButton
+                          toolId={tool.id}
+                          toolName={tool.name}
+                          hasDownloadUrl={!!tool.downloadUrl}
+                        />
                       ) : (
                         <Link href="/contact" className="block">
                           <Button className="w-full bg-secondary hover:bg-secondary-dark text-white" size="lg">

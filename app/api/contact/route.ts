@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { SITE_INFO } from "@/lib/constants"
 import { prisma } from "@/lib/prisma"
+import { sendContactEmail } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -134,7 +135,26 @@ export async function POST(request: NextRequest) {
         console.error("Email sending failed:", emailError)
       }
     } else {
-      console.log("Resend API key not configured - skipping email notification")
+      // Fallback to Gmail SMTP if Resend is not configured
+      const smtpUser = process.env.SMTP_USER
+      const smtpPass = process.env.SMTP_PASS
+
+      if (smtpUser && smtpPass) {
+        try {
+          await sendContactEmail({
+            name,
+            email,
+            phone,
+            service: subject,
+            message,
+          })
+          console.log("Email sent via Gmail SMTP")
+        } catch (smtpError) {
+          console.error("Gmail SMTP email failed:", smtpError)
+        }
+      } else {
+        console.log("No email service configured - skipping email notification")
+      }
     }
 
     // Always return success since the contact was saved to the database

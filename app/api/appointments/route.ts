@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { sendAppointmentEmail } from "@/lib/email"
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +46,33 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
       },
     })
+
+    // Send email notification (admin + user confirmation)
+    const smtpUser = process.env.SMTP_USER
+    const smtpPass = process.env.SMTP_PASS
+
+    if (smtpUser && smtpPass) {
+      try {
+        await sendAppointmentEmail({
+          name,
+          email,
+          phone,
+          service,
+          date: appointmentDate.toLocaleDateString('en-IN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          }),
+          timeSlot,
+          message: message || undefined,
+        })
+        console.log("Appointment email notification sent")
+      } catch (emailError) {
+        console.error("Failed to send appointment email:", emailError)
+        // Don't fail the request if email fails
+      }
+    }
 
     return NextResponse.json(
       {

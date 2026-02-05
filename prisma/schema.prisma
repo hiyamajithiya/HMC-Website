@@ -175,6 +175,7 @@ model Tool {
   updatedAt        DateTime       @updatedAt
 
   purchases        ToolPurchase[]
+  downloadLeads    DownloadLead[]
 }
 
 enum ToolCategory {
@@ -329,4 +330,24 @@ enum DownloadCategory {
   CHECKLISTS
   TOOLS
   OTHER
+}
+
+// Tool download leads - tracks users who download tools
+model DownloadLead {
+  id           String    @id @default(cuid())
+  name         String
+  email        String
+  phone        String?
+  company      String?
+  toolId       String
+  tool         Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  otp          String?
+  otpExpiry    DateTime?
+  verified     Boolean   @default(false)
+  downloadedAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+  @@index([toolId])
 }

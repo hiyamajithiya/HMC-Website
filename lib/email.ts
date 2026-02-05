@@ -171,3 +171,110 @@ export async function testEmailConnection(): Promise<boolean> {
     return false
   }
 }
+
+// Generate 6-digit OTP
+export function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString()
+}
+
+// Send OTP for tool download verification
+export async function sendDownloadOTP(data: {
+  name: string
+  email: string
+  toolName: string
+  otp: string
+}) {
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1e3a5f; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; }
+        .otp-box { background: #1e3a5f; color: white; font-size: 32px; letter-spacing: 8px; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; font-weight: bold; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; background: #f0f0f0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Himanshu Majithiya & Co.</h1>
+          <p style="margin: 5px 0 0; opacity: 0.9;">Chartered Accountants</p>
+        </div>
+        <div class="content">
+          <h2 style="color: #1e3a5f;">Hello ${data.name},</h2>
+          <p>You have requested to download <strong>${data.toolName}</strong>.</p>
+          <p>Please use the following OTP to verify your email and proceed with the download:</p>
+          <div class="otp-box">${data.otp}</div>
+          <p style="color: #666;"><strong>This OTP is valid for 10 minutes.</strong></p>
+          <p style="color: #999; font-size: 14px;">If you did not request this download, please ignore this email.</p>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Himanshu Majithiya & Co. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: data.email,
+    subject: `Your OTP for downloading ${data.toolName} - HMC`,
+    html: emailHtml,
+  })
+}
+
+// Send tool update notification to users who downloaded the tool
+export async function sendToolUpdateNotification(data: {
+  name: string
+  email: string
+  toolName: string
+  toolSlug: string
+  version?: string
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1e3a5f; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; }
+        .btn { display: inline-block; background: #c9a227; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; background: #f0f0f0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Tool Update Available!</h1>
+        </div>
+        <div class="content">
+          <h2 style="color: #1e3a5f;">Hello ${data.name},</h2>
+          <p>Great news! <strong>${data.toolName}</strong>${data.version ? ` (Version ${data.version})` : ''} has been updated.</p>
+          <p>You previously downloaded this tool, and a new version is now available with improvements and bug fixes.</p>
+          <p style="text-align: center;">
+            <a href="${siteUrl}/tools/${data.toolSlug}" class="btn">Download Latest Version</a>
+          </p>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Himanshu Majithiya & Co. All rights reserved.</p>
+          <p style="color: #999;">You're receiving this because you downloaded this tool from our website.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await transporter.sendMail({
+    from: process.env.SMTP_USER,
+    to: data.email,
+    subject: `${data.toolName} has been updated!`,
+    html: emailHtml,
+  })
+}
