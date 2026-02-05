@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,13 +20,29 @@ import {
   Facebook,
   Linkedin,
   Youtube,
-  Twitter
+  Twitter,
+  Send,
+  Eye,
+  EyeOff,
+  AlertCircle
 } from 'lucide-react'
 
 export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [activeSection, setActiveSection] = useState('general')
+  const [showPassword, setShowPassword] = useState(false)
+  const [testingSmtp, setTestingSmtp] = useState(false)
+  const [smtpMessage, setSmtpMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [testEmail, setTestEmail] = useState('')
+  const [smtpSettings, setSmtpSettings] = useState({
+    host: 'smtp.gmail.com',
+    port: '587',
+    user: '',
+    pass: '',
+    fromName: 'Himanshu Majithiya & Co.',
+    notificationEmail: '',
+  })
   const [settings, setSettings] = useState({
     siteName: 'Himanshu Majithiya & Co.',
     tagline: 'Chartered Accountants - Practicing Since 2007',
@@ -43,6 +59,24 @@ export default function SettingsPage() {
     whatsapp: '+919879503465',
   })
 
+  // Fetch SMTP settings on mount
+  useEffect(() => {
+    fetchSmtpSettings()
+  }, [])
+
+  const fetchSmtpSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings/smtp')
+      if (response.ok) {
+        const data = await response.json()
+        setSmtpSettings(data.settings)
+        setTestEmail(data.settings.notificationEmail || data.settings.user || '')
+      }
+    } catch (error) {
+      console.error('Failed to fetch SMTP settings:', error)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     // TODO: Implement settings save to database
@@ -53,12 +87,68 @@ export default function SettingsPage() {
     }, 1000)
   }
 
+  const handleSaveSmtp = async () => {
+    setSaving(true)
+    setSmtpMessage(null)
+
+    try {
+      const response = await fetch('/api/admin/settings/smtp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtpSettings),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSmtpMessage({ type: 'success', text: 'SMTP settings saved successfully!' })
+      } else {
+        setSmtpMessage({ type: 'error', text: data.error || 'Failed to save settings' })
+      }
+    } catch (error) {
+      setSmtpMessage({ type: 'error', text: 'Failed to save settings' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleTestSmtp = async () => {
+    if (!testEmail) {
+      setSmtpMessage({ type: 'error', text: 'Please enter a test email address' })
+      return
+    }
+
+    setTestingSmtp(true)
+    setSmtpMessage(null)
+
+    try {
+      const response = await fetch('/api/admin/settings/smtp', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testEmail }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSmtpMessage({ type: 'success', text: `Test email sent successfully to ${testEmail}` })
+      } else {
+        setSmtpMessage({ type: 'error', text: data.error || 'Failed to send test email' })
+      }
+    } catch (error) {
+      setSmtpMessage({ type: 'error', text: 'Failed to send test email' })
+    } finally {
+      setTestingSmtp(false)
+    }
+  }
+
   const sections = [
     { id: 'general', label: 'General', icon: Globe },
     { id: 'contact', label: 'Contact', icon: Phone },
     { id: 'address', label: 'Address', icon: MapPin },
     { id: 'hours', label: 'Hours', icon: Clock },
     { id: 'social', label: 'Social Media', icon: Share2 },
+    { id: 'email', label: 'Email (SMTP)', icon: Mail },
   ]
 
   return (
@@ -514,6 +604,207 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Email/SMTP Settings */}
+          {activeSection === 'email' && (
+            <>
+              {smtpMessage && (
+                <div
+                  className={`p-4 rounded-lg flex items-center gap-3 ${
+                    smtpMessage.type === 'success'
+                      ? 'bg-green-50 border border-green-200 text-green-700'
+                      : 'bg-red-50 border border-red-200 text-red-700'
+                  }`}
+                >
+                  {smtpMessage.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  )}
+                  <span>{smtpMessage.text}</span>
+                </div>
+              )}
+
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Email (SMTP) Settings</CardTitle>
+                      <CardDescription>Configure email for notifications</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpHost" className="text-sm font-medium text-slate-700">SMTP Host</Label>
+                      <Input
+                        id="smtpHost"
+                        value={smtpSettings.host}
+                        onChange={(e) => setSmtpSettings({ ...smtpSettings, host: e.target.value })}
+                        placeholder="smtp.gmail.com"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpPort" className="text-sm font-medium text-slate-700">SMTP Port</Label>
+                      <Input
+                        id="smtpPort"
+                        value={smtpSettings.port}
+                        onChange={(e) => setSmtpSettings({ ...smtpSettings, port: e.target.value })}
+                        placeholder="587"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpUser" className="text-sm font-medium text-slate-700">Email Address (Username)</Label>
+                    <Input
+                      id="smtpUser"
+                      type="email"
+                      value={smtpSettings.user}
+                      onChange={(e) => setSmtpSettings({ ...smtpSettings, user: e.target.value })}
+                      placeholder="your-email@gmail.com"
+                      className="bg-slate-50 border-slate-200 focus:bg-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtpPass" className="text-sm font-medium text-slate-700">App Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="smtpPass"
+                        type={showPassword ? 'text' : 'password'}
+                        value={smtpSettings.pass}
+                        onChange={(e) => setSmtpSettings({ ...smtpSettings, pass: e.target.value })}
+                        placeholder="Enter app password"
+                        className="bg-slate-50 border-slate-200 focus:bg-white pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      For Gmail: Use an App Password (not your regular password).{' '}
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Generate App Password
+                      </a>
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="smtpFromName" className="text-sm font-medium text-slate-700">From Name</Label>
+                      <Input
+                        id="smtpFromName"
+                        value={smtpSettings.fromName}
+                        onChange={(e) => setSmtpSettings({ ...smtpSettings, fromName: e.target.value })}
+                        placeholder="Himanshu Majithiya & Co."
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="notificationEmail" className="text-sm font-medium text-slate-700">Notification Email</Label>
+                      <Input
+                        id="notificationEmail"
+                        type="email"
+                        value={smtpSettings.notificationEmail}
+                        onChange={(e) => setSmtpSettings({ ...smtpSettings, notificationEmail: e.target.value })}
+                        placeholder="admin@yoursite.com"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                      <p className="text-xs text-slate-500">Where to receive notifications</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleSaveSmtp}
+                    className="bg-primary hover:bg-primary/90"
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save SMTP Settings
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Test Email Card */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                      <Send className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Test Email</CardTitle>
+                      <CardDescription>Send a test email to verify configuration</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex gap-3">
+                    <Input
+                      type="email"
+                      value={testEmail}
+                      onChange={(e) => setTestEmail(e.target.value)}
+                      placeholder="test@example.com"
+                      className="bg-slate-50 border-slate-200 focus:bg-white"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleTestSmtp}
+                      disabled={testingSmtp || !testEmail}
+                    >
+                      {testingSmtp ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Test
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-4">
+                    <h4 className="text-sm font-medium text-slate-700 mb-2">Gmail Setup Guide:</h4>
+                    <ol className="text-xs text-slate-600 space-y-1 list-decimal list-inside">
+                      <li>Enable 2-Factor Authentication on Google Account</li>
+                      <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">App Passwords</a></li>
+                      <li>Create app password for "Mail"</li>
+                      <li>Copy the 16-character password</li>
+                      <li>Paste it in the "App Password" field above</li>
+                    </ol>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </div>
       </div>

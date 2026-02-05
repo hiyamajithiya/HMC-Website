@@ -89,3 +89,51 @@ export function isEncryptedFile(data: Buffer): boolean {
 export function generateEncryptionKey(): string {
   return crypto.randomBytes(32).toString('hex')
 }
+
+// Simple string encryption for settings (like SMTP password)
+const SETTINGS_ALGORITHM = 'aes-256-cbc'
+const SETTINGS_KEY_LENGTH = 32
+const SETTINGS_IV_LENGTH = 16
+
+function getSettingsKey(): Buffer {
+  const key = process.env.SETTINGS_ENCRYPTION_KEY || process.env.DOCUMENT_ENCRYPTION_KEY || 'default-key-change-in-production'
+  // Ensure key is exactly 32 bytes
+  return crypto.createHash('sha256').update(key).digest()
+}
+
+/**
+ * Encrypt a string (for storing sensitive settings like SMTP password)
+ */
+export function encrypt(text: string): string {
+  const key = getSettingsKey()
+  const iv = crypto.randomBytes(SETTINGS_IV_LENGTH)
+  const cipher = crypto.createCipheriv(SETTINGS_ALGORITHM, key, iv)
+  let encrypted = cipher.update(text, 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  // Return IV + encrypted data as hex
+  return iv.toString('hex') + ':' + encrypted
+}
+
+/**
+ * Decrypt a string (for reading sensitive settings like SMTP password)
+ */
+export function decrypt(encryptedText: string): string {
+  try {
+    const key = getSettingsKey()
+    const parts = encryptedText.split(':')
+    if (parts.length !== 2) {
+      // Not encrypted, return as-is (for backwards compatibility)
+      return encryptedText
+    }
+    const iv = Buffer.from(parts[0], 'hex')
+    const encrypted = parts[1]
+    const decipher = crypto.createDecipheriv(SETTINGS_ALGORITHM, key, iv)
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    return decrypted
+  } catch (error) {
+    // If decryption fails, return the original (might be unencrypted)
+    console.error('Decryption failed:', error)
+    return encryptedText
+  }
+}

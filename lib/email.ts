@@ -1,15 +1,4 @@
-import nodemailer from 'nodemailer'
-
-// Email configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+import { createTransporter, getSmtpSettings } from '@/lib/email-db'
 
 // Contact form email
 export async function sendContactEmail(data: {
@@ -19,6 +8,14 @@ export async function sendContactEmail(data: {
   service?: string
   message: string
 }) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   const emailHtml = `
     <h2>New Contact Form Submission</h2>
     <p><strong>Name:</strong> ${data.name}</p>
@@ -30,8 +27,8 @@ export async function sendContactEmail(data: {
   `
 
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
-    to: process.env.CONTACT_EMAIL || 'info@himanshumajithiya.com',
+    from: fromAddress,
+    to: settings.notificationEmail,
     subject: `New Contact Form Submission from ${data.name}`,
     html: emailHtml,
     replyTo: data.email,
@@ -39,7 +36,7 @@ export async function sendContactEmail(data: {
 
   // Send confirmation email to user
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: data.email,
     subject: 'Thank you for contacting Himanshu Majithiya & Co.',
     html: `
@@ -62,6 +59,14 @@ export async function sendAppointmentEmail(data: {
   timeSlot: string
   message?: string
 }) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   const emailHtml = `
     <h2>New Appointment Booking</h2>
     <p><strong>Name:</strong> ${data.name}</p>
@@ -74,8 +79,8 @@ export async function sendAppointmentEmail(data: {
   `
 
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
-    to: process.env.CONTACT_EMAIL || 'info@himanshumajithiya.com',
+    from: fromAddress,
+    to: settings.notificationEmail,
     subject: `New Appointment Request from ${data.name}`,
     html: emailHtml,
     replyTo: data.email,
@@ -83,7 +88,7 @@ export async function sendAppointmentEmail(data: {
 
   // Send confirmation to user
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: data.email,
     subject: 'Appointment Request Received - Himanshu Majithiya & Co.',
     html: `
@@ -100,8 +105,16 @@ export async function sendAppointmentEmail(data: {
 
 // Newsletter subscription email
 export async function sendNewsletterConfirmation(email: string, name?: string) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: email,
     subject: 'Newsletter Subscription Confirmed - Himanshu Majithiya & Co.',
     html: `
@@ -126,8 +139,16 @@ export async function sendPasswordResetEmail(data: {
   name: string | null
   resetUrl: string
 }) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: data.email,
     subject: 'Password Reset Request - Himanshu Majithiya & Co.',
     html: `
@@ -164,6 +185,7 @@ export async function sendPasswordResetEmail(data: {
 // Test email connection
 export async function testEmailConnection(): Promise<boolean> {
   try {
+    const transporter = await createTransporter()
     await transporter.verify()
     return true
   } catch (error) {
@@ -184,6 +206,14 @@ export async function sendDownloadOTP(data: {
   toolName: string
   otp: string
 }) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   const emailHtml = `
     <!DOCTYPE html>
     <html>
@@ -220,7 +250,7 @@ export async function sendDownloadOTP(data: {
   `
 
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: data.email,
     subject: `Your OTP for downloading ${data.toolName} - HMC`,
     html: emailHtml,
@@ -235,6 +265,14 @@ export async function sendToolUpdateNotification(data: {
   toolSlug: string
   version?: string
 }) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
   const emailHtml = `
     <!DOCTYPE html>
@@ -272,7 +310,7 @@ export async function sendToolUpdateNotification(data: {
   `
 
   await transporter.sendMail({
-    from: process.env.SMTP_USER,
+    from: fromAddress,
     to: data.email,
     subject: `${data.toolName} has been updated!`,
     html: emailHtml,
