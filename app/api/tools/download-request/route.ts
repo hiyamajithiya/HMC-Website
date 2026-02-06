@@ -4,11 +4,24 @@ import { generateOTP, sendDownloadOTP } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
-// POST - Request download and send OTP
+// Helper to normalize download URL to API format
+function normalizeDownloadUrl(url: string | null): string | null {
+  if (!url) return null
+  if (url.startsWith('/api/download/')) return url
+  if (url.startsWith('/downloads/')) {
+    return `/api/download/${url.replace('/downloads/', '')}`
+  }
+  if (!url.startsWith('/') && !url.startsWith('http')) {
+    return `/api/download/${url}`
+  }
+  return url
+}
+
+// POST - Request download and send OTP (or skip if returning user)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, phone, company, toolId } = body
+    const { name, email, phone, company, toolId, skipOtp } = body
 
     // Validate required fields
     if (!name || !email || !toolId) {
@@ -30,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Check if tool exists
     const tool = await prisma.tool.findUnique({
       where: { id: toolId },
-      select: { id: true, name: true, isActive: true },
+      select: { id: true, name: true, slug: true, downloadUrl: true, isActive: true },
     })
 
     if (!tool || !tool.isActive) {
@@ -40,7 +53,74 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate OTP
+    // Check if this is a returning user (verified for any tool)
+    const isVerifiedUser = await prisma.downloadLead.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        verified: true,
+      },
+    })
+
+    // If returning user and skipOtp flag is set, skip OTP flow
+    if (isVerifiedUser && skipOtp) {
+      // Check if there's already a lead for this specific tool
+      const existingLeadForTool = await prisma.downloadLead.findFirst({
+        where: {
+          email: email.toLowerCase(),
+          toolId: toolId,
+        },
+      })
+
+      if (existingLeadForTool) {
+        // Update existing record
+        await prisma.downloadLead.update({
+          where: { id: existingLeadForTool.id },
+          data: {
+            name,
+            phone: phone || null,
+            company: company || null,
+            verified: true,
+            downloadedAt: new Date(),
+            otp: null,
+            otpExpiry: null,
+          },
+        })
+      } else {
+        // Create new record for this tool (pre-verified)
+        await prisma.downloadLead.create({
+          data: {
+            name,
+            email: email.toLowerCase(),
+            phone: phone || null,
+            company: company || null,
+            toolId,
+            verified: true,
+            downloadedAt: new Date(),
+          },
+        })
+      }
+
+      // Increment download count
+      await prisma.tool.update({
+        where: { id: toolId },
+        data: {
+          downloadCount: { increment: 1 },
+        },
+      })
+
+      // Return download URL directly
+      const downloadUrl = normalizeDownloadUrl(tool.downloadUrl)
+
+      return NextResponse.json({
+        success: true,
+        skipOtp: true,
+        message: 'Welcome back! Download starting...',
+        downloadUrl,
+        toolName: tool.name,
+      })
+    }
+
+    // Normal flow: Generate OTP and send email
     const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 

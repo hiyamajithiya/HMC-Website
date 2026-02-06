@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { X, Download, Mail, Loader2, CheckCircle } from 'lucide-react'
+import { X, Download, Mail, Loader2, CheckCircle, UserCheck } from 'lucide-react'
 
 interface DownloadModalProps {
   isOpen: boolean
@@ -15,6 +15,12 @@ interface DownloadModalProps {
 }
 
 type Step = 'form' | 'otp' | 'success'
+
+interface ReturningUser {
+  name: string
+  phone: string | null
+  company: string | null
+}
 
 export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadModalProps) {
   const [mounted, setMounted] = useState(false)
@@ -35,11 +41,14 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
       document.body.style.overflow = ''
     }
   }, [isOpen])
+
   const [step, setStep] = useState<Step>('form')
   const [loading, setLoading] = useState(false)
+  const [checkingEmail, setCheckingEmail] = useState(false)
   const [error, setError] = useState('')
   const [leadId, setLeadId] = useState('')
   const [downloadUrl, setDownloadUrl] = useState('')
+  const [returningUser, setReturningUser] = useState<ReturningUser | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -49,6 +58,51 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
   })
 
   const [otp, setOtp] = useState('')
+
+  // Check if email is from a returning user
+  const checkEmail = async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setReturningUser(null)
+      return
+    }
+
+    setCheckingEmail(true)
+    try {
+      const response = await fetch('/api/tools/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+
+      const data = await response.json()
+
+      if (data.recognized) {
+        setReturningUser({
+          name: data.name,
+          phone: data.phone,
+          company: data.company,
+        })
+        // Pre-fill form with previous data
+        setFormData(prev => ({
+          ...prev,
+          name: data.name || prev.name,
+          phone: data.phone || prev.phone,
+          company: data.company || prev.company,
+        }))
+      } else {
+        setReturningUser(null)
+      }
+    } catch (err) {
+      console.error('Failed to check email:', err)
+      setReturningUser(null)
+    } finally {
+      setCheckingEmail(false)
+    }
+  }
+
+  const handleEmailBlur = () => {
+    checkEmail(formData.email)
+  }
 
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,17 +116,32 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
         body: JSON.stringify({
           ...formData,
           toolId,
+          skipOtp: !!returningUser, // Skip OTP for returning users
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send OTP')
+        throw new Error(data.error || 'Failed to process request')
       }
 
-      setLeadId(data.leadId)
-      setStep('otp')
+      // If returning user, download directly
+      if (data.skipOtp && data.downloadUrl) {
+        setDownloadUrl(data.downloadUrl)
+        setStep('success')
+
+        // Auto-start download
+        setTimeout(() => {
+          if (data.downloadUrl) {
+            window.open(data.downloadUrl, '_blank')
+          }
+        }, 500)
+      } else {
+        // Normal flow - go to OTP step
+        setLeadId(data.leadId)
+        setStep('otp')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -154,6 +223,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     setError('')
     setLeadId('')
     setDownloadUrl('')
+    setReturningUser(null)
     onClose()
   }
 
@@ -180,7 +250,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
           <Download className="h-10 w-10 mb-3" />
           <h2 className="text-xl font-bold">Download {toolName}</h2>
           <p className="text-white/80 text-sm mt-1">
-            {step === 'form' && 'Enter your details to download'}
+            {step === 'form' && (returningUser ? 'Welcome back!' : 'Enter your details to download')}
             {step === 'otp' && 'Verify your email to continue'}
             {step === 'success' && 'Download starting...'}
           </p>
@@ -197,6 +267,44 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
           {/* Step 1: Form */}
           {step === 'form' && (
             <form onSubmit={handleSubmitForm} className="space-y-4">
+              {/* Returning User Banner */}
+              {returningUser && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                      <UserCheck className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-green-800">Welcome back, {returningUser.name}!</p>
+                      <p className="text-sm text-green-600">No OTP required. Click download to continue.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email *</Label>
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => {
+                      setFormData({ ...formData, email: e.target.value })
+                      setReturningUser(null) // Reset when email changes
+                    }}
+                    onBlur={handleEmailBlur}
+                    placeholder="your@email.com"
+                    required
+                  />
+                  {checkingEmail && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Name *</Label>
                 <Input
@@ -204,18 +312,6 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Your name"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com"
                   required
                 />
               </div>
@@ -248,7 +344,12 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sending OTP...
+                    {returningUser ? 'Processing...' : 'Sending OTP...'}
+                  </>
+                ) : returningUser ? (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Now
                   </>
                 ) : (
                   <>
@@ -258,9 +359,11 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
                 )}
               </Button>
 
-              <p className="text-xs text-center text-gray-500">
-                We'll send a verification code to your email
-              </p>
+              {!returningUser && (
+                <p className="text-xs text-center text-gray-500">
+                  We'll send a verification code to your email
+                </p>
+              )}
             </form>
           )}
 
@@ -329,7 +432,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
                 <CheckCircle className="h-10 w-10 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                Email Verified!
+                {returningUser ? 'Download Started!' : 'Email Verified!'}
               </h3>
               <p className="text-gray-600 mb-6">
                 Your download should start automatically.
