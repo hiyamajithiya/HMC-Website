@@ -110,13 +110,31 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     setError('')
 
     try {
+      // First, check if this is a returning user (in case blur didn't fire)
+      let isReturningUser = !!returningUser
+      if (!isReturningUser && formData.email) {
+        const checkResponse = await fetch('/api/tools/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: formData.email }),
+        })
+        const checkData = await checkResponse.json()
+        if (checkData.recognized) {
+          isReturningUser = true
+          // Update form with previous data if not already filled
+          if (!formData.name && checkData.name) {
+            setFormData(prev => ({ ...prev, name: checkData.name }))
+          }
+        }
+      }
+
       const response = await fetch('/api/tools/download-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
           toolId,
-          skipOtp: !!returningUser, // Skip OTP for returning users
+          skipOtp: isReturningUser, // Skip OTP for returning users
         }),
       })
 
