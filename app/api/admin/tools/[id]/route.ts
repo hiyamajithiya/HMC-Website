@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { sendToolUpdateNotification } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +83,7 @@ export async function PUT(
       setupGuide,
       version,
       isActive,
+      notifyUsers, // Flag to send update notifications
     } = body
 
     // Check if tool exists
@@ -110,6 +112,9 @@ export async function PUT(
       }
     }
 
+    // Check if download URL changed (new file uploaded)
+    const fileUpdated = downloadUrl && downloadUrl !== existingTool.downloadUrl
+
     const tool = await prisma.tool.update({
       where: { id },
       data: {
@@ -130,7 +135,49 @@ export async function PUT(
       },
     })
 
-    return NextResponse.json(tool)
+    // Send update notifications if file was updated and notifyUsers is true
+    let notificationsSent = 0
+    if (fileUpdated && notifyUsers) {
+      try {
+        // Get all verified users who downloaded this tool
+        const leads = await prisma.downloadLead.findMany({
+          where: {
+            toolId: id,
+            verified: true,
+          },
+          select: {
+            name: true,
+            email: true,
+          },
+        })
+
+        // Send emails in background (don't block the response)
+        const emailPromises = leads.map(lead =>
+          sendToolUpdateNotification({
+            name: lead.name,
+            email: lead.email,
+            toolName: tool.name,
+            toolSlug: tool.slug,
+            version: tool.version || undefined,
+          }).catch(err => {
+            console.error(`Failed to send notification to ${lead.email}:`, err)
+          })
+        )
+
+        // Wait for all emails to be sent
+        await Promise.all(emailPromises)
+        notificationsSent = leads.length
+        console.log(`Sent update notifications to ${notificationsSent} users for tool: ${tool.name}`)
+      } catch (emailError) {
+        console.error('Failed to send update notifications:', emailError)
+        // Don't fail the update if notifications fail
+      }
+    }
+
+    return NextResponse.json({
+      ...tool,
+      notificationsSent: fileUpdated && notifyUsers ? notificationsSent : 0,
+    })
   } catch (error) {
     console.error('Failed to update tool:', error)
     return NextResponse.json(

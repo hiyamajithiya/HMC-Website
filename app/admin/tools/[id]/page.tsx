@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2 } from 'lucide-react'
+import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2, Mail } from 'lucide-react'
 
 // Dynamic import for RichTextEditor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -57,6 +57,8 @@ export default function EditToolPage() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<{ name: string; path: string; size: number } | null>(null)
+  const [notifyUsers, setNotifyUsers] = useState(true)
+  const [originalDownloadUrl, setOriginalDownloadUrl] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -99,6 +101,7 @@ export default function EditToolPage() {
           features: tool.features?.join('\n') || '',
           isActive: tool.isActive,
         })
+        setOriginalDownloadUrl(tool.downloadUrl || '')
       } else {
         alert('Tool not found')
         router.push('/admin/tools')
@@ -115,6 +118,7 @@ export default function EditToolPage() {
     setSaving(true)
 
     const isActive = activate !== undefined ? activate : formData.isActive
+    const fileChanged = formData.downloadUrl !== originalDownloadUrl
 
     try {
       const response = await fetch(`/api/admin/tools/${toolId}`, {
@@ -126,12 +130,21 @@ export default function EditToolPage() {
           features: formData.features.split('\n').map((f) => f.trim()).filter(Boolean),
           requirements: formData.requirements.split('\n').map((r) => r.trim()).filter(Boolean),
           isActive,
+          notifyUsers: fileChanged && notifyUsers,
         }),
       })
 
       if (response.ok) {
+        const result = await response.json()
         setFormData({ ...formData, isActive })
-        alert('Tool updated successfully!')
+        setOriginalDownloadUrl(formData.downloadUrl)
+        setUploadedFile(null)
+
+        if (result.notificationsSent > 0) {
+          alert(`Tool updated successfully! ${result.notificationsSent} user(s) notified about the update.`)
+        } else {
+          alert('Tool updated successfully!')
+        }
       } else {
         const error = await response.json()
         alert(error.message || 'Failed to update tool')
@@ -562,6 +575,27 @@ export default function EditToolPage() {
                   </div>
                   <div className="mt-3 p-2 bg-green-50 rounded text-xs text-green-700">
                     New file uploaded! Click Save to apply changes.
+                  </div>
+
+                  {/* Notify Users Checkbox */}
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={notifyUsers}
+                        onChange={(e) => setNotifyUsers(e.target.checked)}
+                        className="mt-0.5 rounded border-blue-300 text-primary focus:ring-primary"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">Notify users</span>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Send email to all users who previously downloaded this tool
+                        </p>
+                      </div>
+                    </label>
                   </div>
                 </div>
               )}
