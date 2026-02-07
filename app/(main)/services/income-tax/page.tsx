@@ -4,11 +4,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, CheckCircle, ArrowRight } from "lucide-react"
 import { SITE_INFO } from "@/lib/constants"
+import { generateServiceSchema, generateBreadcrumbSchema } from "@/lib/schema"
 
 export const metadata: Metadata = {
   title: "Income Tax Services",
   description: "Professional Income Tax services including ITR filing, tax planning, assessment representation, and NRI taxation by CA Himanshu Majithiya in Ahmedabad.",
 }
+
+const serviceSchema = generateServiceSchema({
+  name: "Income Tax Services",
+  description: "Professional Income Tax services including ITR filing, tax planning, assessment representation, and NRI taxation.",
+  url: "/services/income-tax",
+})
+
+const breadcrumbSchema = generateBreadcrumbSchema([
+  { name: "Home", url: "/" },
+  { name: "Services", url: "/services" },
+  { name: "Income Tax", url: "/services/income-tax" },
+])
 
 export default function IncomeTaxPage() {
   const services = [
@@ -61,6 +74,9 @@ export default function IncomeTaxPage() {
 
   return (
     <div>
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* Hero Section */}
       <section className="bg-primary text-white py-16">
         <div className="container-custom">

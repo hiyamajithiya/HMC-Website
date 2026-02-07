@@ -1,24 +1,8 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
-
-// Helper to check admin status
-async function checkAdmin() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return { error: 'Unauthorized', status: 401 }
-  }
-
-  const isAdmin = session.user.role === 'ADMIN'
-
-  if (!isAdmin) {
-    return { error: 'Forbidden', status: 403 }
-  }
-
-  return { session }
-}
 
 // GET all blog posts
 export async function GET() {

@@ -247,15 +247,3 @@ export const COMPLIANCE_CATEGORIES = [
   { label: "Other", value: "OTHER", color: "#718096" },
 ];
 
-// SEO Keywords
-export const SEO_KEYWORDS = [
-  "Chartered Accountant Ahmedabad",
-  "CA firm Thaltej",
-  "Income Tax Consultant Gujarat",
-  "Company Audit Ahmedabad",
-  "FFMC Compliance",
-  "GST Services Ahmedabad",
-  "AI Automation CA",
-  "Tax Planning Ahmedabad",
-  "Statutory Audit Gujarat",
-];

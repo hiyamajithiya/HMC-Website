@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { checkAdmin } from '@/lib/auth-check'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
 
@@ -24,22 +24,7 @@ function getUploadDir(type: string): string {
     ? path.join(process.cwd(), 'public', 'uploads', 'images')
     : path.join(process.cwd(), 'public', 'downloads')
 }
-
-// Helper to check admin status
-async function checkAdmin() {
-  const session = await auth()
-  if (!session?.user?.email) {
-    return { error: 'Unauthorized', status: 401 }
-  }
-
-  const isAdmin = session.user.role === 'ADMIN'
-
-  if (!isAdmin) {
-    return { error: 'Forbidden', status: 403 }
-  }
-
-  return { session }
-}
+
 
 export async function POST(request: Request) {
   try {

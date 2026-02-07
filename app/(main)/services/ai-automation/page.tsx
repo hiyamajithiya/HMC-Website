@@ -3,11 +3,24 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Bot, CheckCircle, ArrowRight, Download } from "lucide-react"
+import { generateServiceSchema, generateBreadcrumbSchema } from "@/lib/schema"
 
 export const metadata: Metadata = {
   title: "AI & Workflow Automation",
   description: "Document automation, data processing, custom Python solutions, and workflow optimization services by CA Himanshu Majithiya in Ahmedabad.",
 }
+
+const serviceSchema = generateServiceSchema({
+  name: "AI & Workflow Automation",
+  description: "Document automation, data processing, custom Python solutions, and process optimization.",
+  url: "/services/ai-automation",
+})
+
+const breadcrumbSchema = generateBreadcrumbSchema([
+  { name: "Home", url: "/" },
+  { name: "Services", url: "/services" },
+  { name: "AI & Automation", url: "/services/ai-automation" },
+])
 
 export default function AIAutomationPage() {
   const services = [
@@ -68,6 +81,9 @@ export default function AIAutomationPage() {
 
   return (
     <div>
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* Hero Section */}
       <section className="bg-primary text-white py-16">
         <div className="container-custom">

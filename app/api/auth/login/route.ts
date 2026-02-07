@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 login attempts per minute per IP
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`login:${ip}`, { max: 10, windowSeconds: 60 })
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { success: false, error: 'Too many login attempts. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const { identifier, password, selectedUserId } = await request.json()
 
     if (!identifier || !password) {

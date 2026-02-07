@@ -42,14 +42,6 @@ export function slugify(str: string): string {
 }
 
 /**
- * Truncate text to specified length
- */
-export function truncateText(text: string, length: number): string {
-  if (text.length <= length) return text
-  return text.substring(0, length).trim() + '...'
-}
-
-/**
  * Format phone number
  */
 export function formatPhone(phone: string): string {
@@ -75,15 +67,6 @@ export function formatCurrency(amount: number): string {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(amount)
-}
-
-/**
- * Calculate reading time for blog posts
- */
-export function calculateReadingTime(content: string): number {
-  const wordsPerMinute = 200
-  const wordCount = content.trim().split(/\s+/).length
-  return Math.ceil(wordCount / wordsPerMinute)
 }
 
 /**
@@ -113,22 +96,6 @@ export function isValidIndianMobile(phone: string): boolean {
   const phoneRegex = /^[6-9]\d{9}$/
   const cleaned = phone.replace(/\D/g, '')
   return phoneRegex.test(cleaned)
-}
-
-/**
- * Validate PAN number
- */
-export function isValidPAN(pan: string): boolean {
-  const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/
-  return panRegex.test(pan.toUpperCase())
-}
-
-/**
- * Validate GST number
- */
-export function isValidGST(gst: string): boolean {
-  const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
-  return gstRegex.test(gst.toUpperCase())
 }
 
 /**
@@ -176,32 +143,6 @@ export function getFinancialYear(date: Date = new Date()): string {
   } else {
     return `${year}-${(year + 1).toString().slice(-2)}`
   }
-}
-
-/**
- * Get tax regime years
- */
-export function getTaxYears(): string[] {
-  const currentDate = new Date()
-  const currentYear = currentDate.getFullYear()
-  const month = currentDate.getMonth()
-
-  const years: string[] = []
-  let startYear = month < 3 ? currentYear - 1 : currentYear
-
-  for (let i = 0; i < 5; i++) {
-    const y = startYear - i
-    years.push(`${y}-${(y + 1).toString().slice(-2)}`)
-  }
-
-  return years
-}
-
-/**
- * Delay function for async operations
- */
-export function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**

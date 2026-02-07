@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
-import { encrypt, decrypt } from '@/lib/encryption'
+import { encrypt } from '@/lib/encryption'
+import { checkAdmin } from '@/lib/auth-check'
+import { clearSmtpCache } from '@/lib/email-db'
 
 export const dynamic = 'force-dynamic'
 
 // SMTP settings keys
 const SMTP_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from_name', 'notification_email']
-
-// Helper to check admin status
-async function checkAdmin() {
-  const session = await auth()
-  if (!session?.user?.email) {
-    return { error: 'Unauthorized', status: 401 }
-  }
-
-  if (session.user.role !== 'ADMIN') {
-    return { error: 'Forbidden', status: 403 }
-  }
-
-  return { session }
-}
 
 // GET - Get SMTP settings
 export async function GET() {
@@ -108,6 +95,9 @@ export async function POST(request: NextRequest) {
         create: { key: setting.key, value: setting.value },
       })
     }
+
+    // Clear cached SMTP settings so new settings take effect immediately
+    clearSmtpCache()
 
     return NextResponse.json({
       success: true,

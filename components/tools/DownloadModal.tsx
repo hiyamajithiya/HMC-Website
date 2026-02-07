@@ -30,12 +30,18 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     return () => setMounted(false)
   }, [])
 
-  // Lock body scroll when modal is open
+  // Lock body scroll when modal is open + close on Escape
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') handleClose()
+      }
+      document.addEventListener('keydown', handleKeyDown)
+      return () => {
+        document.body.style.overflow = ''
+        document.removeEventListener('keydown', handleKeyDown)
+      }
     }
     return () => {
       document.body.style.overflow = ''
@@ -248,11 +254,12 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
   if (!isOpen || !mounted) return null
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={`Download ${toolName}`}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
@@ -262,6 +269,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+            aria-label="Close dialog"
           >
             <X className="h-6 w-6" />
           </button>

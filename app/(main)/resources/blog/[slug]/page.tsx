@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { ShareButton } from "@/components/blog/ShareButton"
 import { ContentRenderer } from "@/components/content/ContentRenderer"
 import { BlogCoverImage } from "@/components/blog/BlogCoverImage"
+import { generateArticleSchema } from "@/lib/schema"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -76,8 +77,21 @@ export default async function BlogPostPage({ params }: Props) {
     notFound()
   }
 
+  const articleSchema = generateArticleSchema({
+    title: post.title,
+    description: post.excerpt,
+    publishedDate: post.publishedAt?.toISOString() || post.createdAt.toISOString(),
+    modifiedDate: post.updatedAt.toISOString(),
+    image: post.coverImage || undefined,
+  })
+
   return (
     <div>
+      {/* JSON-LD Article Schema */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       {/* Hero Section */}
       <section className="bg-primary text-white py-16">
         <div className="container-custom">

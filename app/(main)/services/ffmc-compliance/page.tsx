@@ -3,11 +3,24 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Building2, CheckCircle, ArrowRight } from "lucide-react"
+import { generateServiceSchema, generateBreadcrumbSchema } from "@/lib/schema"
 
 export const metadata: Metadata = {
   title: "FFMC Compliance (RBI)",
   description: "Full Fledged Money Changer compliance, concurrent audit, and RBI regulatory services by CA Himanshu Majithiya in Ahmedabad.",
 }
+
+const serviceSchema = generateServiceSchema({
+  name: "FFMC Compliance (RBI)",
+  description: "Full Fledged Money Changer compliance, concurrent audit, and RBI regulatory services.",
+  url: "/services/ffmc-compliance",
+})
+
+const breadcrumbSchema = generateBreadcrumbSchema([
+  { name: "Home", url: "/" },
+  { name: "Services", url: "/services" },
+  { name: "FFMC Compliance", url: "/services/ffmc-compliance" },
+])
 
 export default function FFMCCompliancePage() {
   const services = [
@@ -59,6 +72,9 @@ export default function FFMCCompliancePage() {
 
   return (
     <div>
+      {/* JSON-LD Structured Data */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* Hero Section */}
       <section className="bg-primary text-white py-16">
         <div className="container-custom">
