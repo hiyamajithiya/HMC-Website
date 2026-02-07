@@ -3,9 +3,20 @@ import { Resend } from "resend"
 import { SITE_INFO } from "@/lib/constants"
 import { prisma } from "@/lib/prisma"
 import { sendContactEmail } from "@/lib/email"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 contact submissions per minute per IP
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`contact:${ip}`, { max: 5, windowSeconds: 60 })
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Too many submissions. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { name, email, phone, subject, message } = body
 

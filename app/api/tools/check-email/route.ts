@@ -1,11 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 // POST - Check if email is verified for any tool
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 20 checks per minute per IP
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`check-email:${ip}`, { max: 20, windowSeconds: 60 })
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { email } = body
 

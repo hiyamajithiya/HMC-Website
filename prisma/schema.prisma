@@ -45,6 +45,11 @@ model User {
   toolPurchases   ToolPurchase[]
   sessions        Session[]
   blogPosts       BlogPost[]
+
+  @@index([email])
+  @@index([isActive])
+  @@index([role])
+  @@index([groupId])
 }
 
 enum UserRole {
@@ -59,6 +64,9 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expires])
 }
 
 model VerificationToken {
@@ -78,6 +86,8 @@ model PasswordResetToken {
   createdAt  DateTime @default(now())
 
   @@unique([identifier, token])
+  @@index([identifier])
+  @@index([expires])
 }
 
 // Document folders for organizing documents
@@ -114,6 +124,12 @@ model Document {
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([category])
+  @@index([folderId])
+  @@index([financialYear])
+  @@index([userId, financialYear])
 }
 
 enum DocCategory {
@@ -142,6 +158,11 @@ model BlogPost {
   author      User?       @relation(fields: [authorId], references: [id])
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([isPublished])
+  @@index([category])
+  @@index([authorId])
+  @@index([isPublished, category])
 }
 
 enum BlogCategory {
@@ -176,6 +197,10 @@ model Tool {
 
   purchases        ToolPurchase[]
   downloadLeads    DownloadLead[]
+
+  @@index([isActive])
+  @@index([category])
+  @@index([licenseType])
 }
 
 enum ToolCategory {
@@ -350,4 +375,6 @@ model DownloadLead {
 
   @@index([email])
   @@index([toolId])
+  @@index([verified])
+  @@index([email, verified])
 }

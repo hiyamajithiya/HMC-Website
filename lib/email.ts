@@ -182,18 +182,6 @@ export async function sendPasswordResetEmail(data: {
   })
 }
 
-// Test email connection
-export async function testEmailConnection(): Promise<boolean> {
-  try {
-    const transporter = await createTransporter()
-    await transporter.verify()
-    return true
-  } catch (error) {
-    console.error('Email connection error:', error)
-    return false
-  }
-}
-
 // Generate 6-digit OTP
 export function generateOTP(): string {
   return Math.floor(100000 + Math.random() * 900000).toString()

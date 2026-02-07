@@ -1,25 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { checkAdminOrStaff } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export const dynamic = 'force-dynamic'
-
-// Helper to check admin or staff status
-async function checkAdminOrStaff() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return { error: 'Unauthorized', status: 401 }
-  }
-
-  const hasAccess = session.user.role === 'ADMIN' || session.user.role === 'STAFF'
-
-  if (!hasAccess) {
-    return { error: 'Forbidden', status: 403 }
-  }
-
-  return { session, role: session.user.role }
-}
 
 // Helper to generate loginId from name and date of birth
 // Format: first 4 letters of name (lowercase) + first 2 digits of DOB

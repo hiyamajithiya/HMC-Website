@@ -1,24 +1,9 @@
 import { NextResponse } from 'next/server'
+import { checkAdminOrStaff } from '@/lib/auth-check'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
-
-// Helper to check admin or staff status
-async function checkAdminOrStaff() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return { error: 'Unauthorized', status: 401 }
-  }
-
-  const hasAccess = session.user.role === 'ADMIN' || session.user.role === 'STAFF'
-
-  if (!hasAccess) {
-    return { error: 'Forbidden', status: 403 }
-  }
-
-  return { session, role: session.user.role }
-}
 
 // GET single user
 export async function GET(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateOTP, sendDownloadOTP } from '@/lib/email'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,16 @@ function normalizeDownloadUrl(url: string | null): string | null {
 // POST - Request download and send OTP (or skip if returning user)
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 download requests per minute per IP
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`download:${ip}`, { max: 10, windowSeconds: 60 })
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { name, email, phone, company, toolId, skipOtp } = body
 

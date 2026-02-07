@@ -2,15 +2,22 @@ import { Metadata } from "next"
 import { Card, CardContent } from "@/components/ui/card"
 import { MapPin, Phone, Mail, Calendar } from "lucide-react"
 import { SITE_INFO } from "@/lib/constants"
+import { generateBreadcrumbSchema } from "@/lib/schema"
 
 export const metadata: Metadata = {
   title: "About Us",
   description: `Learn about ${SITE_INFO.name}, a Chartered Accountant firm established in ${SITE_INFO.yearEstablished} in Ahmedabad, providing professional accounting and auditing services.`,
 }
 
+const breadcrumbSchema = generateBreadcrumbSchema([
+  { name: "Home", url: "/" },
+  { name: "About", url: "/about" },
+])
+
 export default function AboutPage() {
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {/* Hero Section */}
       <section className="bg-primary text-white py-16">
         <div className="container-custom">
