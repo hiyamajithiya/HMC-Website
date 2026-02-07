@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 
     // Determine upload directory (supports persistent storage via UPLOADS_PATH)
     const uploadDir = getUploadDir(type)
+    console.log(`[Tool Upload] UPLOADS_PATH=${process.env.UPLOADS_PATH || 'NOT SET'}, type=${type}, saving to: ${uploadDir}`)
 
     // Ensure directory exists
     await mkdir(uploadDir, { recursive: true })

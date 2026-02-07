@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     // Create uploads directory if it doesn't exist
     const uploadsDir = getUploadsDir()
+    console.log(`[Blog Upload] UPLOADS_PATH=${process.env.UPLOADS_PATH || 'NOT SET'}, saving to: ${uploadsDir}`)
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }

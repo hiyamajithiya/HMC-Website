@@ -4,13 +4,35 @@ import path from 'path'
 
 export const dynamic = 'force-dynamic'
 
-// Get the file path from persistent storage or public directory
-function getFilePath(filePath: string): string {
-  const persistentPath = process.env.UPLOADS_PATH
-  if (persistentPath) {
-    return path.join(persistentPath, filePath)
+// Check if a file exists
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await stat(filePath)
+    return true
+  } catch {
+    return false
   }
-  return path.join(process.cwd(), 'public', 'uploads', filePath)
+}
+
+// Get the file path - check persistent storage first, then fallback to public directory
+async function getFilePath(filePath: string): Promise<string | null> {
+  const persistentPath = process.env.UPLOADS_PATH
+  const publicPath = path.join(process.cwd(), 'public', 'uploads', filePath)
+
+  if (persistentPath) {
+    const persistentFilePath = path.join(persistentPath, filePath)
+    // Check persistent storage first
+    if (await fileExists(persistentFilePath)) {
+      return persistentFilePath
+    }
+    // Fallback to public directory (for pre-migration files)
+    if (await fileExists(publicPath)) {
+      return publicPath
+    }
+    return persistentFilePath // Return persistent path for error reporting
+  }
+
+  return publicPath
 }
 
 // Get content type based on file extension
@@ -46,19 +68,22 @@ export async function GET(
   try {
     const { path: pathSegments } = await params
     const fileName = pathSegments.join('/')
-    const filePath = getFilePath(fileName)
+    const filePath = await getFilePath(fileName)
+
+    if (!filePath) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 })
+    }
 
     // Security: Prevent directory traversal attacks
     const normalizedPath = path.normalize(filePath)
     const uploadsBase = process.env.UPLOADS_PATH || path.join(process.cwd(), 'public', 'uploads')
-    if (!normalizedPath.startsWith(path.normalize(uploadsBase))) {
+    if (!normalizedPath.startsWith(path.normalize(uploadsBase)) &&
+        !normalizedPath.startsWith(path.normalize(path.join(process.cwd(), 'public', 'uploads')))) {
       return NextResponse.json({ error: 'Invalid path' }, { status: 403 })
     }
 
     // Check if file exists
-    try {
-      await stat(filePath)
-    } catch {
+    if (!(await fileExists(filePath))) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
 
