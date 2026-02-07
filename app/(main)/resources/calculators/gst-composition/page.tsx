@@ -369,10 +369,21 @@ export default function GSTCompositionCalculator() {
                 </div>
               </div>
 
+              <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-r">
+                <h3 className="font-semibold text-green-800 mb-2">GST 2.0 Rate Changes (w.e.f. 22 Sept 2025)</h3>
+                <div className="text-sm text-green-700 space-y-1">
+                  <div>• New rate structure: <strong>0%, 5%, 18%, 40%</strong> (12% and 28% slabs eliminated)</div>
+                  <div>• 99% of items previously at 12% moved to 5%</div>
+                  <div>• 90% of items previously at 28% moved to 18%</div>
+                  <div>• New 40% rate for luxury/sin goods (pan masala, tobacco, aerated drinks)</div>
+                  <div>• Composition scheme rates remain unchanged</div>
+                </div>
+              </div>
+
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r">
                 <h3 className="font-semibold text-yellow-800 mb-2">Disclaimer</h3>
                 <p className="text-sm text-yellow-700">
-                  This calculator uses simplified assumptions (18% avg GST rate for regular scheme). Actual tax may vary based on specific GST rates applicable to your goods/services. Consult a CA for accurate compliance.
+                  This calculator uses simplified assumptions (18% avg GST rate for regular scheme under GST 2.0). Actual tax may vary based on specific GST rates applicable to your goods/services. Consult a CA for accurate compliance.
                 </p>
               </div>
             </div>

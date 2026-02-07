@@ -41,18 +41,19 @@ export default function CapitalGainsCalculator() {
     } else if (asset === "property" || asset === "gold") {
       return months >= 24 ? "long-term" : "short-term"
     } else {
-      // debt mutual funds
-      return months >= 36 ? "long-term" : "short-term"
+      // Debt mutual funds - no LTCG benefit since Budget 2023
+      // Always treated as short-term (taxed at slab rate)
+      return "short-term"
     }
   }
 
   const getTaxRate = (asset: AssetType, period: HoldingPeriod): number => {
-    // FY 2025-26 Capital Gains Tax Rates
+    // FY 2025-26 / 2026-27 Capital Gains Tax Rates
     if (asset === "equity") {
       if (period === "long-term") {
-        return 12.5 // LTCG on equity - 12.5% (increased from 10%)
+        return 12.5 // LTCG on equity - 12.5%
       } else {
-        return 20 // STCG on equity - 20% (increased from 15%)
+        return 20 // STCG on equity - 20%
       }
     } else if (asset === "property" || asset === "gold") {
       if (period === "long-term") {
@@ -61,12 +62,8 @@ export default function CapitalGainsCalculator() {
         return 30 // STCG as per income tax slab (assuming 30% for calculation)
       }
     } else {
-      // debt funds
-      if (period === "long-term") {
-        return 20 // LTCG with indexation
-      } else {
-        return 30 // STCG as per slab
-      }
+      // Debt funds - always taxed at slab rate (no LTCG benefit since Budget 2023)
+      return 30 // As per slab (assuming highest slab for calculation)
     }
   }
 
@@ -85,8 +82,8 @@ export default function CapitalGainsCalculator() {
     // Simple capital gain (without indexation for now)
     let capitalGain = sale - purchase
 
-    // Apply indexation for long-term property/debt if enabled
-    if (indexation && holdingPeriod === "long-term" && (assetType === "property" || assetType === "debt")) {
+    // Apply indexation for long-term property if enabled (not available for debt funds)
+    if (indexation && holdingPeriod === "long-term" && assetType === "property") {
       // Simplified indexation calculation (using average 5% inflation)
       const years = holdingMonths / 12
       const inflationFactor = Math.pow(1.05, years)
@@ -131,7 +128,7 @@ export default function CapitalGainsCalculator() {
           </Link>
           <h1 className="text-4xl font-heading font-bold mb-4">Capital Gains Tax Calculator</h1>
           <p className="text-xl text-white/90">
-            Calculate short-term and long-term capital gains tax on equity, property, and other assets (FY 2025-26)
+            Calculate short-term and long-term capital gains tax on equity, property, and other assets (FY 2025-26 / 2026-27)
           </p>
         </div>
       </section>
@@ -243,8 +240,8 @@ export default function CapitalGainsCalculator() {
                     />
                   </div>
 
-                  {/* Indexation (only for property/debt LTCG) */}
-                  {(assetType === "property" || assetType === "debt") && (
+                  {/* Indexation (only for property LTCG - debt funds have no LTCG benefit) */}
+                  {assetType === "property" && (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
                         <input
@@ -346,10 +343,10 @@ export default function CapitalGainsCalculator() {
             {/* Tax Rates Reference - FY 2025-26 */}
             <Card className="mt-8">
               <CardHeader>
-                <CardTitle>Capital Gains Tax Rates (FY 2025-26)</CardTitle>
+                <CardTitle>Capital Gains Tax Rates (FY 2025-26 / 2026-27)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-4">
                     <h4 className="font-semibold text-primary">Equity/Stocks/Mutual Funds</h4>
                     <div className="text-sm space-y-2">
@@ -383,6 +380,19 @@ export default function CapitalGainsCalculator() {
                       </p>
                     </div>
                   </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-primary">Debt Mutual Funds</h4>
+                    <div className="text-sm space-y-2">
+                      <div className="flex justify-between pb-2 border-b">
+                        <span>Any holding period</span>
+                        <span className="font-semibold">As per slab</span>
+                      </div>
+                      <p className="text-xs text-red-600 mt-2 font-medium">
+                        No LTCG benefit since Budget 2023. Always taxed at slab rate regardless of holding period.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -390,12 +400,13 @@ export default function CapitalGainsCalculator() {
             {/* Important Notes */}
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r">
-                <h3 className="font-semibold text-blue-800 mb-2">Key Changes in FY 2025-26</h3>
+                <h3 className="font-semibold text-blue-800 mb-2">Key Capital Gains Rules</h3>
                 <div className="text-sm text-blue-700 space-y-1">
-                  <div>• STCG on equity increased from 15% to 20%</div>
-                  <div>• LTCG on equity increased from 10% to 12.5%</div>
-                  <div>• LTCG exemption increased to ₹1.25 lakh</div>
-                  <div>• Uniform 12.5% LTCG rate for most assets</div>
+                  <div>• STCG on equity: 20% (increased from 15% in Budget 2024)</div>
+                  <div>• LTCG on equity: 12.5% above ₹1.25 lakh exemption</div>
+                  <div>• Uniform 12.5% LTCG rate for property, gold, unlisted shares</div>
+                  <div>• Debt funds: Always at slab rate (no LTCG benefit since Budget 2023)</div>
+                  <div>• FY 2026-27: Same rates under New Income Tax Act 2025 (Sec 67, 196-198)</div>
                 </div>
               </div>
 

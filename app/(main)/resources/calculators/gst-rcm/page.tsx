@@ -24,7 +24,7 @@ const rcmCategories: RCMCategory[] = [
   { name: "Recovery Agent Services", gstRate: 18, description: "Services of recovery agents" },
   { name: "Arbitral Tribunal Services", gstRate: 18, description: "Services by arbitral tribunal" },
   { name: "Government Services", gstRate: 18, description: "Supply of goods/services by govt" },
-  { name: "Lottery/Betting/Gambling", gstRate: 28, description: "Services related to lottery, betting, gambling" },
+  { name: "Lottery/Betting/Gambling", gstRate: 40, description: "Services related to lottery, betting, gambling (GST 2.0 rate)" },
 ]
 
 export default function GSTRCMCalculator() {
@@ -324,10 +324,20 @@ export default function GSTRCMCalculator() {
                 </div>
               </div>
 
+              <div className="bg-green-50 border-l-4 border-green-400 p-6 rounded-r">
+                <h3 className="font-semibold text-green-800 mb-2">GST 2.0 Rate Changes (w.e.f. 22 Sept 2025)</h3>
+                <div className="text-sm text-green-700 space-y-1">
+                  <div>• New rate structure: 0%, 5%, 18%, 40% (12% and 28% slabs eliminated)</div>
+                  <div>• Most services remain at 18% under RCM</div>
+                  <div>• Lottery/Betting/Gambling moved from 28% to 40%</div>
+                  <div>• GTA services remain at 5%</div>
+                </div>
+              </div>
+
               <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r">
                 <h3 className="font-semibold text-yellow-800 mb-2">Disclaimer</h3>
                 <p className="text-sm text-yellow-700">
-                  This calculator provides approximate RCM calculations based on notified categories. RCM applicability may change based on notifications and specific conditions. Consult a CA for accurate compliance.
+                  This calculator provides approximate RCM calculations based on notified categories. Rates updated for GST 2.0 (effective 22 Sept 2025). RCM applicability may change based on notifications and specific conditions. Consult a CA for accurate compliance.
                 </p>
               </div>
             </div>
