@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendAppointmentEmail } from "@/lib/email"
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 5 appointment bookings per minute per IP
+    const ip = getClientIp(request)
+    const rateLimit = checkRateLimit(`appointment:${ip}`, { max: 5, windowSeconds: 60 })
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { name, email, phone, service, date, timeSlot, message } = body
 
@@ -21,6 +32,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Invalid email format" },
         { status: 400 }
+      )
+    }
+
+    // Verify email was confirmed via OTP
+    const verification = await prisma.emailVerification.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        purpose: 'appointment',
+        verified: true,
+        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) }, // within last 30 min
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (!verification) {
+      return NextResponse.json(
+        { error: "Please verify your email address before booking." },
+        { status: 403 }
       )
     }
 
@@ -73,6 +102,14 @@ export async function POST(request: NextRequest) {
         // Don't fail the request if email fails
       }
     }
+
+    // Clean up used verification record
+    await prisma.emailVerification.deleteMany({
+      where: {
+        email: email.toLowerCase(),
+        purpose: 'appointment',
+      },
+    })
 
     return NextResponse.json(
       {

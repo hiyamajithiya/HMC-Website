@@ -299,6 +299,20 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+// Email OTP verification for contact/appointment forms
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  otpExpiry DateTime
+  verified  Boolean  @default(false)
+  purpose   String   // "contact" | "appointment"
+  createdAt DateTime @default(now())
+
+  @@index([email, purpose])
+  @@index([createdAt])
+}
+
 // Compliance calendar events
 model ComplianceEvent {
   id          String   @id @default(cuid())

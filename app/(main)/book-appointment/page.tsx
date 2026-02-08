@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Clock, CheckCircle, Video, MapPin, Phone, Send, ExternalLink } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { Calendar, Clock, CheckCircle, Video, MapPin, Phone, Send, ExternalLink, ShieldCheck } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -49,6 +49,15 @@ export default function BookAppointmentPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
+  // OTP verification state
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpVerified, setOtpVerified] = useState(false)
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpError, setOtpError] = useState("")
+  const [otp, setOtp] = useState(["", "", "", "", "", ""])
+  const [resendCooldown, setResendCooldown] = useState(0)
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
+
   // Get minimum date (today)
   const today = new Date()
   const minDate = today.toISOString().split('T')[0]
@@ -56,8 +65,149 @@ export default function BookAppointmentPage() {
   // Get maximum date (3 months from now)
   const maxDate = new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0]
 
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [resendCooldown])
+
+  // Reset OTP state when email changes
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value
+    setFormData({ ...formData, email: newEmail })
+    if (otpSent || otpVerified) {
+      setOtpSent(false)
+      setOtpVerified(false)
+      setOtp(["", "", "", "", "", ""])
+      setOtpError("")
+    }
+  }
+
+  const sendOtp = async () => {
+    if (!formData.name || !formData.email) {
+      setOtpError("Please enter your name and email first")
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setOtpError("Please enter a valid email address")
+      return
+    }
+
+    setOtpLoading(true)
+    setOtpError("")
+
+    try {
+      const response = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          name: formData.name,
+          purpose: "appointment",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send OTP")
+      }
+
+      setOtpSent(true)
+      setResendCooldown(30)
+      setOtp(["", "", "", "", "", ""])
+      setTimeout(() => otpRefs.current[0]?.focus(), 100)
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to send OTP")
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const verifyOtp = async (otpValue?: string) => {
+    const otpString = otpValue || otp.join("")
+    if (otpString.length !== 6) {
+      setOtpError("Please enter the complete 6-digit OTP")
+      return
+    }
+
+    setOtpLoading(true)
+    setOtpError("")
+
+    try {
+      const response = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          otp: otpString,
+          purpose: "appointment",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to verify OTP")
+      }
+
+      setOtpVerified(true)
+      setOtpError("")
+    } catch (err) {
+      setOtpError(err instanceof Error ? err.message : "Failed to verify OTP")
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return
+
+    const newOtp = [...otp]
+    newOtp[index] = value.slice(-1)
+    setOtp(newOtp)
+
+    // Auto-focus next input
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus()
+    }
+
+    // Auto-verify when all 6 digits entered
+    const otpString = newOtp.join("")
+    if (otpString.length === 6) {
+      verifyOtp(otpString)
+    }
+  }
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    if (pasted.length === 6) {
+      const newOtp = pasted.split("")
+      setOtp(newOtp)
+      otpRefs.current[5]?.focus()
+      verifyOtp(pasted)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!otpVerified) {
+      setError("Please verify your email address first")
+      return
+    }
+
     setLoading(true)
     setError("")
 
@@ -95,6 +245,10 @@ export default function BookAppointmentPage() {
   const resetForm = () => {
     setFormData({ name: "", email: "", phone: "", service: "", date: "", timeSlot: "", message: "" })
     setSubmitted(false)
+    setOtpSent(false)
+    setOtpVerified(false)
+    setOtp(["", "", "", "", "", ""])
+    setOtpError("")
   }
 
   return (
@@ -169,7 +323,7 @@ export default function BookAppointmentPage() {
               <CardHeader>
                 <CardTitle className="text-2xl">Schedule Your Consultation</CardTitle>
                 <p className="text-sm text-text-muted mt-2">
-                  Fill out the form below and we'll confirm your appointment within 24 hours
+                  Fill out the form below and we&apos;ll confirm your appointment within 24 hours
                 </p>
               </CardHeader>
               <CardContent>
@@ -233,37 +387,101 @@ export default function BookAppointmentPage() {
                       />
                     </div>
 
-                    {/* Email and Phone */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">
-                          Email Address <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="your.email@example.com"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                        />
+                    {/* Email with OTP Verification */}
+                    <div className="space-y-2">
+                      <Label htmlFor="email">
+                        Email Address <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        <div className="flex-1 relative">
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="your.email@example.com"
+                            value={formData.email}
+                            onChange={handleEmailChange}
+                            required
+                            disabled={otpVerified}
+                            className={otpVerified ? "border-green-500 bg-green-50 pr-10" : ""}
+                          />
+                          {otpVerified && (
+                            <ShieldCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-green-600" />
+                          )}
+                        </div>
+                        {!otpVerified && (
+                          <Button
+                            type="button"
+                            onClick={sendOtp}
+                            disabled={otpLoading || !formData.email || !formData.name || resendCooldown > 0}
+                            variant="outline"
+                            className="whitespace-nowrap border-primary text-primary hover:bg-primary/10"
+                          >
+                            {otpLoading ? "Sending..." : otpSent ? (resendCooldown > 0 ? `Resend (${resendCooldown}s)` : "Resend OTP") : "Verify Email"}
+                          </Button>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">
-                          Phone Number <span className="text-red-500">*</span>
-                        </Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          placeholder="+91 98765 43210"
-                          value={formData.phone}
-                          onChange={handleChange}
-                          required
-                        />
-                      </div>
+                      {/* OTP Input */}
+                      {otpSent && !otpVerified && (
+                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800 mb-3">
+                            Enter the 6-digit OTP sent to <strong>{formData.email}</strong>
+                          </p>
+                          <div className="flex gap-2 justify-center mb-2">
+                            {otp.map((digit, index) => (
+                              <input
+                                key={index}
+                                ref={(el) => { otpRefs.current[index] = el }}
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={1}
+                                value={digit}
+                                onChange={(e) => handleOtpChange(index, e.target.value)}
+                                onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                onPaste={index === 0 ? handleOtpPaste : undefined}
+                                className="w-10 h-12 text-center text-lg font-bold border-2 border-blue-300 rounded-lg focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                disabled={otpLoading}
+                              />
+                            ))}
+                          </div>
+                          {otpError && (
+                            <p className="text-sm text-red-600 text-center">{otpError}</p>
+                          )}
+                          {otpLoading && (
+                            <p className="text-sm text-blue-600 text-center">Verifying...</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Verified Badge */}
+                      {otpVerified && (
+                        <p className="text-sm text-green-600 flex items-center gap-1">
+                          <ShieldCheck className="h-4 w-4" />
+                          Email verified successfully
+                        </p>
+                      )}
+
+                      {/* OTP Error when not in OTP box */}
+                      {!otpSent && otpError && (
+                        <p className="text-sm text-red-600">{otpError}</p>
+                      )}
+                    </div>
+
+                    {/* Phone */}
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">
+                        Phone Number <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        required
+                      />
                     </div>
 
                     {/* Service */}
@@ -349,11 +567,11 @@ export default function BookAppointmentPage() {
                       type="submit"
                       className="w-full bg-primary hover:bg-primary-light text-white"
                       size="lg"
-                      disabled={loading}
+                      disabled={loading || !otpVerified}
                     >
                       {loading ? (
                         <>
-                          <span className="animate-spin mr-2">&#9696;</span>
+                          <span className="animate-spin mr-2">&#9203;</span>
                           Booking...
                         </>
                       ) : (
@@ -364,8 +582,14 @@ export default function BookAppointmentPage() {
                       )}
                     </Button>
 
+                    {!otpVerified && (
+                      <p className="text-xs text-amber-600 text-center font-medium">
+                        Please verify your email address to enable booking
+                      </p>
+                    )}
+
                     <p className="text-xs text-text-muted text-center">
-                      By submitting this form, you agree to our privacy policy. We'll contact you to confirm your appointment.
+                      By submitting this form, you agree to our privacy policy. We&apos;ll contact you to confirm your appointment.
                     </p>
                   </form>
                 )}

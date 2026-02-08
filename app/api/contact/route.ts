@@ -37,6 +37,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Verify email was confirmed via OTP
+    const verification = await prisma.emailVerification.findFirst({
+      where: {
+        email: email.toLowerCase(),
+        purpose: 'contact',
+        verified: true,
+        createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) }, // within last 30 min
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    if (!verification) {
+      return NextResponse.json(
+        { error: "Please verify your email address before submitting." },
+        { status: 403 }
+      )
+    }
+
     // Save contact submission to database first (this always happens)
     const contact = await prisma.contactSubmission.create({
       data: {
@@ -167,6 +185,14 @@ export async function POST(request: NextRequest) {
         console.log("No email service configured - skipping email notification")
       }
     }
+
+    // Clean up used verification record
+    await prisma.emailVerification.deleteMany({
+      where: {
+        email: email.toLowerCase(),
+        purpose: 'contact',
+      },
+    })
 
     // Always return success since the contact was saved to the database
     return NextResponse.json(

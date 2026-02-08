@@ -245,6 +245,66 @@ export async function sendDownloadOTP(data: {
   })
 }
 
+// Send OTP for email verification (contact/appointment forms)
+export async function sendVerificationOTP(data: {
+  name: string
+  email: string
+  otp: string
+  purpose: 'contact' | 'appointment'
+}) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
+  const purposeText = data.purpose === 'contact' ? 'contact form submission' : 'appointment booking'
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #1e3a5f; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px; background: #f9f9f9; }
+        .otp-box { background: #1e3a5f; color: white; font-size: 32px; letter-spacing: 8px; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px; font-weight: bold; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; background: #f0f0f0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Himanshu Majithiya & Co.</h1>
+          <p style="margin: 5px 0 0; opacity: 0.9;">Chartered Accountants</p>
+        </div>
+        <div class="content">
+          <h2 style="color: #1e3a5f;">Hello ${data.name},</h2>
+          <p>Please verify your email to proceed with your ${purposeText}.</p>
+          <p>Use the following OTP to verify your email address:</p>
+          <div class="otp-box">${data.otp}</div>
+          <p style="color: #666;"><strong>This OTP is valid for 10 minutes.</strong></p>
+          <p style="color: #999; font-size: 14px;">If you did not request this, please ignore this email.</p>
+        </div>
+        <div class="footer">
+          <p>&copy; ${new Date().getFullYear()} Himanshu Majithiya & Co. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await transporter.sendMail({
+    from: fromAddress,
+    to: data.email,
+    subject: `Verify your email - Himanshu Majithiya & Co.`,
+    html: emailHtml,
+  })
+}
+
 // Send tool update notification to users who downloaded the tool
 export async function sendToolUpdateNotification(data: {
   name: string
