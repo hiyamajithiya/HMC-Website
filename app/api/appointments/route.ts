@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { sendAppointmentEmail } from "@/lib/email"
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
+import { getAvailableSlots, createCalendarEvent } from "@/lib/google-calendar"
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check Google Calendar availability before booking
+    const dateStr = date.split('T')[0] // ensure YYYY-MM-DD format
+    const availability = await getAvailableSlots(dateStr)
+    if (availability.calendarConnected && !availability.slots.includes(timeSlot)) {
+      return NextResponse.json(
+        { error: "This time slot is no longer available. Please select a different time." },
+        { status: 409 }
+      )
+    }
+
     // Save appointment to database
     const appointment = await prisma.appointment.create({
       data: {
@@ -75,6 +86,29 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
       },
     })
+
+    // Create Google Calendar event (non-blocking — failure doesn't affect booking)
+    try {
+      const eventId = await createCalendarEvent({
+        name,
+        email,
+        phone,
+        service,
+        date: dateStr,
+        timeSlot,
+        message: message || undefined,
+      })
+
+      if (eventId) {
+        await prisma.appointment.update({
+          where: { id: appointment.id },
+          data: { googleEventId: eventId },
+        })
+        console.log("Google Calendar event created:", eventId)
+      }
+    } catch (calendarError) {
+      console.error("Failed to create calendar event:", calendarError)
+    }
 
     // Send email notification (admin + user confirmation)
     const smtpUser = process.env.SMTP_USER

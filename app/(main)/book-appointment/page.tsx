@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
-import { Calendar, Clock, CheckCircle, Video, MapPin, Phone, Send, ExternalLink, ShieldCheck } from "lucide-react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { Calendar, Clock, CheckCircle, Video, MapPin, Phone, Send, ExternalLink, ShieldCheck, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,12 +58,36 @@ export default function BookAppointmentPage() {
   const [resendCooldown, setResendCooldown] = useState(0)
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
 
+  // Availability state
+  const [availableSlots, setAvailableSlots] = useState<string[]>(timeSlots)
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [calendarConnected, setCalendarConnected] = useState(false)
+
   // Get minimum date (today)
   const today = new Date()
   const minDate = today.toISOString().split('T')[0]
 
   // Get maximum date (3 months from now)
   const maxDate = new Date(new Date().setMonth(new Date().getMonth() + 3)).toISOString().split('T')[0]
+
+  // Fetch available slots when date changes
+  const fetchAvailability = useCallback(async (dateStr: string) => {
+    if (!dateStr) return
+    setSlotsLoading(true)
+    try {
+      const response = await fetch(`/api/calendar/availability?date=${dateStr}`)
+      const data = await response.json()
+      if (response.ok && data.slots) {
+        setAvailableSlots(data.slots)
+        setCalendarConnected(data.calendarConnected || false)
+      }
+    } catch {
+      // Fallback to all slots on error
+      setAvailableSlots(timeSlots)
+    } finally {
+      setSlotsLoading(false)
+    }
+  }, [])
 
   // Resend cooldown timer
   useEffect(() => {
@@ -236,9 +260,18 @@ export default function BookAppointmentPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+
+    if (name === 'date') {
+      // Reset time slot and fetch availability when date changes
+      setFormData({ ...formData, date: value, timeSlot: "" })
+      if (value) fetchAvailability(value)
+      return
+    }
+
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     })
   }
 
@@ -249,6 +282,8 @@ export default function BookAppointmentPage() {
     setOtpVerified(false)
     setOtp(["", "", "", "", "", ""])
     setOtpError("")
+    setAvailableSlots(timeSlots)
+    setCalendarConnected(false)
   }
 
   return (
@@ -528,21 +563,41 @@ export default function BookAppointmentPage() {
                         <Label htmlFor="timeSlot">
                           Preferred Time <span className="text-red-500">*</span>
                         </Label>
-                        <select
-                          id="timeSlot"
-                          name="timeSlot"
-                          value={formData.timeSlot}
-                          onChange={handleChange}
-                          required
-                          className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          <option value="">Select a time slot</option>
-                          {timeSlots.map((slot) => (
-                            <option key={slot} value={slot}>
-                              {slot}
-                            </option>
-                          ))}
-                        </select>
+                        {slotsLoading ? (
+                          <div className="flex items-center gap-2 h-10 px-3 text-sm text-text-muted">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Checking availability...
+                          </div>
+                        ) : !formData.date ? (
+                          <div className="h-10 px-3 flex items-center text-sm text-text-muted">
+                            Select a date first
+                          </div>
+                        ) : availableSlots.length === 0 ? (
+                          <div className="h-10 px-3 flex items-center text-sm text-red-600">
+                            No slots available for this date
+                          </div>
+                        ) : (
+                          <select
+                            id="timeSlot"
+                            name="timeSlot"
+                            value={formData.timeSlot}
+                            onChange={handleChange}
+                            required
+                            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          >
+                            <option value="">Select a time slot</option>
+                            {availableSlots.map((slot) => (
+                              <option key={slot} value={slot}>
+                                {slot}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {calendarConnected && formData.date && !slotsLoading && availableSlots.length > 0 && (
+                          <p className="text-xs text-green-600">
+                            Showing real-time availability from calendar
+                          </p>
+                        )}
                       </div>
                     </div>
 

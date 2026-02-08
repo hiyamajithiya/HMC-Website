@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
+import { deleteCalendarEvent } from '@/lib/google-calendar'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,17 @@ export async function PATCH(
     const body = await request.json()
     const { status } = body
 
+    // If cancelling, remove from Google Calendar
+    if (status === 'CANCELLED') {
+      const existing = await prisma.appointment.findUnique({
+        where: { id },
+        select: { googleEventId: true },
+      })
+      if (existing?.googleEventId) {
+        await deleteCalendarEvent(existing.googleEventId)
+      }
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status },
@@ -80,6 +92,15 @@ export async function DELETE(
     }
 
     const { id } = await params
+
+    // Remove from Google Calendar before deleting
+    const existing = await prisma.appointment.findUnique({
+      where: { id },
+      select: { googleEventId: true },
+    })
+    if (existing?.googleEventId) {
+      await deleteCalendarEvent(existing.googleEventId)
+    }
 
     await prisma.appointment.delete({
       where: { id },
