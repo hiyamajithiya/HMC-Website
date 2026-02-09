@@ -266,7 +266,7 @@ export async function sendWelcomeEmail(data: {
   const transporter = await createTransporter()
   const fromAddress = `"${settings.fromName}" <${settings.user}>`
 
-  const siteUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || 'https://himanshumajithiya.com'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
   const portalUrl = `${siteUrl}/client-portal/login`
 
   const emailHtml = `
@@ -274,51 +274,44 @@ export async function sendWelcomeEmail(data: {
     <html>
     <head>
       <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%); color: white; padding: 30px; text-align: center; }
-        .content { padding: 30px; background: #f8f9fa; }
-        .credentials-box { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #c9a227; }
-        .credential-row { padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-        .credential-row:last-child { border-bottom: none; }
-        .credential-label { font-weight: bold; color: #555; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .credential-value { font-size: 18px; color: #1e3a5f; font-weight: bold; font-family: monospace; margin-top: 4px; }
-        .btn { display: inline-block; background: #c9a227; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; }
-        .warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0; font-size: 14px; color: #856404; }
-        .footer { background: #1e3a5f; padding: 20px; text-align: center; }
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
       </style>
     </head>
     <body>
-      <div class="container">
-        <div class="header">
-          <h1 style="margin: 0;">Himanshu Majithiya & Co.</h1>
-          <p style="margin: 5px 0 0; opacity: 0.9;">Chartered Accountants</p>
+      <div style="max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%); color: white; padding: 30px; text-align: center;">
+          <h1 style="margin: 0; font-size: 24px;">Himanshu Majithiya & Co.</h1>
+          <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Chartered Accountants</p>
         </div>
-        <div class="content">
-          <h2 style="color: #1e3a5f; margin-top: 0;">Welcome to Client Portal!</h2>
-          <p>Dear ${data.name},</p>
-          <p>Your account has been created on the <strong>Himanshu Majithiya & Co.</strong> Client Portal. You can now access your documents, appointments, and more.</p>
-          <p>Here are your login credentials:</p>
-          <div class="credentials-box">
-            <div class="credential-row">
-              <div class="credential-label">Login ID</div>
-              <div class="credential-value">${data.loginId}</div>
-            </div>
-            <div class="credential-row">
-              <div class="credential-label">Password</div>
-              <div class="credential-value">${data.password}</div>
-            </div>
-          </div>
-          <div class="warning">
+        <div style="padding: 30px; background: #f8f9fa;">
+          <h2 style="color: #1e3a5f; margin-top: 0; font-size: 22px;">Welcome to Client Portal!</h2>
+          <p style="margin: 0 0 15px;">Dear ${data.name},</p>
+          <p style="margin: 0 0 15px;">Your account has been created on the <strong>Himanshu Majithiya & Co.</strong> Client Portal. You can now access your documents, appointments, and more.</p>
+          <p style="margin: 0 0 10px;">Here are your login credentials:</p>
+          <table style="width: 100%; background: white; border-radius: 8px; border-collapse: collapse; margin: 15px 0; border-left: 4px solid #c9a227;">
+            <tr>
+              <td style="padding: 12px 20px; border-bottom: 1px solid #f0f0f0;">
+                <div style="font-weight: bold; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Login ID</div>
+                <div style="font-size: 18px; color: #1e3a5f; font-weight: bold; font-family: monospace; margin-top: 4px;">${data.loginId}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 20px;">
+                <div style="font-weight: bold; color: #555; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Password</div>
+                <div style="font-size: 18px; color: #1e3a5f; font-weight: bold; font-family: monospace; margin-top: 4px;">${data.password}</div>
+              </td>
+            </tr>
+          </table>
+          <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0; font-size: 14px; color: #856404;">
             <strong>Important:</strong> Please change your password after your first login for security purposes.
           </div>
           <p style="text-align: center; margin: 25px 0;">
-            <a href="${portalUrl}" class="btn">Login to Client Portal</a>
+            <a href="${portalUrl}" style="display: inline-block; background: #c9a227; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Client Portal</a>
           </p>
-          <p style="font-size: 14px; color: #666;">If the button doesn't work, copy and paste this link into your browser:</p>
-          <p style="font-size: 12px; color: #999; word-break: break-all;">${portalUrl}</p>
+          <p style="font-size: 14px; color: #666; margin: 0 0 5px;">If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="font-size: 12px; color: #999; word-break: break-all; margin: 0;">${portalUrl}</p>
         </div>
-        <div class="footer">
+        <div style="background: #1e3a5f; padding: 20px; text-align: center;">
           <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 14px;">
             Best regards,<br>
             Himanshu Majithiya & Co.<br>
