@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { checkAdminOrStaff } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { sendWelcomeEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -206,6 +207,23 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       },
     })
+
+    // Send welcome email with login credentials (only if email is provided)
+    if (email && loginId) {
+      try {
+        await sendWelcomeEmail({
+          name: name || 'User',
+          email,
+          loginId,
+          password: DEFAULT_PASSWORD,
+          role: user.role,
+        })
+        console.log('Welcome email sent to:', email)
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError)
+        // Don't fail user creation if email fails
+      }
+    }
 
     return NextResponse.json(user, { status: 201 })
   } catch (error) {
