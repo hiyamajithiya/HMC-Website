@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Build reset URL
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    const baseUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const resetUrl = `${baseUrl}/client-portal/reset-password?token=${token}`
 
     // Send email

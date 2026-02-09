@@ -103,6 +103,153 @@ export async function sendAppointmentEmail(data: {
   })
 }
 
+// Appointment confirmed email (sent to client when admin confirms)
+export async function sendAppointmentConfirmedEmail(data: {
+  name: string
+  email: string
+  service: string
+  date: string
+  timeSlot: string
+}) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background: #f8f9fa; }
+        .details-box { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e; }
+        .detail-row { display: flex; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .detail-label { font-weight: bold; color: #555; min-width: 120px; }
+        .badge { display: inline-block; background: #22c55e; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .footer { background: #1e3a5f; padding: 20px; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Himanshu Majithiya & Co.</h1>
+          <p style="margin: 5px 0 0; opacity: 0.9;">Chartered Accountants</p>
+        </div>
+        <div class="content">
+          <h2 style="color: #1e3a5f; margin-top: 0;">Appointment Confirmed!</h2>
+          <p>Dear ${data.name},</p>
+          <p>We are pleased to inform you that your appointment has been <span class="badge">Confirmed</span></p>
+          <div class="details-box">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Service:</td><td style="padding: 8px 0;">${data.service}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Date:</td><td style="padding: 8px 0;">${data.date}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Time:</td><td style="padding: 8px 0;">${data.timeSlot}</td></tr>
+            </table>
+          </div>
+          <p><strong>Please note:</strong></p>
+          <ul style="color: #555;">
+            <li>Please arrive 5-10 minutes before your scheduled time</li>
+            <li>Bring all relevant documents related to the service</li>
+            <li>If you need to reschedule, please contact us at least 24 hours in advance</li>
+          </ul>
+          <p>If you have any questions, please call us at <strong>+91 98795 03465</strong>.</p>
+        </div>
+        <div class="footer">
+          <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 14px;">
+            Best regards,<br>
+            Himanshu Majithiya & Co.<br>
+            +91 98795 03465 | info@himanshumajithiya.com
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await transporter.sendMail({
+    from: fromAddress,
+    to: data.email,
+    subject: `Appointment Confirmed - ${data.service} on ${data.date} - Himanshu Majithiya & Co.`,
+    html: emailHtml,
+  })
+}
+
+// Appointment cancelled email (sent to client when admin cancels)
+export async function sendAppointmentCancelledEmail(data: {
+  name: string
+  email: string
+  service: string
+  date: string
+  timeSlot: string
+}) {
+  const settings = await getSmtpSettings()
+  if (!settings) {
+    throw new Error('SMTP settings not configured')
+  }
+
+  const transporter = await createTransporter()
+  const fromAddress = `"${settings.fromName}" <${settings.user}>`
+
+  const emailHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; background: #f8f9fa; }
+        .details-box { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #ef4444; }
+        .badge { display: inline-block; background: #ef4444; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+        .footer { background: #1e3a5f; padding: 20px; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin: 0;">Himanshu Majithiya & Co.</h1>
+          <p style="margin: 5px 0 0; opacity: 0.9;">Chartered Accountants</p>
+        </div>
+        <div class="content">
+          <h2 style="color: #1e3a5f; margin-top: 0;">Appointment Cancelled</h2>
+          <p>Dear ${data.name},</p>
+          <p>We regret to inform you that your appointment has been <span class="badge">Cancelled</span></p>
+          <div class="details-box">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Service:</td><td style="padding: 8px 0;">${data.service}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Date:</td><td style="padding: 8px 0;">${data.date}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold; color: #555;">Time:</td><td style="padding: 8px 0;">${data.timeSlot}</td></tr>
+            </table>
+          </div>
+          <p>We apologize for any inconvenience. Please feel free to book a new appointment at your convenience through our website.</p>
+          <p>If you have any questions, please call us at <strong>+91 98795 03465</strong>.</p>
+        </div>
+        <div class="footer">
+          <p style="color: rgba(255,255,255,0.8); margin: 0; font-size: 14px;">
+            Best regards,<br>
+            Himanshu Majithiya & Co.<br>
+            +91 98795 03465 | info@himanshumajithiya.com
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `
+
+  await transporter.sendMail({
+    from: fromAddress,
+    to: data.email,
+    subject: `Appointment Cancelled - Himanshu Majithiya & Co.`,
+    html: emailHtml,
+  })
+}
+
 // Newsletter subscription email
 export async function sendNewsletterConfirmation(email: string, name?: string) {
   const settings = await getSmtpSettings()

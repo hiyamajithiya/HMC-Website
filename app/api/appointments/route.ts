@@ -110,31 +110,26 @@ export async function POST(request: NextRequest) {
       console.error("Failed to create calendar event:", calendarError)
     }
 
-    // Send email notification (admin + user confirmation)
-    const smtpUser = process.env.SMTP_USER
-    const smtpPass = process.env.SMTP_PASS
-
-    if (smtpUser && smtpPass) {
-      try {
-        await sendAppointmentEmail({
-          name,
-          email,
-          phone,
-          service,
-          date: appointmentDate.toLocaleDateString('en-IN', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          }),
-          timeSlot,
-          message: message || undefined,
-        })
-        console.log("Appointment email notification sent")
-      } catch (emailError) {
-        console.error("Failed to send appointment email:", emailError)
-        // Don't fail the request if email fails
-      }
+    // Send email notification (admin + user acknowledgment)
+    try {
+      await sendAppointmentEmail({
+        name,
+        email,
+        phone,
+        service,
+        date: appointmentDate.toLocaleDateString('en-IN', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        timeSlot,
+        message: message || undefined,
+      })
+      console.log("Appointment email notification sent")
+    } catch (emailError) {
+      console.error("Failed to send appointment email:", emailError)
+      // Don't fail the request if email fails
     }
 
     // Clean up used verification record

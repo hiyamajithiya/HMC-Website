@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
+import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,21 +55,57 @@ export async function PATCH(
     const body = await request.json()
     const { status } = body
 
+    // Fetch existing appointment for email and calendar operations
+    const existing = await prisma.appointment.findUnique({
+      where: { id },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Appointment not found' }, { status: 404 })
+    }
+
     // If cancelling, remove from Google Calendar
-    if (status === 'CANCELLED') {
-      const existing = await prisma.appointment.findUnique({
-        where: { id },
-        select: { googleEventId: true },
-      })
-      if (existing?.googleEventId) {
-        await deleteCalendarEvent(existing.googleEventId)
-      }
+    if (status === 'CANCELLED' && existing.googleEventId) {
+      await deleteCalendarEvent(existing.googleEventId)
     }
 
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status },
     })
+
+    // Send email notification to client on status change
+    const formattedDate = existing.date.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+
+    try {
+      if (status === 'CONFIRMED') {
+        await sendAppointmentConfirmedEmail({
+          name: existing.name,
+          email: existing.email,
+          service: existing.service,
+          date: formattedDate,
+          timeSlot: existing.timeSlot,
+        })
+        console.log('Appointment confirmation email sent to:', existing.email)
+      } else if (status === 'CANCELLED') {
+        await sendAppointmentCancelledEmail({
+          name: existing.name,
+          email: existing.email,
+          service: existing.service,
+          date: formattedDate,
+          timeSlot: existing.timeSlot,
+        })
+        console.log('Appointment cancellation email sent to:', existing.email)
+      }
+    } catch (emailError) {
+      console.error('Failed to send status email:', emailError)
+      // Don't fail the status update if email fails
+    }
 
     return NextResponse.json(appointment)
   } catch (error) {
