@@ -61,13 +61,40 @@ function buildISTDate(dateStr: string, hours: number, minutes: number): Date {
   return date
 }
 
+// Check if a date string (YYYY-MM-DD) is today in IST
+function isToday(dateStr: string): boolean {
+  const now = new Date()
+  // Convert current time to IST
+  const istNow = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const todayStr = `${istNow.getFullYear()}-${String(istNow.getMonth() + 1).padStart(2, '0')}-${String(istNow.getDate()).padStart(2, '0')}`
+  return dateStr === todayStr
+}
+
+// Filter out time slots that have already passed (for today's date)
+function filterPastSlots(slots: string[], dateStr: string): string[] {
+  if (!isToday(dateStr)) return slots
+
+  const now = new Date()
+  const istNow = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const currentHours = istNow.getHours()
+  const currentMinutes = istNow.getMinutes()
+
+  return slots.filter((slot) => {
+    const startStr = slot.split(' - ')[0]
+    const { hours, minutes } = parseTime(startStr)
+    // Only show slots whose start time is in the future
+    return hours > currentHours || (hours === currentHours && minutes > currentMinutes)
+  })
+}
+
 /**
  * Get available time slots for a given date
  * Returns the full slot list if Google Calendar is not configured
+ * Filters out past time slots if the date is today
  */
 export async function getAvailableSlots(dateStr: string): Promise<{ slots: string[]; calendarConnected: boolean }> {
   if (!isConfigured()) {
-    return { slots: ALL_SLOTS, calendarConnected: false }
+    return { slots: filterPastSlots(ALL_SLOTS, dateStr), calendarConnected: false }
   }
 
   try {
@@ -108,11 +135,12 @@ export async function getAvailableSlots(dateStr: string): Promise<{ slots: strin
       })
     })
 
-    return { slots: availableSlots, calendarConnected: true }
+    // Also filter out past time slots for today
+    return { slots: filterPastSlots(availableSlots, dateStr), calendarConnected: true }
   } catch (error) {
     console.error('Google Calendar availability check failed:', error)
-    // Graceful fallback: return all slots
-    return { slots: ALL_SLOTS, calendarConnected: false }
+    // Graceful fallback: return all slots (still filter past for today)
+    return { slots: filterPastSlots(ALL_SLOTS, dateStr), calendarConnected: false }
   }
 }
 
