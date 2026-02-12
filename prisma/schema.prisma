@@ -156,6 +156,7 @@ model BlogPost {
   viewCount   Int         @default(0)
   authorId    String?
   author      User?       @relation(fields: [authorId], references: [id])
+  socialPosts SocialPostLog[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -163,6 +164,35 @@ model BlogPost {
   @@index([category])
   @@index([authorId])
   @@index([isPublished, category])
+}
+
+// Social media auto-post tracking
+model SocialPostLog {
+  id         String           @id @default(cuid())
+  blogPostId String
+  blogPost   BlogPost         @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  platform   SocialPlatform
+  status     SocialPostStatus @default(PENDING)
+  postId     String?
+  postUrl    String?
+  error      String?
+  createdAt  DateTime         @default(now())
+
+  @@index([blogPostId])
+  @@index([platform])
+}
+
+enum SocialPlatform {
+  TWITTER
+  LINKEDIN
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum SocialPostStatus {
+  PENDING
+  POSTED
+  FAILED
 }
 
 enum BlogCategory {

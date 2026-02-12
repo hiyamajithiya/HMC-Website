@@ -1,0 +1,367 @@
+import { TwitterApi } from 'twitter-api-v2'
+import { prisma } from '@/lib/prisma'
+import { getSocialMediaSettings } from '@/lib/social-media'
+import path from 'path'
+import fs from 'fs'
+
+interface BlogPostData {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  coverImage: string | null
+  tags: string[]
+}
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
+
+// Build post text for Twitter (280 char limit, links use ~23 chars)
+function buildTwitterText(post: BlogPostData): string {
+  const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
+  const hashtags = post.tags.slice(0, 3).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+  const urlLen = 23 // t.co shortened URL length
+  const hashtagLen = hashtags ? hashtags.length + 1 : 0 // +1 for newline
+  const maxExcerpt = 280 - urlLen - hashtagLen - 10 // 10 for spacing/newlines
+
+  let excerpt = post.excerpt
+  if (excerpt.length > maxExcerpt) {
+    excerpt = excerpt.substring(0, maxExcerpt - 3) + '...'
+  }
+
+  let text = `${excerpt}\n\n${blogUrl}`
+  if (hashtags) {
+    text += `\n${hashtags}`
+  }
+  return text
+}
+
+// Build post text for LinkedIn (3000 char limit)
+function buildLinkedInText(post: BlogPostData): string {
+  const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
+  const hashtags = post.tags.slice(0, 5).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+
+  let text = `${post.title}\n\n${post.excerpt}\n\nRead more: ${blogUrl}`
+  if (hashtags) {
+    text += `\n\n${hashtags}`
+  }
+  return text
+}
+
+// Resolve cover image to a local file path for upload
+function resolveCoverImagePath(coverImage: string): string | null {
+  if (!coverImage) return null
+
+  // Handle /api/uploads/blog/filename pattern
+  const match = coverImage.match(/\/api\/uploads\/blog\/(.+)$/)
+  if (match) {
+    const filename = match[1]
+    const uploadsPath = process.env.UPLOADS_PATH
+    if (uploadsPath) {
+      return path.join(uploadsPath, 'blog', filename)
+    }
+    return path.join(process.cwd(), 'public', 'uploads', 'blog', filename)
+  }
+
+  return null
+}
+
+// Post to X/Twitter
+async function postToTwitter(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.twitter.enabled) {
+    throw new Error('Twitter is not enabled')
+  }
+
+  const { apiKey, apiSecret, accessToken, accessSecret } = settings.twitter
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) {
+    throw new Error('Twitter credentials are incomplete')
+  }
+
+  const client = new TwitterApi({
+    appKey: apiKey,
+    appSecret: apiSecret,
+    accessToken: accessToken,
+    accessSecret: accessSecret,
+  })
+
+  const text = buildTwitterText(post)
+
+  // Try uploading cover image
+  let mediaId: string | undefined
+  if (post.coverImage) {
+    const imagePath = resolveCoverImagePath(post.coverImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      try {
+        mediaId = await client.v1.uploadMedia(imagePath)
+      } catch (err) {
+        console.error('Failed to upload Twitter media:', err)
+        // Continue without image
+      }
+    }
+  }
+
+  const tweetPayload: any = { text }
+  if (mediaId) {
+    tweetPayload.media = { media_ids: [mediaId] }
+  }
+
+  const result = await client.v2.tweet(tweetPayload)
+  const tweetId = result.data.id
+  // Construct tweet URL (need username — we'll use a generic format)
+  const postUrl = `https://x.com/i/status/${tweetId}`
+
+  return { postId: tweetId, postUrl }
+}
+
+// Post to LinkedIn using Share API v2
+async function postToLinkedIn(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.linkedin.enabled) {
+    throw new Error('LinkedIn is not enabled')
+  }
+
+  const { accessToken, personUrn } = settings.linkedin
+  if (!accessToken || !personUrn) {
+    throw new Error('LinkedIn credentials are incomplete')
+  }
+
+  const text = buildLinkedInText(post)
+  const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
+
+  // Build the share payload
+  const sharePayload: any = {
+    author: personUrn,
+    lifecycleState: 'PUBLISHED',
+    specificContent: {
+      'com.linkedin.ugc.ShareContent': {
+        shareCommentary: { text },
+        shareMediaCategory: 'ARTICLE',
+        media: [
+          {
+            status: 'READY',
+            originalUrl: blogUrl,
+            title: { text: post.title },
+            description: { text: post.excerpt.substring(0, 200) },
+          },
+        ],
+      },
+    },
+    visibility: {
+      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
+    },
+  }
+
+  const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Restli-Protocol-Version': '2.0.0',
+    },
+    body: JSON.stringify(sharePayload),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`LinkedIn API error (${response.status}): ${errorText}`)
+  }
+
+  const data = await response.json()
+  const shareId = data.id // urn:li:share:XXXXX or urn:li:ugcPost:XXXXX
+
+  // Extract numeric ID for URL
+  const numericId = shareId?.split(':').pop() || ''
+  const postUrl = `https://www.linkedin.com/feed/update/${shareId}`
+
+  return { postId: shareId, postUrl }
+}
+
+// Main auto-post function — called when a blog is published
+export async function autoPostBlog(post: BlogPostData): Promise<void> {
+  const settings = await getSocialMediaSettings()
+  if (!settings) {
+    console.log('No social media settings configured, skipping auto-post')
+    return
+  }
+
+  // Check if already posted (prevent double-posting)
+  const existingPosts = await prisma.socialPostLog.findMany({
+    where: { blogPostId: post.id },
+  })
+
+  const platforms: Array<{
+    name: 'TWITTER' | 'LINKEDIN'
+    enabled: boolean
+    postFn: (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>
+  }> = [
+    { name: 'TWITTER', enabled: settings.twitter.enabled, postFn: postToTwitter },
+    { name: 'LINKEDIN', enabled: settings.linkedin.enabled, postFn: postToLinkedIn },
+  ]
+
+  for (const platform of platforms) {
+    // Skip if not enabled
+    if (!platform.enabled) continue
+
+    // Skip if already successfully posted to this platform
+    const alreadyPosted = existingPosts.find(
+      p => p.platform === platform.name && p.status === 'POSTED'
+    )
+    if (alreadyPosted) {
+      console.log(`Already posted to ${platform.name}, skipping`)
+      continue
+    }
+
+    // Create PENDING log entry
+    const log = await prisma.socialPostLog.create({
+      data: {
+        blogPostId: post.id,
+        platform: platform.name,
+        status: 'PENDING',
+      },
+    })
+
+    try {
+      const result = await platform.postFn(post)
+
+      // Update to POSTED
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: {
+          status: 'POSTED',
+          postId: result.postId,
+          postUrl: result.postUrl,
+        },
+      })
+
+      console.log(`Successfully posted to ${platform.name}:`, result.postUrl)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to post to ${platform.name}:`, errorMsg)
+
+      // Update to FAILED
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: {
+          status: 'FAILED',
+          error: errorMsg.substring(0, 500),
+        },
+      })
+    }
+  }
+}
+
+// Retry a failed social post
+export async function retryPostToSocial(logId: string): Promise<{ success: boolean; error?: string }> {
+  const log = await prisma.socialPostLog.findUnique({
+    where: { id: logId },
+    include: { blogPost: true },
+  })
+
+  if (!log) {
+    return { success: false, error: 'Log entry not found' }
+  }
+
+  if (log.status === 'POSTED') {
+    return { success: false, error: 'Already posted successfully' }
+  }
+
+  const post: BlogPostData = {
+    id: log.blogPost.id,
+    title: log.blogPost.title,
+    slug: log.blogPost.slug,
+    excerpt: log.blogPost.excerpt,
+    coverImage: log.blogPost.coverImage,
+    tags: log.blogPost.tags,
+  }
+
+  const postFn = log.platform === 'TWITTER' ? postToTwitter : postToLinkedIn
+
+  try {
+    const result = await postFn(post)
+
+    await prisma.socialPostLog.update({
+      where: { id: logId },
+      data: {
+        status: 'POSTED',
+        postId: result.postId,
+        postUrl: result.postUrl,
+        error: null,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+
+    await prisma.socialPostLog.update({
+      where: { id: logId },
+      data: {
+        status: 'FAILED',
+        error: errorMsg.substring(0, 500),
+      },
+    })
+
+    return { success: false, error: errorMsg }
+  }
+}
+
+// Manually trigger posting for a specific blog + platform
+export async function manualPostToSocial(
+  blogPostId: string,
+  platform: 'TWITTER' | 'LINKEDIN'
+): Promise<{ success: boolean; error?: string }> {
+  const blogPost = await prisma.blogPost.findUnique({
+    where: { id: blogPostId },
+  })
+
+  if (!blogPost || !blogPost.isPublished) {
+    return { success: false, error: 'Blog post not found or not published' }
+  }
+
+  const post: BlogPostData = {
+    id: blogPost.id,
+    title: blogPost.title,
+    slug: blogPost.slug,
+    excerpt: blogPost.excerpt,
+    coverImage: blogPost.coverImage,
+    tags: blogPost.tags,
+  }
+
+  const postFn = platform === 'TWITTER' ? postToTwitter : postToLinkedIn
+
+  // Create log entry
+  const log = await prisma.socialPostLog.create({
+    data: {
+      blogPostId: blogPost.id,
+      platform,
+      status: 'PENDING',
+    },
+  })
+
+  try {
+    const result = await postFn(post)
+
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: {
+        status: 'POSTED',
+        postId: result.postId,
+        postUrl: result.postUrl,
+      },
+    })
+
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: {
+        status: 'FAILED',
+        error: errorMsg.substring(0, 500),
+      },
+    })
+
+    return { success: false, error: errorMsg }
+  }
+}

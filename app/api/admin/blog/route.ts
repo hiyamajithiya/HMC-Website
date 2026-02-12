@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
+import { autoPostBlog } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -89,6 +90,18 @@ export async function POST(request: Request) {
         authorId: user.id,
       },
     })
+
+    // Auto-post to social media if published immediately (fire-and-forget)
+    if (isPublished) {
+      autoPostBlog({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage,
+        tags: post.tags,
+      }).catch(err => console.error('Auto-post failed:', err))
+    }
 
     return NextResponse.json(post, { status: 201 })
   } catch (error) {

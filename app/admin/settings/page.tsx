@@ -24,7 +24,10 @@ import {
   Send,
   Eye,
   EyeOff,
-  AlertCircle
+  AlertCircle,
+  Megaphone,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -43,6 +46,15 @@ export default function SettingsPage() {
     fromName: 'Himanshu Majithiya & Co.',
     notificationEmail: '',
   })
+  // Social media auto-post state
+  const [savingSocial, setSavingSocial] = useState(false)
+  const [socialMessage, setSocialMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [showTwitterSecrets, setShowTwitterSecrets] = useState(false)
+  const [showLinkedInToken, setShowLinkedInToken] = useState(false)
+  const [socialSettings, setSocialSettings] = useState({
+    twitter: { enabled: false, apiKey: '', apiSecret: '', accessToken: '', accessSecret: '' },
+    linkedin: { enabled: false, accessToken: '', personUrn: '' },
+  })
   const [settings, setSettings] = useState({
     siteName: 'Himanshu Majithiya & Co.',
     tagline: 'Chartered Accountants - Practicing Since 2007',
@@ -59,9 +71,10 @@ export default function SettingsPage() {
     whatsapp: '+919879503465',
   })
 
-  // Fetch SMTP settings on mount
+  // Fetch settings on mount
   useEffect(() => {
     fetchSmtpSettings()
+    fetchSocialSettings()
   }, [])
 
   const fetchSmtpSettings = async () => {
@@ -142,12 +155,51 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchSocialSettings = async () => {
+    try {
+      const response = await fetch('/api/admin/settings/social')
+      if (response.ok) {
+        const data = await response.json()
+        setSocialSettings(data.settings)
+      }
+    } catch (error) {
+      console.error('Failed to fetch social settings:', error)
+    }
+  }
+
+  const handleSaveSocial = async () => {
+    setSavingSocial(true)
+    setSocialMessage(null)
+
+    try {
+      const response = await fetch('/api/admin/settings/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(socialSettings),
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        setSocialMessage({ type: 'success', text: 'Social media settings saved successfully!' })
+        fetchSocialSettings() // Refresh to show masked tokens
+      } else {
+        setSocialMessage({ type: 'error', text: data.error || 'Failed to save settings' })
+      }
+    } catch (error) {
+      setSocialMessage({ type: 'error', text: 'Failed to save settings' })
+    } finally {
+      setSavingSocial(false)
+    }
+  }
+
   const sections = [
     { id: 'general', label: 'General', icon: Globe },
     { id: 'contact', label: 'Contact', icon: Phone },
     { id: 'address', label: 'Address', icon: MapPin },
     { id: 'hours', label: 'Hours', icon: Clock },
     { id: 'social', label: 'Social Media', icon: Share2 },
+    { id: 'autopost', label: 'Auto-Post', icon: Megaphone },
     { id: 'email', label: 'Email (SMTP)', icon: Mail },
   ]
 
@@ -604,6 +656,229 @@ export default function SettingsPage() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Auto-Post Settings */}
+          {activeSection === 'autopost' && (
+            <>
+              {socialMessage && (
+                <div
+                  className={`p-4 rounded-lg flex items-center gap-3 ${
+                    socialMessage.type === 'success'
+                      ? 'bg-green-50 border border-green-200 text-green-700'
+                      : 'bg-red-50 border border-red-200 text-red-700'
+                  }`}
+                >
+                  {socialMessage.type === 'success' ? (
+                    <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                  )}
+                  <span>{socialMessage.text}</span>
+                </div>
+              )}
+
+              {/* X (Twitter) Settings */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                        <Twitter className="h-5 w-5 text-slate-800" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">X (Twitter)</CardTitle>
+                        <CardDescription>Auto-post blogs to X/Twitter</CardDescription>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSocialSettings({
+                        ...socialSettings,
+                        twitter: { ...socialSettings.twitter, enabled: !socialSettings.twitter.enabled }
+                      })}
+                      className="flex items-center gap-2"
+                    >
+                      {socialSettings.twitter.enabled ? (
+                        <ToggleRight className="h-8 w-8 text-green-500" />
+                      ) : (
+                        <ToggleLeft className="h-8 w-8 text-slate-300" />
+                      )}
+                    </button>
+                  </div>
+                </CardHeader>
+                {socialSettings.twitter.enabled && (
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">API Key (Consumer Key)</Label>
+                      <Input
+                        value={socialSettings.twitter.apiKey}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          twitter: { ...socialSettings.twitter, apiKey: e.target.value }
+                        })}
+                        placeholder="Enter API Key"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">API Secret (Consumer Secret)</Label>
+                      <div className="relative">
+                        <Input
+                          type={showTwitterSecrets ? 'text' : 'password'}
+                          value={socialSettings.twitter.apiSecret}
+                          onChange={(e) => setSocialSettings({
+                            ...socialSettings,
+                            twitter: { ...socialSettings.twitter, apiSecret: e.target.value }
+                          })}
+                          placeholder="Enter API Secret"
+                          className="bg-slate-50 border-slate-200 focus:bg-white pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowTwitterSecrets(!showTwitterSecrets)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showTwitterSecrets ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Access Token</Label>
+                      <Input
+                        type={showTwitterSecrets ? 'text' : 'password'}
+                        value={socialSettings.twitter.accessToken}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          twitter: { ...socialSettings.twitter, accessToken: e.target.value }
+                        })}
+                        placeholder="Enter Access Token"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Access Token Secret</Label>
+                      <Input
+                        type={showTwitterSecrets ? 'text' : 'password'}
+                        value={socialSettings.twitter.accessSecret}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          twitter: { ...socialSettings.twitter, accessSecret: e.target.value }
+                        })}
+                        placeholder="Enter Access Token Secret"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <h4 className="text-sm font-medium text-slate-700 mb-2">Setup Guide:</h4>
+                      <ol className="text-xs text-slate-600 space-y-1 list-decimal list-inside">
+                        <li>Go to <a href="https://developer.x.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">developer.x.com</a> and sign up for a Developer account</li>
+                        <li>Create a new Project and App</li>
+                        <li>Set App permissions to &quot;Read and Write&quot;</li>
+                        <li>Go to &quot;Keys and Tokens&quot; tab</li>
+                        <li>Copy API Key, API Secret, Access Token, and Access Token Secret</li>
+                      </ol>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* LinkedIn Settings */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                        <Linkedin className="h-5 w-5 text-blue-700" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">LinkedIn</CardTitle>
+                        <CardDescription>Auto-post blogs to LinkedIn</CardDescription>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSocialSettings({
+                        ...socialSettings,
+                        linkedin: { ...socialSettings.linkedin, enabled: !socialSettings.linkedin.enabled }
+                      })}
+                      className="flex items-center gap-2"
+                    >
+                      {socialSettings.linkedin.enabled ? (
+                        <ToggleRight className="h-8 w-8 text-green-500" />
+                      ) : (
+                        <ToggleLeft className="h-8 w-8 text-slate-300" />
+                      )}
+                    </button>
+                  </div>
+                </CardHeader>
+                {socialSettings.linkedin.enabled && (
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Access Token</Label>
+                      <div className="relative">
+                        <Input
+                          type={showLinkedInToken ? 'text' : 'password'}
+                          value={socialSettings.linkedin.accessToken}
+                          onChange={(e) => setSocialSettings({
+                            ...socialSettings,
+                            linkedin: { ...socialSettings.linkedin, accessToken: e.target.value }
+                          })}
+                          placeholder="Enter LinkedIn Access Token"
+                          className="bg-slate-50 border-slate-200 focus:bg-white pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowLinkedInToken(!showLinkedInToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showLinkedInToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Person/Organization URN</Label>
+                      <Input
+                        value={socialSettings.linkedin.personUrn}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          linkedin: { ...socialSettings.linkedin, personUrn: e.target.value }
+                        })}
+                        placeholder="urn:li:person:XXXXX or urn:li:organization:XXXXX"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                      <p className="text-xs text-slate-500">Your LinkedIn Person URN or Company Page Organization URN</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <h4 className="text-sm font-medium text-slate-700 mb-2">Setup Guide:</h4>
+                      <ol className="text-xs text-slate-600 space-y-1 list-decimal list-inside">
+                        <li>Go to <a href="https://www.linkedin.com/developers" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">linkedin.com/developers</a> and create an App</li>
+                        <li>Associate with your LinkedIn Page</li>
+                        <li>Request &quot;Share on LinkedIn&quot; (w_member_social) permission</li>
+                        <li>Generate an OAuth 2.0 Access Token</li>
+                        <li>Find your Person URN from the LinkedIn API</li>
+                      </ol>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              <Button
+                onClick={handleSaveSocial}
+                className="bg-primary hover:bg-primary/90"
+                disabled={savingSocial}
+              >
+                {savingSocial ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Auto-Post Settings
+                  </>
+                )}
+              </Button>
+            </>
           )}
 
           {/* Email/SMTP Settings */}

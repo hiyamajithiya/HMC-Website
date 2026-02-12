@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
+import { autoPostBlog } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +95,18 @@ export async function PUT(
       },
     })
 
+    // Auto-post to social media on first publish (fire-and-forget)
+    if (isPublished && !existingPost.isPublished) {
+      autoPostBlog({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage,
+        tags: post.tags,
+      }).catch(err => console.error('Auto-post failed:', err))
+    }
+
     return NextResponse.json(post)
   } catch (error) {
     console.error('Failed to update blog post:', error)
@@ -118,10 +131,27 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
+    // Check if this is a publish action (need existing post to compare)
+    const existingPost = body.isPublished !== undefined
+      ? await prisma.blogPost.findUnique({ where: { id } })
+      : null
+
     const post = await prisma.blogPost.update({
       where: { id },
       data: body,
     })
+
+    // Auto-post to social media on first publish (fire-and-forget)
+    if (body.isPublished && existingPost && !existingPost.isPublished) {
+      autoPostBlog({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        excerpt: post.excerpt,
+        coverImage: post.coverImage,
+        tags: post.tags,
+      }).catch(err => console.error('Auto-post failed:', err))
+    }
 
     return NextResponse.json(post)
   } catch (error) {

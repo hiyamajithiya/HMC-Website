@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, X, Loader2, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, X, Loader2, ImageIcon, Twitter, Linkedin, RefreshCw, CheckCircle, XCircle, Clock, Send } from 'lucide-react'
 
 // Dynamically import RichTextEditor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -48,9 +48,20 @@ export default function EditBlogPostPage() {
     tags: '',
     isPublished: false,
   })
+  const [socialPosts, setSocialPosts] = useState<Array<{
+    id: string
+    platform: string
+    status: string
+    postUrl: string | null
+    error: string | null
+    createdAt: string
+  }>>([])
+  const [retrying, setRetrying] = useState<string | null>(null)
+  const [manualPosting, setManualPosting] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPost()
+    fetchSocialPosts()
   }, [postId])
 
   const fetchPost = async () => {
@@ -180,6 +191,60 @@ export default function EditBlogPostPage() {
 
   const handleRemoveImage = () => {
     setFormData({ ...formData, coverImage: '' })
+  }
+
+  const fetchSocialPosts = async () => {
+    try {
+      const response = await fetch(`/api/admin/blog/${postId}/social`)
+      if (response.ok) {
+        const data = await response.json()
+        setSocialPosts(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch social posts:', error)
+    }
+  }
+
+  const handleRetry = async (logId: string) => {
+    setRetrying(logId)
+    try {
+      const response = await fetch(`/api/admin/blog/${postId}/social`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logId }),
+      })
+      if (response.ok) {
+        fetchSocialPosts()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Retry failed')
+      }
+    } catch (error) {
+      alert('Failed to retry')
+    } finally {
+      setRetrying(null)
+    }
+  }
+
+  const handleManualPost = async (platform: string) => {
+    setManualPosting(platform)
+    try {
+      const response = await fetch(`/api/admin/blog/${postId}/social`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      })
+      if (response.ok) {
+        fetchSocialPosts()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Post failed')
+      }
+    } catch (error) {
+      alert('Failed to post')
+    } finally {
+      setManualPosting(null)
+    }
   }
 
   if (loading) {
@@ -481,6 +546,127 @@ export default function EditBlogPostPage() {
                     View on Website
                   </Button>
                 </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Social Media Posts */}
+          {formData.isPublished && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Social Media
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Twitter status */}
+                {(() => {
+                  const twitterPost = socialPosts.find(p => p.platform === 'TWITTER')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Twitter className="h-4 w-4 text-slate-800" />
+                        <span className="text-sm font-medium">X / Twitter</span>
+                      </div>
+                      {twitterPost ? (
+                        <div className="flex items-center gap-2">
+                          {twitterPost.status === 'POSTED' && (
+                            <a href={twitterPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                              <CheckCircle className="h-3.5 w-3.5" /> Posted
+                            </a>
+                          )}
+                          {twitterPost.status === 'FAILED' && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-red-600 flex items-center gap-1" title={twitterPost.error || ''}>
+                                <XCircle className="h-3.5 w-3.5" /> Failed
+                              </span>
+                              <button
+                                onClick={() => handleRetry(twitterPost.id)}
+                                disabled={retrying === twitterPost.id}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Retry"
+                              >
+                                <RefreshCw className={`h-3.5 w-3.5 ${retrying === twitterPost.id ? 'animate-spin' : ''}`} />
+                              </button>
+                            </div>
+                          )}
+                          {twitterPost.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" /> Pending
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleManualPost('TWITTER')}
+                          disabled={manualPosting === 'TWITTER'}
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          {manualPosting === 'TWITTER' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Post Now'
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* LinkedIn status */}
+                {(() => {
+                  const linkedinPost = socialPosts.find(p => p.platform === 'LINKEDIN')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="h-4 w-4 text-blue-700" />
+                        <span className="text-sm font-medium">LinkedIn</span>
+                      </div>
+                      {linkedinPost ? (
+                        <div className="flex items-center gap-2">
+                          {linkedinPost.status === 'POSTED' && (
+                            <a href={linkedinPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                              <CheckCircle className="h-3.5 w-3.5" /> Posted
+                            </a>
+                          )}
+                          {linkedinPost.status === 'FAILED' && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-red-600 flex items-center gap-1" title={linkedinPost.error || ''}>
+                                <XCircle className="h-3.5 w-3.5" /> Failed
+                              </span>
+                              <button
+                                onClick={() => handleRetry(linkedinPost.id)}
+                                disabled={retrying === linkedinPost.id}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Retry"
+                              >
+                                <RefreshCw className={`h-3.5 w-3.5 ${retrying === linkedinPost.id ? 'animate-spin' : ''}`} />
+                              </button>
+                            </div>
+                          )}
+                          {linkedinPost.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" /> Pending
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleManualPost('LINKEDIN')}
+                          disabled={manualPosting === 'LINKEDIN'}
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          {manualPosting === 'LINKEDIN' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Post Now'
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           )}
