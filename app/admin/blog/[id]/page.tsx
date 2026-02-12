@@ -572,9 +572,19 @@ export default function EditBlogPostPage() {
                       {twitterPost ? (
                         <div className="flex items-center gap-2">
                           {twitterPost.status === 'POSTED' && (
-                            <a href={twitterPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
-                              <CheckCircle className="h-3.5 w-3.5" /> Posted
-                            </a>
+                            <>
+                              <a href={twitterPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button
+                                onClick={() => handleManualPost('TWITTER')}
+                                disabled={manualPosting === 'TWITTER'}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Repost"
+                              >
+                                {manualPosting === 'TWITTER' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
                           )}
                           {twitterPost.status === 'FAILED' && (
                             <div className="flex items-center gap-1">
@@ -626,9 +636,19 @@ export default function EditBlogPostPage() {
                       {linkedinPost ? (
                         <div className="flex items-center gap-2">
                           {linkedinPost.status === 'POSTED' && (
-                            <a href={linkedinPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
-                              <CheckCircle className="h-3.5 w-3.5" /> Posted
-                            </a>
+                            <>
+                              <a href={linkedinPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button
+                                onClick={() => handleManualPost('LINKEDIN')}
+                                disabled={manualPosting === 'LINKEDIN'}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Repost"
+                              >
+                                {manualPosting === 'LINKEDIN' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
                           )}
                           {linkedinPost.status === 'FAILED' && (
                             <div className="flex items-center gap-1">
@@ -680,9 +700,19 @@ export default function EditBlogPostPage() {
                       {facebookPost ? (
                         <div className="flex items-center gap-2">
                           {facebookPost.status === 'POSTED' && (
-                            <a href={facebookPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
-                              <CheckCircle className="h-3.5 w-3.5" /> Posted
-                            </a>
+                            <>
+                              <a href={facebookPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button
+                                onClick={() => handleManualPost('FACEBOOK')}
+                                disabled={manualPosting === 'FACEBOOK'}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Repost"
+                              >
+                                {manualPosting === 'FACEBOOK' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
                           )}
                           {facebookPost.status === 'FAILED' && (
                             <div className="flex items-center gap-1">
@@ -738,9 +768,19 @@ export default function EditBlogPostPage() {
                       {instagramPost ? (
                         <div className="flex items-center gap-2">
                           {instagramPost.status === 'POSTED' && (
-                            <a href={instagramPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
-                              <CheckCircle className="h-3.5 w-3.5" /> Posted
-                            </a>
+                            <>
+                              <a href={instagramPost.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button
+                                onClick={() => handleManualPost('INSTAGRAM')}
+                                disabled={manualPosting === 'INSTAGRAM'}
+                                className="p-1 text-slate-500 hover:text-primary"
+                                title="Repost"
+                              >
+                                {manualPosting === 'INSTAGRAM' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
                           )}
                           {instagramPost.status === 'FAILED' && (
                             <div className="flex items-center gap-1">
