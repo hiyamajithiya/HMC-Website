@@ -95,6 +95,20 @@ function resolveCoverImagePath(coverImage: string): string | null {
   return null
 }
 
+// Get MIME type from file extension
+function getMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase()
+  const mimeTypes: Record<string, string> = {
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.svg': 'image/svg+xml',
+  }
+  return mimeTypes[ext] || 'image/jpeg'
+}
+
 // Post to X/Twitter
 async function postToTwitter(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
   const settings = await getSocialMediaSettings()
@@ -143,6 +157,79 @@ async function postToTwitter(post: BlogPostData): Promise<{ postId: string; post
   return { postId: tweetId, postUrl }
 }
 
+// Upload an image to LinkedIn and return the asset URN
+async function uploadImageToLinkedIn(
+  imagePath: string,
+  accessToken: string,
+  personUrn: string
+): Promise<string | null> {
+  try {
+    // Step 1: Register the upload
+    const registerResponse = await fetch(
+      'https://api.linkedin.com/v2/assets?action=registerUpload',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registerUploadRequest: {
+            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+            owner: personUrn,
+            serviceRelationships: [
+              {
+                relationshipType: 'OWNER',
+                identifier: 'urn:li:userGeneratedContent',
+              },
+            ],
+          },
+        }),
+      }
+    )
+
+    if (!registerResponse.ok) {
+      const errText = await registerResponse.text()
+      console.error('LinkedIn register upload failed:', errText)
+      return null
+    }
+
+    const registerData = await registerResponse.json()
+    const uploadUrl =
+      registerData.value?.uploadMechanism?.[
+        'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+      ]?.uploadUrl
+    const asset = registerData.value?.asset
+
+    if (!uploadUrl || !asset) {
+      console.error('LinkedIn register upload: missing uploadUrl or asset')
+      return null
+    }
+
+    // Step 2: Upload the image binary
+    const imageBuffer = fs.readFileSync(imagePath)
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: imageBuffer,
+    })
+
+    if (!uploadResponse.ok) {
+      const errText = await uploadResponse.text()
+      console.error('LinkedIn image upload failed:', errText)
+      return null
+    }
+
+    return asset // e.g. "urn:li:digitalmediaAsset:XXXXX"
+  } catch (err) {
+    console.error('LinkedIn image upload error:', err)
+    return null
+  }
+}
+
 // Post to LinkedIn using Share API v2
 async function postToLinkedIn(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
   const settings = await getSocialMediaSettings()
@@ -158,27 +245,63 @@ async function postToLinkedIn(post: BlogPostData): Promise<{ postId: string; pos
   const text = buildLinkedInText(post)
   const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
 
+  // Try uploading cover image to LinkedIn
+  let imageAsset: string | null = null
+  if (post.coverImage) {
+    const imagePath = resolveCoverImagePath(post.coverImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      imageAsset = await uploadImageToLinkedIn(imagePath, accessToken, personUrn)
+    }
+  }
+
   // Build the share payload
-  const sharePayload: any = {
-    author: personUrn,
-    lifecycleState: 'PUBLISHED',
-    specificContent: {
-      'com.linkedin.ugc.ShareContent': {
-        shareCommentary: { text },
-        shareMediaCategory: 'ARTICLE',
-        media: [
-          {
-            status: 'READY',
-            originalUrl: blogUrl,
-            title: { text: post.title },
-            description: { text: post.excerpt.substring(0, 200) },
-          },
-        ],
+  let sharePayload: any
+
+  if (imageAsset) {
+    // Post with uploaded image — shows the cover image prominently
+    sharePayload = {
+      author: personUrn,
+      lifecycleState: 'PUBLISHED',
+      specificContent: {
+        'com.linkedin.ugc.ShareContent': {
+          shareCommentary: { text },
+          shareMediaCategory: 'IMAGE',
+          media: [
+            {
+              status: 'READY',
+              media: imageAsset,
+              title: { text: post.title },
+            },
+          ],
+        },
       },
-    },
-    visibility: {
-      'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-    },
+      visibility: {
+        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
+      },
+    }
+  } else {
+    // Fallback: post as article link preview (no uploaded image)
+    sharePayload = {
+      author: personUrn,
+      lifecycleState: 'PUBLISHED',
+      specificContent: {
+        'com.linkedin.ugc.ShareContent': {
+          shareCommentary: { text },
+          shareMediaCategory: 'ARTICLE',
+          media: [
+            {
+              status: 'READY',
+              originalUrl: blogUrl,
+              title: { text: post.title },
+              description: { text: post.excerpt.substring(0, 200) },
+            },
+          ],
+        },
+      },
+      visibility: {
+        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
+      },
+    }
   }
 
   const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
@@ -199,8 +322,6 @@ async function postToLinkedIn(post: BlogPostData): Promise<{ postId: string; pos
   const data = await response.json()
   const shareId = data.id // urn:li:share:XXXXX or urn:li:ugcPost:XXXXX
 
-  // Extract numeric ID for URL
-  const numericId = shareId?.split(':').pop() || ''
   const postUrl = `https://www.linkedin.com/feed/update/${shareId}`
 
   return { postId: shareId, postUrl }
@@ -230,7 +351,8 @@ async function postToFacebook(post: BlogPostData): Promise<{ postId: string; pos
       // Post as photo with message
       const formData = new FormData()
       const imageBuffer = fs.readFileSync(imagePath)
-      const blob = new Blob([imageBuffer])
+      const mimeType = getMimeType(imagePath)
+      const blob = new Blob([imageBuffer], { type: mimeType })
       formData.append('source', blob, path.basename(imagePath))
       formData.append('message', text)
       formData.append('access_token', pageAccessToken)
