@@ -34,11 +34,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Don't allow past dates
-    const requestedDate = new Date(date + 'T00:00:00+05:30')
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (requestedDate < today) {
+    // Don't allow past dates (compare in IST)
+    const now = new Date()
+    const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+    const istNow = new Date(utcMs + 330 * 60000)
+    const todayIST = `${istNow.getFullYear()}-${String(istNow.getMonth() + 1).padStart(2, '0')}-${String(istNow.getDate()).padStart(2, '0')}`
+    if (date < todayIST) {
       return NextResponse.json(
         { error: 'Cannot check availability for past dates' },
         { status: 400 }
