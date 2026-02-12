@@ -61,11 +61,17 @@ function buildISTDate(dateStr: string, hours: number, minutes: number): Date {
   return date
 }
 
+// Get current time in IST using UTC offset (reliable on all Node.js environments)
+function getISTNow(): Date {
+  const now = new Date()
+  // IST is UTC+5:30 (330 minutes ahead of UTC)
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000
+  return new Date(utcMs + 330 * 60000)
+}
+
 // Check if a date string (YYYY-MM-DD) is today in IST
 function isToday(dateStr: string): boolean {
-  const now = new Date()
-  // Convert current time to IST
-  const istNow = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const istNow = getISTNow()
   const todayStr = `${istNow.getFullYear()}-${String(istNow.getMonth() + 1).padStart(2, '0')}-${String(istNow.getDate()).padStart(2, '0')}`
   return dateStr === todayStr
 }
@@ -74,8 +80,7 @@ function isToday(dateStr: string): boolean {
 function filterPastSlots(slots: string[], dateStr: string): string[] {
   if (!isToday(dateStr)) return slots
 
-  const now = new Date()
-  const istNow = new Date(now.toLocaleString('en-US', { timeZone: TIMEZONE }))
+  const istNow = getISTNow()
   const currentHours = istNow.getHours()
   const currentMinutes = istNow.getMinutes()
 
