@@ -51,9 +51,12 @@ export default function SettingsPage() {
   const [socialMessage, setSocialMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showTwitterSecrets, setShowTwitterSecrets] = useState(false)
   const [showLinkedInToken, setShowLinkedInToken] = useState(false)
+  const [showFacebookToken, setShowFacebookToken] = useState(false)
   const [socialSettings, setSocialSettings] = useState({
     twitter: { enabled: false, apiKey: '', apiSecret: '', accessToken: '', accessSecret: '' },
     linkedin: { enabled: false, accessToken: '', personUrn: '' },
+    facebook: { enabled: false, pageAccessToken: '', pageId: '' },
+    instagram: { enabled: false, instagramAccountId: '' },
   })
   const [settings, setSettings] = useState({
     siteName: 'Himanshu Majithiya & Co.',
@@ -855,6 +858,164 @@ export default function SettingsPage() {
                         <li>Request &quot;Share on LinkedIn&quot; (w_member_social) permission</li>
                         <li>Generate an OAuth 2.0 Access Token</li>
                         <li>Find your Person URN from the LinkedIn API</li>
+                      </ol>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Facebook Page Settings */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                        <Facebook className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Facebook Page</CardTitle>
+                        <CardDescription>Auto-post blogs to your Facebook Page</CardDescription>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSocialSettings({
+                        ...socialSettings,
+                        facebook: { ...socialSettings.facebook, enabled: !socialSettings.facebook.enabled }
+                      })}
+                      className="flex items-center gap-2"
+                    >
+                      {socialSettings.facebook.enabled ? (
+                        <ToggleRight className="h-8 w-8 text-green-500" />
+                      ) : (
+                        <ToggleLeft className="h-8 w-8 text-slate-300" />
+                      )}
+                    </button>
+                  </div>
+                </CardHeader>
+                {socialSettings.facebook.enabled && (
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Page Access Token</Label>
+                      <div className="relative">
+                        <Input
+                          type={showFacebookToken ? 'text' : 'password'}
+                          value={socialSettings.facebook.pageAccessToken}
+                          onChange={(e) => setSocialSettings({
+                            ...socialSettings,
+                            facebook: { ...socialSettings.facebook, pageAccessToken: e.target.value }
+                          })}
+                          placeholder="Enter Facebook Page Access Token"
+                          className="bg-slate-50 border-slate-200 focus:bg-white pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowFacebookToken(!showFacebookToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showFacebookToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Page ID</Label>
+                      <Input
+                        value={socialSettings.facebook.pageId}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          facebook: { ...socialSettings.facebook, pageId: e.target.value }
+                        })}
+                        placeholder="Enter Facebook Page ID"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                      <p className="text-xs text-slate-500">Found in your Page&apos;s About section or Page Settings</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <h4 className="text-sm font-medium text-amber-800 mb-1">Requires Meta App Review</h4>
+                      <p className="text-xs text-amber-700">Facebook Page posting needs the <code className="bg-amber-100 px-1 rounded">pages_manage_posts</code> permission which requires Meta App Review. Without approval, it only works in Development Mode (test users only).</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <h4 className="text-sm font-medium text-slate-700 mb-2">Setup Guide:</h4>
+                      <ol className="text-xs text-slate-600 space-y-1 list-decimal list-inside">
+                        <li>Go to <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">developers.facebook.com</a> and create an App</li>
+                        <li>Add &quot;Facebook Login&quot; product and configure permissions</li>
+                        <li>Request <code className="bg-slate-100 px-1 rounded">pages_manage_posts</code> and <code className="bg-slate-100 px-1 rounded">pages_read_engagement</code></li>
+                        <li>Submit for App Review (required for production use)</li>
+                        <li>Generate a long-lived Page Access Token</li>
+                        <li>Find your Page ID from your Page&apos;s About section</li>
+                      </ol>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* Instagram Settings */}
+              <Card className="border-0 shadow-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+                        <svg className="h-5 w-5 text-pink-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                        </svg>
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">Instagram</CardTitle>
+                        <CardDescription>Auto-post blog cover images to Instagram</CardDescription>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSocialSettings({
+                        ...socialSettings,
+                        instagram: { ...socialSettings.instagram, enabled: !socialSettings.instagram.enabled }
+                      })}
+                      className="flex items-center gap-2"
+                    >
+                      {socialSettings.instagram.enabled ? (
+                        <ToggleRight className="h-8 w-8 text-green-500" />
+                      ) : (
+                        <ToggleLeft className="h-8 w-8 text-slate-300" />
+                      )}
+                    </button>
+                  </div>
+                </CardHeader>
+                {socialSettings.instagram.enabled && (
+                  <CardContent className="space-y-4 pt-0">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Instagram Business Account ID</Label>
+                      <Input
+                        value={socialSettings.instagram.instagramAccountId}
+                        onChange={(e) => setSocialSettings({
+                          ...socialSettings,
+                          instagram: { ...socialSettings.instagram, instagramAccountId: e.target.value }
+                        })}
+                        placeholder="Enter Instagram Business Account ID"
+                        className="bg-slate-50 border-slate-200 focus:bg-white"
+                      />
+                      <p className="text-xs text-slate-500">This is your Instagram Business Account ID from the Facebook Graph API, not your username</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <h4 className="text-sm font-medium text-amber-800 mb-1">Requirements</h4>
+                      <ul className="text-xs text-amber-700 space-y-1 list-disc list-inside">
+                        <li>Instagram Business or Creator Account (not Personal)</li>
+                        <li>Facebook Page linked to the Instagram account</li>
+                        <li>Facebook App with <code className="bg-amber-100 px-1 rounded">instagram_basic</code> and <code className="bg-amber-100 px-1 rounded">instagram_content_publish</code> permissions</li>
+                        <li>Meta App Review approval for production use</li>
+                        <li>Blog posts must have a cover image (Instagram requires an image)</li>
+                        <li>Uses the same Facebook Page Access Token configured above</li>
+                      </ul>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <h4 className="text-sm font-medium text-slate-700 mb-2">Setup Guide:</h4>
+                      <ol className="text-xs text-slate-600 space-y-1 list-decimal list-inside">
+                        <li>Convert your Instagram account to a Business or Creator account</li>
+                        <li>Link it to your Facebook Page</li>
+                        <li>In your Meta Developer App, add Instagram Graph API product</li>
+                        <li>Request <code className="bg-slate-100 px-1 rounded">instagram_basic</code> and <code className="bg-slate-100 px-1 rounded">instagram_content_publish</code></li>
+                        <li>Submit for App Review</li>
+                        <li>Use the Graph API Explorer to find your Instagram Business Account ID</li>
+                        <li>Ensure the Facebook Page Access Token (above) includes Instagram permissions</li>
                       </ol>
                     </div>
                   </CardContent>

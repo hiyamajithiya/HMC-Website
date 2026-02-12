@@ -35,6 +35,36 @@ function buildTwitterText(post: BlogPostData): string {
   return text
 }
 
+// Build post text for Facebook (63,206 char limit — practically unlimited)
+function buildFacebookText(post: BlogPostData): string {
+  const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
+  const hashtags = post.tags.slice(0, 5).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+
+  let text = `${post.title}\n\n${post.excerpt}\n\nRead more: ${blogUrl}`
+  if (hashtags) {
+    text += `\n\n${hashtags}`
+  }
+  return text
+}
+
+// Build caption for Instagram (2,200 char limit, no clickable links in caption)
+function buildInstagramCaption(post: BlogPostData): string {
+  const hashtags = post.tags.slice(0, 10).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+
+  let text = `${post.title}\n\n${post.excerpt}`
+  // Instagram doesn't support clickable links in captions, so just mention the site
+  text += `\n\nLink in bio | ${SITE_URL}`
+  if (hashtags) {
+    text += `\n\n${hashtags}`
+  }
+
+  // Instagram caption max is 2,200 chars
+  if (text.length > 2200) {
+    text = text.substring(0, 2197) + '...'
+  }
+  return text
+}
+
 // Build post text for LinkedIn (3000 char limit)
 function buildLinkedInText(post: BlogPostData): string {
   const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
@@ -176,6 +206,173 @@ async function postToLinkedIn(post: BlogPostData): Promise<{ postId: string; pos
   return { postId: shareId, postUrl }
 }
 
+// Post to Facebook Page using Graph API
+async function postToFacebook(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.facebook.enabled) {
+    throw new Error('Facebook is not enabled')
+  }
+
+  const { pageAccessToken, pageId } = settings.facebook
+  if (!pageAccessToken || !pageId) {
+    throw new Error('Facebook credentials are incomplete')
+  }
+
+  const text = buildFacebookText(post)
+  const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
+
+  // Try posting with cover image, otherwise post as link share
+  let response: Response
+
+  if (post.coverImage) {
+    const imagePath = resolveCoverImagePath(post.coverImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      // Post as photo with message
+      const formData = new FormData()
+      const imageBuffer = fs.readFileSync(imagePath)
+      const blob = new Blob([imageBuffer])
+      formData.append('source', blob, path.basename(imagePath))
+      formData.append('message', text)
+      formData.append('access_token', pageAccessToken)
+
+      response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, {
+        method: 'POST',
+        body: formData,
+      })
+    } else {
+      // Fall back to link share
+      response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: text,
+          link: blogUrl,
+          access_token: pageAccessToken,
+        }),
+      })
+    }
+  } else {
+    // Post as link share (Facebook auto-generates link preview)
+    response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: text,
+        link: blogUrl,
+        access_token: pageAccessToken,
+      }),
+    })
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(`Facebook API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+  const fbPostId = data.id || data.post_id
+  const postUrl = `https://www.facebook.com/${fbPostId}`
+
+  return { postId: fbPostId, postUrl }
+}
+
+// Post to Instagram using Facebook Graph API (Content Publishing API)
+// Requires: Facebook Page linked to Instagram Business Account
+async function postToInstagram(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.instagram.enabled) {
+    throw new Error('Instagram is not enabled')
+  }
+
+  const { pageAccessToken, instagramAccountId } = settings.instagram
+  if (!pageAccessToken || !instagramAccountId) {
+    throw new Error('Instagram credentials are incomplete')
+  }
+
+  const caption = buildInstagramCaption(post)
+
+  // Instagram requires a public image URL — can't upload local files directly
+  // Use the cover image URL or the blog URL for link preview
+  let imageUrl = ''
+  if (post.coverImage) {
+    // If it's already a full URL, use it directly
+    if (post.coverImage.startsWith('http')) {
+      imageUrl = post.coverImage
+    } else {
+      // Convert local path to public URL
+      imageUrl = `${SITE_URL}${post.coverImage}`
+    }
+  }
+
+  if (!imageUrl) {
+    throw new Error('Instagram requires an image. Please add a cover image to the blog post.')
+  }
+
+  // Step 1: Create a media container
+  const containerResponse = await fetch(
+    `https://graph.facebook.com/v19.0/${instagramAccountId}/media`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image_url: imageUrl,
+        caption: caption,
+        access_token: pageAccessToken,
+      }),
+    }
+  )
+
+  if (!containerResponse.ok) {
+    const errorData = await containerResponse.json()
+    throw new Error(`Instagram container error (${containerResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const containerData = await containerResponse.json()
+  const containerId = containerData.id
+
+  // Step 2: Wait briefly for the container to be ready, then publish
+  // Instagram needs a moment to process the image
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+  const publishResponse = await fetch(
+    `https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        creation_id: containerId,
+        access_token: pageAccessToken,
+      }),
+    }
+  )
+
+  if (!publishResponse.ok) {
+    const errorData = await publishResponse.json()
+    throw new Error(`Instagram publish error (${publishResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const publishData = await publishResponse.json()
+  const igPostId = publishData.id
+
+  // Get the permalink for the published post
+  let postUrl = `https://www.instagram.com`
+  try {
+    const permalinkResponse = await fetch(
+      `https://graph.facebook.com/v19.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`
+    )
+    if (permalinkResponse.ok) {
+      const permalinkData = await permalinkResponse.json()
+      if (permalinkData.permalink) {
+        postUrl = permalinkData.permalink
+      }
+    }
+  } catch {
+    // Use default Instagram URL if permalink fetch fails
+  }
+
+  return { postId: igPostId, postUrl }
+}
+
 // Main auto-post function — called when a blog is published
 export async function autoPostBlog(post: BlogPostData): Promise<void> {
   const settings = await getSocialMediaSettings()
@@ -190,12 +387,14 @@ export async function autoPostBlog(post: BlogPostData): Promise<void> {
   })
 
   const platforms: Array<{
-    name: 'TWITTER' | 'LINKEDIN'
+    name: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
     enabled: boolean
     postFn: (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>
   }> = [
     { name: 'TWITTER', enabled: settings.twitter.enabled, postFn: postToTwitter },
     { name: 'LINKEDIN', enabled: settings.linkedin.enabled, postFn: postToLinkedIn },
+    { name: 'FACEBOOK', enabled: settings.facebook.enabled, postFn: postToFacebook },
+    { name: 'INSTAGRAM', enabled: settings.instagram.enabled, postFn: postToInstagram },
   ]
 
   for (const platform of platforms) {
@@ -274,7 +473,17 @@ export async function retryPostToSocial(logId: string): Promise<{ success: boole
     tags: log.blogPost.tags,
   }
 
-  const postFn = log.platform === 'TWITTER' ? postToTwitter : postToLinkedIn
+  const platformFns: Record<string, (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>> = {
+    TWITTER: postToTwitter,
+    LINKEDIN: postToLinkedIn,
+    FACEBOOK: postToFacebook,
+    INSTAGRAM: postToInstagram,
+  }
+
+  const postFn = platformFns[log.platform]
+  if (!postFn) {
+    return { success: false, error: `Unknown platform: ${log.platform}` }
+  }
 
   try {
     const result = await postFn(post)
@@ -308,7 +517,7 @@ export async function retryPostToSocial(logId: string): Promise<{ success: boole
 // Manually trigger posting for a specific blog + platform
 export async function manualPostToSocial(
   blogPostId: string,
-  platform: 'TWITTER' | 'LINKEDIN'
+  platform: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
 ): Promise<{ success: boolean; error?: string }> {
   const blogPost = await prisma.blogPost.findUnique({
     where: { id: blogPostId },
@@ -327,7 +536,17 @@ export async function manualPostToSocial(
     tags: blogPost.tags,
   }
 
-  const postFn = platform === 'TWITTER' ? postToTwitter : postToLinkedIn
+  const platformFns: Record<string, (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>> = {
+    TWITTER: postToTwitter,
+    LINKEDIN: postToLinkedIn,
+    FACEBOOK: postToFacebook,
+    INSTAGRAM: postToInstagram,
+  }
+
+  const postFn = platformFns[platform]
+  if (!postFn) {
+    return { success: false, error: `Unknown platform: ${platform}` }
+  }
 
   // Create log entry
   const log = await prisma.socialPostLog.create({

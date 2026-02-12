@@ -26,9 +26,23 @@ export interface LinkedInSettings {
   personUrn: string // urn:li:person:XXXXX or urn:li:organization:XXXXX
 }
 
+export interface FacebookSettings {
+  enabled: boolean
+  pageAccessToken: string
+  pageId: string
+}
+
+export interface InstagramSettings {
+  enabled: boolean
+  pageAccessToken: string // Same Facebook Page token (Instagram uses Facebook Graph API)
+  instagramAccountId: string // Instagram Business Account ID
+}
+
 export interface SocialMediaSettings {
   twitter: TwitterSettings
   linkedin: LinkedInSettings
+  facebook: FacebookSettings
+  instagram: InstagramSettings
 }
 
 const SOCIAL_KEYS = [
@@ -40,6 +54,12 @@ const SOCIAL_KEYS = [
   'social_linkedin_enabled',
   'social_linkedin_access_token',
   'social_linkedin_person_urn',
+  'social_facebook_enabled',
+  'social_facebook_page_access_token',
+  'social_facebook_page_id',
+  'social_instagram_enabled',
+  'social_instagram_account_id',
+  // Instagram uses the same Facebook Page Access Token (social_facebook_page_access_token)
 ]
 
 // Encrypted keys (these get decrypted when read)
@@ -48,6 +68,7 @@ const ENCRYPTED_KEYS = [
   'social_twitter_access_token',
   'social_twitter_access_secret',
   'social_linkedin_access_token',
+  'social_facebook_page_access_token',
 ]
 
 export async function getSocialMediaSettings(): Promise<SocialMediaSettings | null> {
@@ -88,6 +109,16 @@ export async function getSocialMediaSettings(): Promise<SocialMediaSettings | nu
         enabled: map.social_linkedin_enabled === 'true',
         accessToken: map.social_linkedin_access_token || '',
         personUrn: map.social_linkedin_person_urn || '',
+      },
+      facebook: {
+        enabled: map.social_facebook_enabled === 'true',
+        pageAccessToken: map.social_facebook_page_access_token || '',
+        pageId: map.social_facebook_page_id || '',
+      },
+      instagram: {
+        enabled: map.social_instagram_enabled === 'true',
+        pageAccessToken: map.social_facebook_page_access_token || '', // Shares token with Facebook
+        instagramAccountId: map.social_instagram_account_id || '',
       },
     }
 

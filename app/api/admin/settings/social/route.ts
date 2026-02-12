@@ -11,6 +11,7 @@ const ENCRYPTED_KEYS = [
   'social_twitter_access_token',
   'social_twitter_access_secret',
   'social_linkedin_access_token',
+  'social_facebook_page_access_token',
 ]
 
 const ALL_KEYS = [
@@ -22,6 +23,11 @@ const ALL_KEYS = [
   'social_linkedin_enabled',
   'social_linkedin_access_token',
   'social_linkedin_person_urn',
+  'social_facebook_enabled',
+  'social_facebook_page_access_token',
+  'social_facebook_page_id',
+  'social_instagram_enabled',
+  'social_instagram_account_id',
 ]
 
 // GET - Get social media settings
@@ -61,6 +67,15 @@ export async function GET() {
           accessToken: settingsObj.social_linkedin_access_token || '',
           personUrn: settingsObj.social_linkedin_person_urn || '',
         },
+        facebook: {
+          enabled: settingsObj.social_facebook_enabled === 'true',
+          pageAccessToken: settingsObj.social_facebook_page_access_token || '',
+          pageId: settingsObj.social_facebook_page_id || '',
+        },
+        instagram: {
+          enabled: settingsObj.social_instagram_enabled === 'true',
+          instagramAccountId: settingsObj.social_instagram_account_id || '',
+        },
       },
     })
   } catch (error) {
@@ -78,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { twitter, linkedin } = body
+    const { twitter, linkedin, facebook, instagram } = body
 
     const settingsToSave: Array<{ key: string; value: string }> = []
 
@@ -108,6 +123,26 @@ export async function POST(request: NextRequest) {
       if (linkedin.personUrn !== undefined) {
         settingsToSave.push({ key: 'social_linkedin_person_urn', value: linkedin.personUrn })
       }
+    }
+
+    // Facebook settings
+    if (facebook) {
+      settingsToSave.push({ key: 'social_facebook_enabled', value: String(!!facebook.enabled) })
+      if (facebook.pageAccessToken && facebook.pageAccessToken !== '********') {
+        settingsToSave.push({ key: 'social_facebook_page_access_token', value: encrypt(facebook.pageAccessToken) })
+      }
+      if (facebook.pageId !== undefined) {
+        settingsToSave.push({ key: 'social_facebook_page_id', value: facebook.pageId })
+      }
+    }
+
+    // Instagram settings
+    if (instagram) {
+      settingsToSave.push({ key: 'social_instagram_enabled', value: String(!!instagram.enabled) })
+      if (instagram.instagramAccountId !== undefined) {
+        settingsToSave.push({ key: 'social_instagram_account_id', value: instagram.instagramAccountId })
+      }
+      // Instagram uses the same Facebook Page Access Token — saved under Facebook settings
     }
 
     // Upsert each setting
