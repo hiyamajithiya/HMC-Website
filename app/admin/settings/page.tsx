@@ -52,11 +52,12 @@ export default function SettingsPage() {
   const [showTwitterSecrets, setShowTwitterSecrets] = useState(false)
   const [showLinkedInToken, setShowLinkedInToken] = useState(false)
   const [showFacebookToken, setShowFacebookToken] = useState(false)
+  const [showInstagramToken, setShowInstagramToken] = useState(false)
   const [socialSettings, setSocialSettings] = useState({
     twitter: { enabled: false, apiKey: '', apiSecret: '', accessToken: '', accessSecret: '' },
     linkedin: { enabled: false, accessToken: '', personUrn: '' },
     facebook: { enabled: false, pageAccessToken: '', pageId: '' },
-    instagram: { enabled: false, instagramAccountId: '' },
+    instagram: { enabled: false, pageAccessToken: '', instagramAccountId: '' },
   })
   const [settings, setSettings] = useState({
     siteName: 'Himanshu Majithiya & Co.',
@@ -983,6 +984,29 @@ export default function SettingsPage() {
                 {socialSettings.instagram.enabled && (
                   <CardContent className="space-y-4 pt-0">
                     <div className="space-y-2">
+                      <Label className="text-sm font-medium text-slate-700">Page Access Token</Label>
+                      <div className="relative">
+                        <Input
+                          type={showInstagramToken ? 'text' : 'password'}
+                          value={socialSettings.instagram.pageAccessToken}
+                          onChange={(e) => setSocialSettings({
+                            ...socialSettings,
+                            instagram: { ...socialSettings.instagram, pageAccessToken: e.target.value }
+                          })}
+                          placeholder="Enter Facebook Page Access Token with Instagram permissions"
+                          className="bg-slate-50 border-slate-200 focus:bg-white pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowInstagramToken(!showInstagramToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showInstagramToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <p className="text-xs text-slate-500">Facebook Page Access Token with instagram_basic and instagram_content_publish permissions</p>
+                    </div>
+                    <div className="space-y-2">
                       <Label className="text-sm font-medium text-slate-700">Instagram Business Account ID</Label>
                       <Input
                         value={socialSettings.instagram.instagramAccountId}
@@ -1003,7 +1027,7 @@ export default function SettingsPage() {
                         <li>Facebook App with <code className="bg-amber-100 px-1 rounded">instagram_basic</code> and <code className="bg-amber-100 px-1 rounded">instagram_content_publish</code> permissions</li>
                         <li>Meta App Review approval for production use</li>
                         <li>Blog posts must have a cover image (Instagram requires an image)</li>
-                        <li>Uses the same Facebook Page Access Token configured above</li>
+                        <li>Page Access Token must include Instagram permissions</li>
                       </ul>
                     </div>
                     <div className="bg-slate-50 rounded-xl p-4">
@@ -1014,8 +1038,8 @@ export default function SettingsPage() {
                         <li>In your Meta Developer App, add Instagram Graph API product</li>
                         <li>Request <code className="bg-slate-100 px-1 rounded">instagram_basic</code> and <code className="bg-slate-100 px-1 rounded">instagram_content_publish</code></li>
                         <li>Submit for App Review</li>
+                        <li>Generate a Page Access Token with Instagram permissions</li>
                         <li>Use the Graph API Explorer to find your Instagram Business Account ID</li>
-                        <li>Ensure the Facebook Page Access Token (above) includes Instagram permissions</li>
                       </ol>
                     </div>
                   </CardContent>

@@ -34,7 +34,7 @@ export interface FacebookSettings {
 
 export interface InstagramSettings {
   enabled: boolean
-  pageAccessToken: string // Same Facebook Page token (Instagram uses Facebook Graph API)
+  pageAccessToken: string // Facebook Page Access Token with Instagram permissions
   instagramAccountId: string // Instagram Business Account ID
 }
 
@@ -58,8 +58,8 @@ const SOCIAL_KEYS = [
   'social_facebook_page_access_token',
   'social_facebook_page_id',
   'social_instagram_enabled',
+  'social_instagram_page_access_token',
   'social_instagram_account_id',
-  // Instagram uses the same Facebook Page Access Token (social_facebook_page_access_token)
 ]
 
 // Encrypted keys (these get decrypted when read)
@@ -69,6 +69,7 @@ const ENCRYPTED_KEYS = [
   'social_twitter_access_secret',
   'social_linkedin_access_token',
   'social_facebook_page_access_token',
+  'social_instagram_page_access_token',
 ]
 
 export async function getSocialMediaSettings(): Promise<SocialMediaSettings | null> {
@@ -117,7 +118,7 @@ export async function getSocialMediaSettings(): Promise<SocialMediaSettings | nu
       },
       instagram: {
         enabled: map.social_instagram_enabled === 'true',
-        pageAccessToken: map.social_facebook_page_access_token || '', // Shares token with Facebook
+        pageAccessToken: map.social_instagram_page_access_token || '',
         instagramAccountId: map.social_instagram_account_id || '',
       },
     }

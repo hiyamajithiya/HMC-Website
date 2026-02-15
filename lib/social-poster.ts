@@ -422,6 +422,7 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
       imageUrl = post.coverImage
     } else {
       // Convert local path to public URL
+      // Images are already stored with /api/uploads/ prefix in database
       imageUrl = `${SITE_URL}${post.coverImage}`
     }
   }

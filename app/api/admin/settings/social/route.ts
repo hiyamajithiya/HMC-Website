@@ -12,6 +12,7 @@ const ENCRYPTED_KEYS = [
   'social_twitter_access_secret',
   'social_linkedin_access_token',
   'social_facebook_page_access_token',
+  'social_instagram_page_access_token',
 ]
 
 const ALL_KEYS = [
@@ -27,6 +28,7 @@ const ALL_KEYS = [
   'social_facebook_page_access_token',
   'social_facebook_page_id',
   'social_instagram_enabled',
+  'social_instagram_page_access_token',
   'social_instagram_account_id',
 ]
 
@@ -74,6 +76,7 @@ export async function GET() {
         },
         instagram: {
           enabled: settingsObj.social_instagram_enabled === 'true',
+          pageAccessToken: settingsObj.social_instagram_page_access_token || '',
           instagramAccountId: settingsObj.social_instagram_account_id || '',
         },
       },
@@ -139,10 +142,12 @@ export async function POST(request: NextRequest) {
     // Instagram settings
     if (instagram) {
       settingsToSave.push({ key: 'social_instagram_enabled', value: String(!!instagram.enabled) })
+      if (instagram.pageAccessToken && instagram.pageAccessToken !== '********') {
+        settingsToSave.push({ key: 'social_instagram_page_access_token', value: encrypt(instagram.pageAccessToken) })
+      }
       if (instagram.instagramAccountId !== undefined) {
         settingsToSave.push({ key: 'social_instagram_account_id', value: instagram.instagramAccountId })
       }
-      // Instagram uses the same Facebook Page Access Token — saved under Facebook settings
     }
 
     // Upsert each setting
