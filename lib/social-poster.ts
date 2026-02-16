@@ -414,16 +414,15 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
   const caption = buildInstagramCaption(post)
 
   // Instagram requires a public image URL — can't upload local files directly
-  // Use the cover image URL or the blog URL for link preview
+  // Use nginx-served /uploads/ path (not /api/uploads/) so Instagram can fetch it
   let imageUrl = ''
   if (post.coverImage) {
-    // If it's already a full URL, use it directly
     if (post.coverImage.startsWith('http')) {
       imageUrl = post.coverImage
     } else {
-      // Convert local path to public URL
-      // Images are already stored with /api/uploads/ prefix in database
-      imageUrl = `${SITE_URL}${post.coverImage}`
+      // Convert /api/uploads/blog/file.png → /uploads/blog/file.png for direct nginx serving
+      const directPath = post.coverImage.replace(/^\/api\/uploads\//, '/uploads/')
+      imageUrl = `${SITE_URL}${directPath}`
     }
   }
 
