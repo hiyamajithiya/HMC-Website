@@ -398,8 +398,8 @@ async function postToFacebook(post: BlogPostData): Promise<{ postId: string; pos
   return { postId: fbPostId, postUrl }
 }
 
-// Post to Instagram using Facebook Graph API (Content Publishing API)
-// Requires: Facebook Page linked to Instagram Business Account
+// Post to Instagram using Instagram Graph API (Content Publishing API)
+// Requires: Instagram Business/Creator Account with valid access token
 async function postToInstagram(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
   const settings = await getSocialMediaSettings()
   if (!settings?.instagram.enabled) {
@@ -433,7 +433,7 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
 
   // Step 1: Create a media container
   const containerResponse = await fetch(
-    `https://graph.facebook.com/v19.0/${instagramAccountId}/media`,
+    `https://graph.instagram.com/v19.0/${instagramAccountId}/media`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -458,7 +458,7 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
   await new Promise(resolve => setTimeout(resolve, 5000))
 
   const publishResponse = await fetch(
-    `https://graph.facebook.com/v19.0/${instagramAccountId}/media_publish`,
+    `https://graph.instagram.com/v19.0/${instagramAccountId}/media_publish`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -481,7 +481,7 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
   let postUrl = `https://www.instagram.com`
   try {
     const permalinkResponse = await fetch(
-      `https://graph.facebook.com/v19.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`
+      `https://graph.instagram.com/v19.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`
     )
     if (permalinkResponse.ok) {
       const permalinkData = await permalinkResponse.json()
