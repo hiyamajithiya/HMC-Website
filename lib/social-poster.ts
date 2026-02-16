@@ -438,6 +438,7 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        media_type: 'IMAGE',
         image_url: imageUrl,
         caption: caption,
         access_token: pageAccessToken,
