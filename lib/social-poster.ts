@@ -16,9 +16,14 @@ interface BlogPostData {
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
 
 // Build post text for Twitter (280 char limit, links use ~23 chars)
-function buildTwitterText(post: BlogPostData): string {
+function buildTwitterText(post: BlogPostData, isRepost = false): string {
   const blogUrl = `${SITE_URL}/resources/blog/${post.slug}`
-  const hashtags = post.tags.slice(0, 3).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+  let hashtags = post.tags.slice(0, 3).map(t => `#${t.replace(/\s+/g, '')}`).join(' ')
+  // Add date suffix on repost to avoid Twitter duplicate content rejection
+  if (isRepost) {
+    const now = new Date()
+    hashtags += ` | ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+  }
   const urlLen = 23 // t.co shortened URL length
   const hashtagLen = hashtags ? hashtags.length + 1 : 0 // +1 for newline
   const maxExcerpt = 280 - urlLen - hashtagLen - 10 // 10 for spacing/newlines
@@ -110,7 +115,7 @@ function getMimeType(filePath: string): string {
 }
 
 // Post to X/Twitter
-async function postToTwitter(post: BlogPostData): Promise<{ postId: string; postUrl: string }> {
+async function postToTwitter(post: BlogPostData, isRepost = false): Promise<{ postId: string; postUrl: string }> {
   const settings = await getSocialMediaSettings()
   if (!settings?.twitter.enabled) {
     throw new Error('Twitter is not enabled')
@@ -128,7 +133,7 @@ async function postToTwitter(post: BlogPostData): Promise<{ postId: string; post
     accessSecret: accessSecret,
   })
 
-  const text = buildTwitterText(post)
+  const text = buildTwitterText(post, isRepost)
 
   // Try uploading cover image
   let mediaId: string | undefined
@@ -600,8 +605,9 @@ export async function retryPostToSocial(logId: string): Promise<{ success: boole
     tags: log.blogPost.tags,
   }
 
+  // Use repost variants for Twitter to avoid duplicate content rejection
   const platformFns: Record<string, (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>> = {
-    TWITTER: postToTwitter,
+    TWITTER: (p) => postToTwitter(p, true),
     LINKEDIN: postToLinkedIn,
     FACEBOOK: postToFacebook,
     INSTAGRAM: postToInstagram,
@@ -663,8 +669,9 @@ export async function manualPostToSocial(
     tags: blogPost.tags,
   }
 
+  // Use repost variants for Twitter to avoid duplicate content rejection
   const platformFns: Record<string, (post: BlogPostData) => Promise<{ postId: string; postUrl: string }>> = {
-    TWITTER: postToTwitter,
+    TWITTER: (p) => postToTwitter(p, true),
     LINKEDIN: postToLinkedIn,
     FACEBOOK: postToFacebook,
     INSTAGRAM: postToInstagram,
@@ -728,15 +735,25 @@ interface ToolPostData {
 
 function resolveToolImagePath(iconImage: string): string | null {
   if (!iconImage) return null
-  const match = iconImage.match(/\/api\/uploads\/tools\/(.+)$/)
-  if (match) {
-    const filename = match[1]
+
+  // Handle /api/uploads/tools/filename pattern
+  const uploadsMatch = iconImage.match(/\/api\/uploads\/tools\/(.+)$/)
+  if (uploadsMatch) {
+    const filename = uploadsMatch[1]
     const uploadsPath = process.env.UPLOADS_PATH
-    if (uploadsPath) {
-      return path.join(uploadsPath, 'tools', filename)
-    }
+    if (uploadsPath) return path.join(uploadsPath, 'tools', filename)
     return path.join(process.cwd(), 'public', 'uploads', 'tools', filename)
   }
+
+  // Handle /api/download/filename pattern (tool files stored in downloads dir)
+  const downloadMatch = iconImage.match(/\/api\/download\/(.+)$/)
+  if (downloadMatch) {
+    const filename = downloadMatch[1]
+    const uploadsPath = process.env.UPLOADS_PATH
+    if (uploadsPath) return path.join(uploadsPath, 'downloads', filename)
+    return path.join(process.cwd(), 'public', 'downloads', filename)
+  }
+
   return null
 }
 
@@ -744,11 +761,16 @@ function formatCategory(category: string): string {
   return category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
-function buildToolTwitterText(tool: ToolPostData): string {
+function buildToolTwitterText(tool: ToolPostData, isRepost = false): string {
   const toolUrl = `${SITE_URL}/tools/${tool.slug}`
   const category = formatCategory(tool.category)
   const urlLen = 23
-  const hashtags = `#${category.replace(/\s+/g, '')} #tools`
+  let hashtags = `#${category.replace(/\s+/g, '')} #tools`
+  // Add date suffix on repost to avoid Twitter duplicate content rejection
+  if (isRepost) {
+    const now = new Date()
+    hashtags += ` | ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+  }
   const hashtagLen = hashtags.length + 1
   const maxDesc = 280 - urlLen - hashtagLen - 10
 
@@ -804,7 +826,7 @@ function buildToolLinkedInText(tool: ToolPostData): string {
   return text
 }
 
-async function postToolToTwitter(tool: ToolPostData): Promise<{ postId: string; postUrl: string }> {
+async function postToolToTwitter(tool: ToolPostData, isRepost = false): Promise<{ postId: string; postUrl: string }> {
   const settings = await getSocialMediaSettings()
   if (!settings?.twitter.enabled) throw new Error('Twitter is not enabled')
 
@@ -812,7 +834,7 @@ async function postToolToTwitter(tool: ToolPostData): Promise<{ postId: string; 
   if (!apiKey || !apiSecret || !accessToken || !accessSecret) throw new Error('Twitter credentials are incomplete')
 
   const client = new TwitterApi({ appKey: apiKey, appSecret: apiSecret, accessToken, accessSecret })
-  const text = buildToolTwitterText(tool)
+  const text = buildToolTwitterText(tool, isRepost)
 
   let mediaIds: string[] = []
   if (tool.iconImage) {
@@ -959,7 +981,12 @@ async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string
   if (tool.iconImage) {
     if (tool.iconImage.startsWith('http')) {
       imageUrl = tool.iconImage
+    } else if (tool.iconImage.startsWith('/api/download/')) {
+      // /api/download/file.jpg → /uploads/downloads/file.jpg for direct nginx serving
+      const filename = tool.iconImage.replace(/^\/api\/download\//, '')
+      imageUrl = `${SITE_URL}/uploads/downloads/${filename}`
     } else {
+      // /api/uploads/tools/file.jpg → /uploads/tools/file.jpg
       const directPath = tool.iconImage.replace(/^\/api\/uploads\//, '/uploads/')
       imageUrl = `${SITE_URL}${directPath}`
     }
@@ -967,7 +994,7 @@ async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string
 
   if (!imageUrl) throw new Error('Instagram requires an image. Please add an icon image to the tool.')
 
-  const containerResponse = await fetch(`https://graph.instagram.com/v19.0/${instagramAccountId}/media`, {
+  const containerResponse = await fetch(`https://graph.instagram.com/v22.0/${instagramAccountId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrl, caption, access_token: pageAccessToken }),
@@ -981,7 +1008,7 @@ async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string
   const containerId = (await containerResponse.json()).id
   await new Promise(resolve => setTimeout(resolve, 5000))
 
-  const publishResponse = await fetch(`https://graph.instagram.com/v19.0/${instagramAccountId}/media_publish`, {
+  const publishResponse = await fetch(`https://graph.instagram.com/v22.0/${instagramAccountId}/media_publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ creation_id: containerId, access_token: pageAccessToken }),
@@ -996,7 +1023,7 @@ async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string
 
   let postUrl = `https://www.instagram.com`
   try {
-    const permalinkResponse = await fetch(`https://graph.instagram.com/v19.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`)
+    const permalinkResponse = await fetch(`https://graph.instagram.com/v22.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`)
     if (permalinkResponse.ok) {
       const permalinkData = await permalinkResponse.json()
       if (permalinkData.permalink) postUrl = permalinkData.permalink
@@ -1073,8 +1100,9 @@ export async function manualPostToTool(
     category: dbTool.category, iconImage: dbTool.iconImage,
   }
 
+  // Use repost variants for Twitter to avoid duplicate content rejection
   const platformFns: Record<string, (t: ToolPostData) => Promise<{ postId: string; postUrl: string }>> = {
-    TWITTER: postToolToTwitter, LINKEDIN: postToolToLinkedIn,
+    TWITTER: (t) => postToolToTwitter(t, true), LINKEDIN: postToolToLinkedIn,
     FACEBOOK: postToolToFacebook, INSTAGRAM: postToolToInstagram,
   }
 
