@@ -1,6 +1,7 @@
 import { TwitterApi } from 'twitter-api-v2'
 import { prisma } from '@/lib/prisma'
 import { getSocialMediaSettings } from '@/lib/social-media'
+import sharp from 'sharp'
 import path from 'path'
 import fs from 'fs'
 
@@ -112,6 +113,65 @@ function getMimeType(filePath: string): string {
     '.svg': 'image/svg+xml',
   }
   return mimeTypes[ext] || 'image/jpeg'
+}
+
+// Process image for Instagram aspect ratio requirements (4:5 to 1.91:1)
+// If image is outside bounds, pad it onto a white square canvas
+async function processImageForInstagram(imagePath: string): Promise<string> {
+  const metadata = await sharp(imagePath).metadata()
+  const { width = 0, height = 0 } = metadata
+
+  if (!width || !height) return imagePath
+
+  const ratio = width / height
+  const MIN_RATIO = 0.8  // 4:5
+  const MAX_RATIO = 1.91 // 1.91:1
+
+  // If aspect ratio is already within Instagram bounds, return as-is
+  if (ratio >= MIN_RATIO && ratio <= MAX_RATIO) return imagePath
+
+  // Create a square canvas (1:1 ratio) with the image centered
+  const size = Math.max(width, height)
+  // Cap at 1440px (Instagram max)
+  const canvasSize = Math.min(size, 1440)
+
+  const uploadsPath = process.env.UPLOADS_PATH
+  const outputDir = uploadsPath
+    ? path.join(uploadsPath, 'instagram-processed')
+    : path.join(process.cwd(), 'public', 'uploads', 'instagram-processed')
+
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true })
+  }
+
+  const outputName = `ig-${Date.now()}-${path.basename(imagePath, path.extname(imagePath))}.jpg`
+  const outputPath = path.join(outputDir, outputName)
+
+  await sharp(imagePath)
+    .resize(canvasSize, canvasSize, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255 },
+    })
+    .jpeg({ quality: 90 })
+    .toFile(outputPath)
+
+  return outputPath
+}
+
+// Get the public nginx URL for a processed Instagram image
+function getProcessedImageUrl(processedPath: string): string {
+  const uploadsPath = process.env.UPLOADS_PATH
+  if (uploadsPath && processedPath.startsWith(uploadsPath)) {
+    // /var/www/uploads/instagram-processed/file.jpg → /uploads/instagram-processed/file.jpg
+    const relativePath = processedPath.substring(uploadsPath.length)
+    return `${SITE_URL}/uploads${relativePath.startsWith('/') ? '' : '/'}${relativePath}`
+  }
+  // Fallback: serve through public directory
+  const publicIdx = processedPath.indexOf('uploads')
+  if (publicIdx !== -1) {
+    return `${SITE_URL}/${processedPath.substring(publicIdx)}`
+  }
+  return ''
 }
 
 // Post to X/Twitter
@@ -420,14 +480,22 @@ async function postToInstagram(post: BlogPostData): Promise<{ postId: string; po
 
   // Instagram requires a public image URL — can't upload local files directly
   // Use nginx-served /uploads/ path (not /api/uploads/) so Instagram can fetch it
+  // Resolve local image, process for Instagram aspect ratio, then get public URL
   let imageUrl = ''
   if (post.coverImage) {
-    if (post.coverImage.startsWith('http')) {
-      imageUrl = post.coverImage
-    } else {
-      // Convert /api/uploads/blog/file.png → /uploads/blog/file.png for direct nginx serving
-      const directPath = post.coverImage.replace(/^\/api\/uploads\//, '/uploads/')
-      imageUrl = `${SITE_URL}${directPath}`
+    const localPath = resolveCoverImagePath(post.coverImage)
+    if (localPath && fs.existsSync(localPath)) {
+      const processedPath = await processImageForInstagram(localPath)
+      imageUrl = getProcessedImageUrl(processedPath)
+    }
+    // Fallback to direct URL if local processing fails
+    if (!imageUrl) {
+      if (post.coverImage.startsWith('http')) {
+        imageUrl = post.coverImage
+      } else {
+        const directPath = post.coverImage.replace(/^\/api\/uploads\//, '/uploads/')
+        imageUrl = `${SITE_URL}${directPath}`
+      }
     }
   }
 
@@ -977,18 +1045,26 @@ async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string
 
   const caption = buildToolInstagramCaption(tool)
 
+  // Resolve local image path, process for Instagram aspect ratio, then get public URL
   let imageUrl = ''
   if (tool.iconImage) {
-    if (tool.iconImage.startsWith('http')) {
-      imageUrl = tool.iconImage
-    } else if (tool.iconImage.startsWith('/api/download/')) {
-      // /api/download/file.jpg → /uploads/downloads/file.jpg for direct nginx serving
-      const filename = tool.iconImage.replace(/^\/api\/download\//, '')
-      imageUrl = `${SITE_URL}/uploads/downloads/${filename}`
-    } else {
-      // /api/uploads/tools/file.jpg → /uploads/tools/file.jpg
-      const directPath = tool.iconImage.replace(/^\/api\/uploads\//, '/uploads/')
-      imageUrl = `${SITE_URL}${directPath}`
+    const localPath = resolveToolImagePath(tool.iconImage)
+    if (localPath && fs.existsSync(localPath)) {
+      // Process image to fit Instagram aspect ratio (4:5 to 1.91:1)
+      const processedPath = await processImageForInstagram(localPath)
+      imageUrl = getProcessedImageUrl(processedPath)
+    }
+    // Fallback to direct URL if local processing fails
+    if (!imageUrl) {
+      if (tool.iconImage.startsWith('http')) {
+        imageUrl = tool.iconImage
+      } else if (tool.iconImage.startsWith('/api/download/')) {
+        const filename = tool.iconImage.replace(/^\/api\/download\//, '')
+        imageUrl = `${SITE_URL}/uploads/downloads/${filename}`
+      } else {
+        const directPath = tool.iconImage.replace(/^\/api\/uploads\//, '/uploads/')
+        imageUrl = `${SITE_URL}${directPath}`
+      }
     }
   }
 
