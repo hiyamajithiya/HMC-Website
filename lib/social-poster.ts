@@ -586,6 +586,10 @@ export async function retryPostToSocial(logId: string): Promise<{ success: boole
   if (log.status === 'POSTED') {
     return { success: false, error: 'Already posted successfully' }
   }
+  if (!log.blogPost) {
+    return { success: false, error: 'Blog post not found' }
+  }
+
 
   const post: BlogPostData = {
     id: log.blogPost.id,
