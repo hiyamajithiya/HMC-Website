@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { FileText, Table, Calculator, Bot, Zap, ArrowRight, Code } from "lucide-react"
@@ -215,9 +216,15 @@ export default async function ToolsPage() {
                     )}
                     <Link href={`/tools/${tool.slug}`}>
                       <CardHeader className="cursor-pointer">
-                        <div className={`w-16 h-16 ${color} rounded-lg flex items-center justify-center mb-4`}>
-                          <Icon className="h-8 w-8" />
-                        </div>
+                        {tool.iconImage ? (
+                          <div className="w-16 h-16 rounded-lg overflow-hidden mb-4">
+                            <Image src={tool.iconImage} alt={tool.name} width={64} height={64} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`w-16 h-16 ${color} rounded-lg flex items-center justify-center mb-4`}>
+                            <Icon className="h-8 w-8" />
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2 text-xs text-text-muted">
                             <span className="bg-bg-secondary px-2 py-1 rounded">

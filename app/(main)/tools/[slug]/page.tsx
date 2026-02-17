@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -96,12 +97,21 @@ export default async function ToolDetailPage({ params }: { params: Promise<{ slu
                 </span>
               )}
             </div>
-            <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">
-              {tool.name}
-            </h1>
-            <p className="text-xl text-white/90">
-              {tool.shortDescription}
-            </p>
+            <div className="flex items-start gap-5">
+              {tool.iconImage && (
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-white/10 flex-shrink-0">
+                  <Image src={tool.iconImage} alt={tool.name} width={80} height={80} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div>
+                <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4">
+                  {tool.name}
+                </h1>
+                <p className="text-xl text-white/90">
+                  {tool.shortDescription}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
