@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import { sendToolUpdateNotification } from '@/lib/email'
+import { autoPostTool } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +69,7 @@ export async function PUT(
       version,
       isActive,
       notifyUsers, // Flag to send update notifications
+      iconImage,
     } = body
 
     // Check if tool exists
@@ -116,8 +118,22 @@ export async function PUT(
         setupGuide: setupGuide !== undefined ? setupGuide : existingTool.setupGuide,
         version: version ?? existingTool.version,
         isActive: isActive ?? existingTool.isActive,
+        iconImage: iconImage !== undefined ? iconImage : existingTool.iconImage,
       },
     })
+
+    // Auto-post to social media if tool is active (fire-and-forget)
+    if (tool.isActive) {
+      autoPostTool({
+        id: tool.id,
+        name: tool.name,
+        slug: tool.slug,
+        shortDescription: tool.shortDescription,
+        features: tool.features,
+        category: tool.category,
+        iconImage: tool.iconImage,
+      }).catch(err => console.error('Tool auto-post failed:', err))
+    }
 
     // Send update notifications if file was updated and notifyUsers is true
     let notificationsSent = 0

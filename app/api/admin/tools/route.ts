@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
+import { autoPostTool } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,8 +95,22 @@ export async function POST(request: Request) {
         setupGuide: setupGuide || null,
         version: version || '1.0.0',
         isActive: isActive ?? true,
+        iconImage: body.iconImage || null,
       },
     })
+
+    // Auto-post to social media if tool is active (fire-and-forget)
+    if (tool.isActive) {
+      autoPostTool({
+        id: tool.id,
+        name: tool.name,
+        slug: tool.slug,
+        shortDescription: tool.shortDescription,
+        features: tool.features,
+        category: tool.category,
+        iconImage: tool.iconImage,
+      }).catch(err => console.error('Tool auto-post failed:', err))
+    }
 
     return NextResponse.json(tool, { status: 201 })
   } catch (error) {

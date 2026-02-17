@@ -707,3 +707,393 @@ export async function manualPostToSocial(
     return { success: false, error: errorMsg }
   }
 }
+
+// ============================================================
+// TOOL SOCIAL POSTING
+// ============================================================
+
+interface ToolPostData {
+  id: string
+  name: string
+  slug: string
+  shortDescription: string
+  features: string[]
+  category: string
+  iconImage: string | null
+}
+
+function resolveToolImagePath(iconImage: string): string | null {
+  if (!iconImage) return null
+  const match = iconImage.match(/\/api\/uploads\/tools\/(.+)$/)
+  if (match) {
+    const filename = match[1]
+    const uploadsPath = process.env.UPLOADS_PATH
+    if (uploadsPath) {
+      return path.join(uploadsPath, 'tools', filename)
+    }
+    return path.join(process.cwd(), 'public', 'uploads', 'tools', filename)
+  }
+  return null
+}
+
+function formatCategory(category: string): string {
+  return category.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function buildToolTwitterText(tool: ToolPostData): string {
+  const toolUrl = `${SITE_URL}/tools/${tool.slug}`
+  const category = formatCategory(tool.category)
+  const urlLen = 23
+  const hashtags = `#${category.replace(/\s+/g, '')} #tools`
+  const hashtagLen = hashtags.length + 1
+  const maxDesc = 280 - urlLen - hashtagLen - 10
+
+  let text = `${tool.name} — ${tool.shortDescription}`
+  if (text.length > maxDesc) {
+    text = text.substring(0, maxDesc - 3) + '...'
+  }
+  return `${text}\n\n${toolUrl}\n${hashtags}`
+}
+
+function buildToolFacebookText(tool: ToolPostData): string {
+  const toolUrl = `${SITE_URL}/tools/${tool.slug}`
+  const category = formatCategory(tool.category)
+
+  let text = `${tool.name}\n\n${tool.shortDescription}`
+  if (tool.features.length > 0) {
+    const featureList = tool.features.slice(0, 5).map(f => `• ${f}`).join('\n')
+    text += `\n\nKey Features:\n${featureList}`
+  }
+  text += `\n\nCheck it out: ${toolUrl}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #tools #automation`
+  return text
+}
+
+function buildToolInstagramCaption(tool: ToolPostData): string {
+  const category = formatCategory(tool.category)
+
+  let text = `${tool.name}\n\n${tool.shortDescription}`
+  if (tool.features.length > 0) {
+    const featureList = tool.features.slice(0, 5).map(f => `• ${f}`).join('\n')
+    text += `\n\nKey Features:\n${featureList}`
+  }
+  text += `\n\nLink in bio | ${SITE_URL}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #tools #automation #accounting`
+
+  if (text.length > 2200) {
+    text = text.substring(0, 2197) + '...'
+  }
+  return text
+}
+
+function buildToolLinkedInText(tool: ToolPostData): string {
+  const toolUrl = `${SITE_URL}/tools/${tool.slug}`
+  const category = formatCategory(tool.category)
+
+  let text = `${tool.name}\n\n${tool.shortDescription}`
+  if (tool.features.length > 0) {
+    const featureList = tool.features.slice(0, 5).map(f => `• ${f}`).join('\n')
+    text += `\n\nKey Features:\n${featureList}`
+  }
+  text += `\n\nCheck it out: ${toolUrl}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #tools #automation`
+  return text
+}
+
+async function postToolToTwitter(tool: ToolPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.twitter.enabled) throw new Error('Twitter is not enabled')
+
+  const { apiKey, apiSecret, accessToken, accessSecret } = settings.twitter
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) throw new Error('Twitter credentials are incomplete')
+
+  const client = new TwitterApi({ appKey: apiKey, appSecret: apiSecret, accessToken, accessSecret })
+  const text = buildToolTwitterText(tool)
+
+  let mediaIds: string[] = []
+  if (tool.iconImage) {
+    const imagePath = resolveToolImagePath(tool.iconImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      const mediaId = await client.v1.uploadMedia(imagePath)
+      mediaIds = [mediaId]
+    }
+  }
+
+  const tweet = await client.v2.tweet({
+    text,
+    ...(mediaIds.length > 0 && { media: { media_ids: mediaIds as any } }),
+  })
+
+  return { postId: tweet.data.id, postUrl: `https://x.com/i/status/${tweet.data.id}` }
+}
+
+async function postToolToFacebook(tool: ToolPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.facebook.enabled) throw new Error('Facebook is not enabled')
+
+  const { pageAccessToken, pageId } = settings.facebook
+  if (!pageAccessToken || !pageId) throw new Error('Facebook credentials are incomplete')
+
+  const text = buildToolFacebookText(tool)
+  let response: Response
+
+  if (tool.iconImage) {
+    const imagePath = resolveToolImagePath(tool.iconImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      const formData = new FormData()
+      const imageBuffer = fs.readFileSync(imagePath)
+      const blob = new Blob([imageBuffer], { type: getMimeType(imagePath) })
+      formData.append('source', blob, path.basename(imagePath))
+      formData.append('message', text)
+      formData.append('access_token', pageAccessToken)
+      response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, { method: 'POST', body: formData })
+    } else {
+      response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, link: `${SITE_URL}/tools/${tool.slug}`, access_token: pageAccessToken }),
+      })
+    }
+  } else {
+    response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, link: `${SITE_URL}/tools/${tool.slug}`, access_token: pageAccessToken }),
+    })
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(`Facebook API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+  const fbPostId = data.id || data.post_id
+  return { postId: fbPostId, postUrl: `https://www.facebook.com/${fbPostId}` }
+}
+
+async function postToolToLinkedIn(tool: ToolPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.linkedin.enabled) throw new Error('LinkedIn is not enabled')
+
+  const { accessToken, personUrn } = settings.linkedin
+  if (!accessToken || !personUrn) throw new Error('LinkedIn credentials are incomplete')
+
+  const text = buildToolLinkedInText(tool)
+  const toolUrl = `${SITE_URL}/tools/${tool.slug}`
+  let sharePayload: any
+
+  if (tool.iconImage) {
+    const imagePath = resolveToolImagePath(tool.iconImage)
+    if (imagePath && fs.existsSync(imagePath)) {
+      const registerResponse = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registerUploadRequest: {
+            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+            owner: personUrn,
+            serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+          },
+        }),
+      })
+      if (!registerResponse.ok) throw new Error(`LinkedIn register upload failed: ${await registerResponse.text()}`)
+
+      const registerData = await registerResponse.json()
+      const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl
+      const imageAsset = registerData.value.asset
+
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': getMimeType(imagePath) },
+        body: fs.readFileSync(imagePath),
+      })
+      if (!uploadResponse.ok) throw new Error(`LinkedIn image upload failed: ${uploadResponse.status}`)
+
+      sharePayload = {
+        author: personUrn, lifecycleState: 'PUBLISHED',
+        specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text }, shareMediaCategory: 'IMAGE', media: [{ status: 'READY', media: imageAsset, title: { text: tool.name } }] } },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }
+    } else {
+      sharePayload = {
+        author: personUrn, lifecycleState: 'PUBLISHED',
+        specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text }, shareMediaCategory: 'ARTICLE', media: [{ status: 'READY', originalUrl: toolUrl, title: { text: tool.name }, description: { text: tool.shortDescription.substring(0, 200) } }] } },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+      }
+    }
+  } else {
+    sharePayload = {
+      author: personUrn, lifecycleState: 'PUBLISHED',
+      specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text }, shareMediaCategory: 'ARTICLE', media: [{ status: 'READY', originalUrl: toolUrl, title: { text: tool.name }, description: { text: tool.shortDescription.substring(0, 200) } }] } },
+      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+    }
+  }
+
+  const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0' },
+    body: JSON.stringify(sharePayload),
+  })
+
+  if (!response.ok) throw new Error(`LinkedIn API error (${response.status}): ${await response.text()}`)
+
+  const data = await response.json()
+  return { postId: data.id, postUrl: `https://www.linkedin.com/feed/update/${data.id}` }
+}
+
+async function postToolToInstagram(tool: ToolPostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.instagram.enabled) throw new Error('Instagram is not enabled')
+
+  const { pageAccessToken, instagramAccountId } = settings.instagram
+  if (!pageAccessToken || !instagramAccountId) throw new Error('Instagram credentials are incomplete')
+
+  const caption = buildToolInstagramCaption(tool)
+
+  let imageUrl = ''
+  if (tool.iconImage) {
+    if (tool.iconImage.startsWith('http')) {
+      imageUrl = tool.iconImage
+    } else {
+      const directPath = tool.iconImage.replace(/^\/api\/uploads\//, '/uploads/')
+      imageUrl = `${SITE_URL}${directPath}`
+    }
+  }
+
+  if (!imageUrl) throw new Error('Instagram requires an image. Please add an icon image to the tool.')
+
+  const containerResponse = await fetch(`https://graph.instagram.com/v19.0/${instagramAccountId}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrl, caption, access_token: pageAccessToken }),
+  })
+
+  if (!containerResponse.ok) {
+    const errorData = await containerResponse.json()
+    throw new Error(`Instagram container error (${containerResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const containerId = (await containerResponse.json()).id
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+  const publishResponse = await fetch(`https://graph.instagram.com/v19.0/${instagramAccountId}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: containerId, access_token: pageAccessToken }),
+  })
+
+  if (!publishResponse.ok) {
+    const errorData = await publishResponse.json()
+    throw new Error(`Instagram publish error (${publishResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const igPostId = (await publishResponse.json()).id
+
+  let postUrl = `https://www.instagram.com`
+  try {
+    const permalinkResponse = await fetch(`https://graph.instagram.com/v19.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`)
+    if (permalinkResponse.ok) {
+      const permalinkData = await permalinkResponse.json()
+      if (permalinkData.permalink) postUrl = permalinkData.permalink
+    }
+  } catch { /* Use default */ }
+
+  return { postId: igPostId, postUrl }
+}
+
+export async function autoPostTool(tool: ToolPostData): Promise<void> {
+  const settings = await getSocialMediaSettings()
+  if (!settings) {
+    console.log('No social media settings configured, skipping tool auto-post')
+    return
+  }
+
+  const existingPosts = await prisma.socialPostLog.findMany({ where: { toolId: tool.id } })
+
+  const platforms: Array<{
+    name: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
+    enabled: boolean
+    postFn: (tool: ToolPostData) => Promise<{ postId: string; postUrl: string }>
+  }> = [
+    { name: 'TWITTER', enabled: settings.twitter.enabled, postFn: postToolToTwitter },
+    { name: 'LINKEDIN', enabled: settings.linkedin.enabled, postFn: postToolToLinkedIn },
+    { name: 'FACEBOOK', enabled: settings.facebook.enabled, postFn: postToolToFacebook },
+    { name: 'INSTAGRAM', enabled: settings.instagram.enabled, postFn: postToolToInstagram },
+  ]
+
+  for (const platform of platforms) {
+    if (!platform.enabled) continue
+
+    const alreadyPosted = existingPosts.find(p => p.platform === platform.name && p.status === 'POSTED')
+    if (alreadyPosted) {
+      console.log(`Tool already posted to ${platform.name}, skipping`)
+      continue
+    }
+
+    const log = await prisma.socialPostLog.create({
+      data: { toolId: tool.id, platform: platform.name, status: 'PENDING' },
+    })
+
+    try {
+      const result = await platform.postFn(tool)
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: { status: 'POSTED', postId: result.postId, postUrl: result.postUrl },
+      })
+      console.log(`Successfully posted tool to ${platform.name}:`, result.postUrl)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to post tool to ${platform.name}:`, errorMsg)
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: { status: 'FAILED', error: errorMsg.substring(0, 500) },
+      })
+    }
+  }
+}
+
+export async function manualPostToTool(
+  toolId: string,
+  platform: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
+): Promise<{ success: boolean; error?: string }> {
+  const dbTool = await prisma.tool.findUnique({ where: { id: toolId } })
+
+  if (!dbTool || !dbTool.isActive) {
+    return { success: false, error: 'Tool not found or not active' }
+  }
+
+  const tool: ToolPostData = {
+    id: dbTool.id, name: dbTool.name, slug: dbTool.slug,
+    shortDescription: dbTool.shortDescription, features: dbTool.features,
+    category: dbTool.category, iconImage: dbTool.iconImage,
+  }
+
+  const platformFns: Record<string, (t: ToolPostData) => Promise<{ postId: string; postUrl: string }>> = {
+    TWITTER: postToolToTwitter, LINKEDIN: postToolToLinkedIn,
+    FACEBOOK: postToolToFacebook, INSTAGRAM: postToolToInstagram,
+  }
+
+  const postFn = platformFns[platform]
+  if (!postFn) return { success: false, error: `Unknown platform: ${platform}` }
+
+  const log = await prisma.socialPostLog.create({
+    data: { toolId: dbTool.id, platform, status: 'PENDING' },
+  })
+
+  try {
+    const result = await postFn(tool)
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: { status: 'POSTED', postId: result.postId, postUrl: result.postUrl },
+    })
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: { status: 'FAILED', error: errorMsg.substring(0, 500) },
+    })
+    return { success: false, error: errorMsg }
+  }
+}

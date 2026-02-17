@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2, Mail } from 'lucide-react'
+import Image from 'next/image'
+import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2, Mail, ImageIcon } from 'lucide-react'
 
 // Dynamic import for RichTextEditor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -52,10 +53,13 @@ export default function EditToolPage() {
   const params = useParams()
   const toolId = params.id as string
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const iconInputRef = useRef<HTMLInputElement>(null)
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [iconUploading, setIconUploading] = useState(false)
+  const [iconImage, setIconImage] = useState<string>('')
   const [uploadedFile, setUploadedFile] = useState<{ name: string; path: string; size: number } | null>(null)
   const [notifyUsers, setNotifyUsers] = useState(true)
   const [originalDownloadUrl, setOriginalDownloadUrl] = useState('')
@@ -102,6 +106,7 @@ export default function EditToolPage() {
           isActive: tool.isActive,
         })
         setOriginalDownloadUrl(tool.downloadUrl || '')
+        setIconImage(tool.iconImage || '')
       } else {
         alert('Tool not found')
         router.push('/admin/tools')
@@ -131,6 +136,7 @@ export default function EditToolPage() {
           requirements: formData.requirements.split('\n').map((r) => r.trim()).filter(Boolean),
           isActive,
           notifyUsers: fileChanged && notifyUsers,
+          iconImage: iconImage || null,
         }),
       })
 
@@ -234,6 +240,41 @@ export default function EditToolPage() {
     if (bytes < 1024) return bytes + ' B'
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image size exceeds 10MB limit.')
+      return
+    }
+
+    setIconUploading(true)
+    try {
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      uploadFormData.append('type', 'tools')
+
+      const response = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIconImage(data.filePath)
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to upload image')
+      }
+    } catch (error) {
+      console.error('Icon upload error:', error)
+      alert('Failed to upload image')
+    } finally {
+      setIconUploading(false)
+    }
   }
 
   if (loading) {
@@ -497,6 +538,65 @@ export default function EditToolPage() {
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     placeholder="999"
                   />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tool Icon Image</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {iconImage ? (
+                <div className="relative">
+                  <Image
+                    src={iconImage}
+                    alt="Tool icon"
+                    width={300}
+                    height={200}
+                    className="w-full h-48 object-cover rounded-lg border border-border-light"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setIconImage(''); if (iconInputRef.current) iconInputRef.current.value = '' }}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    iconUploading
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border-light hover:border-primary hover:bg-primary/5'
+                  }`}
+                  onClick={() => !iconUploading && iconInputRef.current?.click()}
+                >
+                  <input
+                    ref={iconInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={handleIconUpload}
+                    accept="image/*"
+                  />
+                  {iconUploading ? (
+                    <>
+                      <Loader2 className="h-10 w-10 mx-auto text-primary animate-spin" />
+                      <p className="mt-2 text-sm text-text-muted">Uploading...</p>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="h-10 w-10 mx-auto text-text-muted" />
+                      <p className="mt-2 text-sm font-medium text-text-primary">
+                        Click to upload icon image
+                      </p>
+                      <p className="text-xs text-text-muted mt-1">
+                        PNG, JPG, WebP (max 10MB). Used for social media posts.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </CardContent>

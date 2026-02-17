@@ -169,8 +169,10 @@ model BlogPost {
 // Social media auto-post tracking
 model SocialPostLog {
   id         String           @id @default(cuid())
-  blogPostId String
-  blogPost   BlogPost         @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  blogPostId String?
+  blogPost   BlogPost?        @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
+  toolId     String?
+  tool       Tool?            @relation(fields: [toolId], references: [id], onDelete: Cascade)
   platform   SocialPlatform
   status     SocialPostStatus @default(PENDING)
   postId     String?
@@ -179,6 +181,7 @@ model SocialPostLog {
   createdAt  DateTime         @default(now())
 
   @@index([blogPostId])
+  @@index([toolId])
   @@index([platform])
 }
 
@@ -220,6 +223,7 @@ model Tool {
   requirements     String[]
   setupGuide       String?        @db.Text
   features         String[]
+  iconImage        String?
   downloadCount    Int            @default(0)
   isActive         Boolean        @default(true)
   createdAt        DateTime       @default(now())
@@ -227,6 +231,7 @@ model Tool {
 
   purchases        ToolPurchase[]
   downloadLeads    DownloadLead[]
+  socialPosts      SocialPostLog[]
 
   @@index([isActive])
   @@index([category])
