@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import Image from 'next/image'
-import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2, Mail, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, Eye, EyeOff, Trash2, Upload, File, X, Loader2, Mail, ImageIcon, Twitter, Linkedin, Facebook, RefreshCw, CheckCircle, XCircle, Clock, Send } from 'lucide-react'
 
 // Dynamic import for RichTextEditor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -63,6 +63,16 @@ export default function EditToolPage() {
   const [uploadedFile, setUploadedFile] = useState<{ name: string; path: string; size: number } | null>(null)
   const [notifyUsers, setNotifyUsers] = useState(true)
   const [originalDownloadUrl, setOriginalDownloadUrl] = useState('')
+  const [socialPosts, setSocialPosts] = useState<Array<{
+    id: string
+    platform: string
+    status: string
+    postUrl: string | null
+    error: string | null
+    createdAt: string
+  }>>([])
+  const [retrying, setRetrying] = useState<string | null>(null)
+  const [manualPosting, setManualPosting] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -82,6 +92,7 @@ export default function EditToolPage() {
 
   useEffect(() => {
     fetchTool()
+    fetchSocialPosts()
   }, [toolId])
 
   const fetchTool = async () => {
@@ -274,6 +285,39 @@ export default function EditToolPage() {
       alert('Failed to upload image')
     } finally {
       setIconUploading(false)
+    }
+  }
+
+  const fetchSocialPosts = async () => {
+    try {
+      const response = await fetch(`/api/admin/tools/${toolId}/social`)
+      if (response.ok) {
+        const data = await response.json()
+        setSocialPosts(data)
+      }
+    } catch (error) {
+      console.error('Failed to fetch social posts:', error)
+    }
+  }
+
+  const handleManualPost = async (platform: string) => {
+    setManualPosting(platform)
+    try {
+      const response = await fetch(`/api/admin/tools/${toolId}/social`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      })
+      if (response.ok) {
+        fetchSocialPosts()
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Post failed')
+      }
+    } catch (error) {
+      alert('Failed to post')
+    } finally {
+      setManualPosting(null)
     }
   }
 
@@ -734,6 +778,191 @@ export default function EditToolPage() {
                     View on Website
                   </Button>
                 </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Social Media Posts */}
+          {formData.isActive && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="h-4 w-4" />
+                  Social Media
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Twitter */}
+                {(() => {
+                  const post = socialPosts.find(p => p.platform === 'TWITTER')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Twitter className="h-4 w-4 text-slate-800" />
+                        <span className="text-sm font-medium">X / Twitter</span>
+                      </div>
+                      {post ? (
+                        <div className="flex items-center gap-2">
+                          {post.status === 'POSTED' && (
+                            <>
+                              <a href={post.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button onClick={() => handleManualPost('TWITTER')} disabled={manualPosting === 'TWITTER'} className="p-1 text-slate-500 hover:text-primary" title="Repost">
+                                {manualPosting === 'TWITTER' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
+                          )}
+                          {post.status === 'FAILED' && (
+                            <span className="text-xs text-red-600 flex items-center gap-1" title={post.error || ''}>
+                              <XCircle className="h-3.5 w-3.5" /> Failed
+                              <button onClick={() => handleManualPost('TWITTER')} disabled={manualPosting === 'TWITTER'} className="p-1 text-slate-500 hover:text-primary" title="Retry">
+                                <RefreshCw className={`h-3.5 w-3.5 ${manualPosting === 'TWITTER' ? 'animate-spin' : ''}`} />
+                              </button>
+                            </span>
+                          )}
+                          {post.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleManualPost('TWITTER')} disabled={manualPosting === 'TWITTER'} className="text-xs text-primary hover:underline flex items-center gap-1">
+                          {manualPosting === 'TWITTER' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Post Now'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* LinkedIn */}
+                {(() => {
+                  const post = socialPosts.find(p => p.platform === 'LINKEDIN')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Linkedin className="h-4 w-4 text-blue-700" />
+                        <span className="text-sm font-medium">LinkedIn</span>
+                      </div>
+                      {post ? (
+                        <div className="flex items-center gap-2">
+                          {post.status === 'POSTED' && (
+                            <>
+                              <a href={post.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button onClick={() => handleManualPost('LINKEDIN')} disabled={manualPosting === 'LINKEDIN'} className="p-1 text-slate-500 hover:text-primary" title="Repost">
+                                {manualPosting === 'LINKEDIN' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
+                          )}
+                          {post.status === 'FAILED' && (
+                            <span className="text-xs text-red-600 flex items-center gap-1" title={post.error || ''}>
+                              <XCircle className="h-3.5 w-3.5" /> Failed
+                              <button onClick={() => handleManualPost('LINKEDIN')} disabled={manualPosting === 'LINKEDIN'} className="p-1 text-slate-500 hover:text-primary" title="Retry">
+                                <RefreshCw className={`h-3.5 w-3.5 ${manualPosting === 'LINKEDIN' ? 'animate-spin' : ''}`} />
+                              </button>
+                            </span>
+                          )}
+                          {post.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleManualPost('LINKEDIN')} disabled={manualPosting === 'LINKEDIN'} className="text-xs text-primary hover:underline flex items-center gap-1">
+                          {manualPosting === 'LINKEDIN' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Post Now'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Facebook */}
+                {(() => {
+                  const post = socialPosts.find(p => p.platform === 'FACEBOOK')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <Facebook className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-medium">Facebook</span>
+                      </div>
+                      {post ? (
+                        <div className="flex items-center gap-2">
+                          {post.status === 'POSTED' && (
+                            <>
+                              <a href={post.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button onClick={() => handleManualPost('FACEBOOK')} disabled={manualPosting === 'FACEBOOK'} className="p-1 text-slate-500 hover:text-primary" title="Repost">
+                                {manualPosting === 'FACEBOOK' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
+                          )}
+                          {post.status === 'FAILED' && (
+                            <span className="text-xs text-red-600 flex items-center gap-1" title={post.error || ''}>
+                              <XCircle className="h-3.5 w-3.5" /> Failed
+                              <button onClick={() => handleManualPost('FACEBOOK')} disabled={manualPosting === 'FACEBOOK'} className="p-1 text-slate-500 hover:text-primary" title="Retry">
+                                <RefreshCw className={`h-3.5 w-3.5 ${manualPosting === 'FACEBOOK' ? 'animate-spin' : ''}`} />
+                              </button>
+                            </span>
+                          )}
+                          {post.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleManualPost('FACEBOOK')} disabled={manualPosting === 'FACEBOOK'} className="text-xs text-primary hover:underline flex items-center gap-1">
+                          {manualPosting === 'FACEBOOK' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Post Now'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
+
+                {/* Instagram */}
+                {(() => {
+                  const post = socialPosts.find(p => p.platform === 'INSTAGRAM')
+                  return (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                      <div className="flex items-center gap-2">
+                        <svg className="h-4 w-4 text-pink-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                          <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                          <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                        </svg>
+                        <span className="text-sm font-medium">Instagram</span>
+                      </div>
+                      {post ? (
+                        <div className="flex items-center gap-2">
+                          {post.status === 'POSTED' && (
+                            <>
+                              <a href={post.postUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-green-600 hover:underline">
+                                <CheckCircle className="h-3.5 w-3.5" /> Posted
+                              </a>
+                              <button onClick={() => handleManualPost('INSTAGRAM')} disabled={manualPosting === 'INSTAGRAM'} className="p-1 text-slate-500 hover:text-primary" title="Repost">
+                                {manualPosting === 'INSTAGRAM' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                              </button>
+                            </>
+                          )}
+                          {post.status === 'FAILED' && (
+                            <span className="text-xs text-red-600 flex items-center gap-1" title={post.error || ''}>
+                              <XCircle className="h-3.5 w-3.5" /> Failed
+                              <button onClick={() => handleManualPost('INSTAGRAM')} disabled={manualPosting === 'INSTAGRAM'} className="p-1 text-slate-500 hover:text-primary" title="Retry">
+                                <RefreshCw className={`h-3.5 w-3.5 ${manualPosting === 'INSTAGRAM' ? 'animate-spin' : ''}`} />
+                              </button>
+                            </span>
+                          )}
+                          {post.status === 'PENDING' && (
+                            <span className="text-xs text-yellow-600 flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => handleManualPost('INSTAGRAM')} disabled={manualPosting === 'INSTAGRAM'} className="text-xs text-primary hover:underline flex items-center gap-1">
+                          {manualPosting === 'INSTAGRAM' ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Post Now'}
+                        </button>
+                      )}
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           )}
