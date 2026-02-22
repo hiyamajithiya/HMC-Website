@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, ClipboardCheck, Building2, Bot, Receipt, Briefcase } from "lucide-react"
-import { SERVICES } from "@/lib/constants"
+import { SERVICES, getYearsOfPractice } from "@/lib/constants"
 
 export const metadata: Metadata = {
   title: "Services",
@@ -76,7 +76,7 @@ export default function ServicesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <Card>
                 <CardContent className="p-6 text-center">
-                  <div className="text-4xl font-bold text-primary mb-2">17+</div>
+                  <div className="text-4xl font-bold text-primary mb-2">{getYearsOfPractice()}+</div>
                   <div className="text-sm text-text-muted">Years of Practice</div>
                 </CardContent>
               </Card>

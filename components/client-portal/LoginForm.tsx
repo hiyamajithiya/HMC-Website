@@ -27,7 +27,7 @@ interface UserAccount {
 
 export default function LoginForm() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/client-portal/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || '/hmc-club/dashboard'
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -309,7 +309,7 @@ export default function LoginForm() {
         </div>
 
         <div className="text-sm">
-          <a href="/client-portal/forgot-password" className="underline-offset-2 hover:underline" style={{ color: '#ffffff', fontWeight: 600 }}>
+          <a href="/hmc-club/forgot-password" className="underline-offset-2 hover:underline" style={{ color: '#ffffff', fontWeight: 600 }}>
             Forgot password?
           </a>
         </div>

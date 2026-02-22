@@ -5,5 +5,5 @@ import { authConfig } from './auth.config'
 export default NextAuth(authConfig).auth
 
 export const config = {
-  matcher: ['/client-portal/:path*'],
+  matcher: ['/hmc-club/:path*'],
 }

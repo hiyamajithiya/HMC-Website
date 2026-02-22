@@ -101,7 +101,7 @@ function ResetPasswordForm() {
         <p className="text-white/80 text-sm mb-6">
           This password reset link is invalid or has expired. Please request a new one.
         </p>
-        <Link href="/client-portal/forgot-password">
+        <Link href="/hmc-club/forgot-password">
           <Button className="bg-secondary hover:bg-secondary-dark text-white">
             Request New Link
           </Button>
@@ -120,7 +120,7 @@ function ResetPasswordForm() {
         <p className="text-white/80 text-sm mb-6">
           Your password has been reset successfully. You can now sign in with your new password.
         </p>
-        <Link href="/client-portal/login">
+        <Link href="/hmc-club/login">
           <Button className="bg-secondary hover:bg-secondary-dark text-white">
             Sign In
           </Button>
@@ -237,7 +237,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center gradient-navy py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Back to Login Link */}
       <Link
-        href="/client-portal/login"
+        href="/hmc-club/login"
         className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-5 w-5" />

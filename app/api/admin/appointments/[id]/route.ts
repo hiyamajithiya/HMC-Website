@@ -3,6 +3,7 @@ import { checkAdmin } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
 import { sendAppointmentConfirmedEmail, sendAppointmentCancelledEmail } from '@/lib/email'
+import { notifyUser } from '@/lib/push-notifications'
 
 export const dynamic = 'force-dynamic'
 
@@ -105,6 +106,16 @@ export async function PATCH(
     } catch (emailError) {
       console.error('Failed to send status email:', emailError)
       // Don't fail the status update if email fails
+    }
+
+    // Push notification to client if appointment is linked to a user
+    if (existing.userId) {
+      const statusText = status === 'CONFIRMED' ? 'confirmed' : status === 'CANCELLED' ? 'cancelled' : status.toLowerCase()
+      notifyUser(existing.userId, 'Appointment Update', `Your appointment on ${formattedDate} has been ${statusText}.`, {
+        type: 'appointment',
+        appointmentId: id,
+        status,
+      }).catch(err => console.error('Push notification failed:', err))
     }
 
     return NextResponse.json(appointment)

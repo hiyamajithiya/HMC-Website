@@ -4,8 +4,8 @@ import { Shield, Info } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Register | Client Portal | Himanshu Majithiya & Co.',
-  description: 'Request access to the client portal for Himanshu Majithiya & Co.',
+  title: 'Register | HMC Club | Himanshu Majithiya & Co.',
+  description: 'Request access to HMC Club for Himanshu Majithiya & Co.',
   robots: {
     index: false,
     follow: false,
@@ -24,7 +24,7 @@ export default function RegisterPage() {
             </div>
           </div>
           <h1 className="mt-6 text-3xl font-heading font-bold text-white">
-            Client Portal
+            HMC Club
           </h1>
           <p className="mt-2 text-sm text-white/80">
             Himanshu Majithiya & Co.
@@ -38,7 +38,7 @@ export default function RegisterPage() {
               Request Portal Access
             </CardTitle>
             <CardDescription className="text-base" style={{ color: '#ffffff', fontWeight: 500, opacity: 0.9 }}>
-              Client portal access is available for existing clients only
+              HMC Club access is available for existing clients only
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -79,7 +79,7 @@ export default function RegisterPage() {
             {/* Back to Login */}
             <div className="pt-4 border-t border-white/20">
               <Link
-                href="/client-portal/login"
+                href="/hmc-club/login"
                 className="block w-full text-center py-2 px-4 rounded-md bg-secondary hover:bg-secondary-dark text-white font-medium transition-colors"
               >
                 Back to Login
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           <p>
             Already have an account?{' '}
             <Link
-              href="/client-portal/login"
+              href="/hmc-club/login"
               className="font-semibold text-secondary-light hover:text-secondary underline"
             >
               Sign in

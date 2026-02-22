@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Client Portal Login | Himanshu Majithiya & Co.',
-  description: 'Access your secure client portal to view documents, track services, and manage your account.',
+  title: 'HMC Club Login | Himanshu Majithiya & Co.',
+  description: 'Access your HMC Club to view documents, track services, and manage your account.',
   robots: {
     index: false,
     follow: false,
@@ -23,7 +23,7 @@ export default async function LoginPage({
 }) {
   const session = await auth()
   const params = await searchParams
-  const callbackUrl = params.callbackUrl || '/client-portal/dashboard'
+  const callbackUrl = params.callbackUrl || '/hmc-club/dashboard'
 
   // If user is already logged in, redirect to callbackUrl
   if (session?.user) {
@@ -50,7 +50,7 @@ export default async function LoginPage({
             </div>
           </div>
           <h1 className="mt-6 text-3xl font-heading font-bold text-white">
-            Client Portal
+            HMC Club
           </h1>
           <p className="mt-2 text-sm text-white/80">
             Himanshu Majithiya & Co.

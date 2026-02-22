@@ -28,10 +28,10 @@ interface ClientPortalLayoutProps {
 }
 
 const navItems = [
-  { href: '/client-portal/dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & stats' },
-  { href: '/client-portal/documents', label: 'Documents', icon: FileText, description: 'View & upload files' },
-  { href: '/client-portal/appointments', label: 'Appointments', icon: Calendar, description: 'Schedule meetings' },
-  { href: '/client-portal/profile', label: 'Profile', icon: User, description: 'Account settings' },
+  { href: '/hmc-club/dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview & stats' },
+  { href: '/hmc-club/documents', label: 'Documents', icon: FileText, description: 'View & upload files' },
+  { href: '/hmc-club/appointments', label: 'Appointments', icon: Calendar, description: 'Schedule meetings' },
+  { href: '/hmc-club/profile', label: 'Profile', icon: User, description: 'Account settings' },
 ]
 
 export default function ClientPortalLayout({
@@ -67,12 +67,12 @@ export default function ClientPortalLayout({
               </button>
 
               {/* Logo */}
-              <Link href="/client-portal/dashboard" className="flex items-center gap-3 group">
+              <Link href="/hmc-club/dashboard" className="flex items-center gap-3 group">
                 <div className="bg-white/10 backdrop-blur-sm p-2 rounded-xl group-hover:bg-white/20 transition-colors">
                   <Shield className="h-6 w-6 text-secondary" />
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg font-heading font-bold tracking-tight">Client Portal</h1>
+                  <h1 className="text-lg font-heading font-bold tracking-tight">HMC Club</h1>
                   <p className="text-xs text-white/70">Himanshu Majithiya & Co.</p>
                 </div>
               </Link>
@@ -122,7 +122,7 @@ export default function ClientPortalLayout({
                 variant="ghost"
                 size="sm"
                 className="text-white hover:bg-white/10"
-                onClick={() => signOut({ callbackUrl: '/client-portal/login' })}
+                onClick={() => signOut({ callbackUrl: '/hmc-club/login' })}
               >
                 <LogOut className="h-5 w-5" />
               </Button>
@@ -237,7 +237,7 @@ export default function ClientPortalLayout({
 
               {/* Sign Out */}
               <button
-                onClick={() => signOut({ callbackUrl: '/client-portal/login' })}
+                onClick={() => signOut({ callbackUrl: '/hmc-club/login' })}
                 className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 mt-4"
               >
                 <LogOut className="h-5 w-5" />

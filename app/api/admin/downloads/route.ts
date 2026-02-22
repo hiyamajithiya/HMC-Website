@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getSession } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
@@ -19,7 +19,7 @@ function getDownloadsDir(): string {
 // GET - Fetch all downloads
 export async function GET() {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -55,7 +55,7 @@ export async function GET() {
 // POST - Create a new download (with file upload)
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

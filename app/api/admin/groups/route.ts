@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getSession } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 // GET - Fetch all client groups
 export async function GET() {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -44,7 +44,7 @@ export async function GET() {
 // POST - Create a new client group
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

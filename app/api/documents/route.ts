@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
+import { getSession } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
+import { notifyUser } from '@/lib/push-notifications'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
@@ -22,7 +23,7 @@ function getSecureUploadsDir(): string {
 // GET - Fetch documents for a user
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
 // POST - Upload a document
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -293,6 +294,14 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Push notification: notify client when admin/staff uploads a document for them
+    if ((currentUser.role === 'ADMIN' || currentUser.role === 'STAFF') && documentUserId !== currentUser.id) {
+      notifyUser(documentUserId, 'New Document', `"${title}" has been shared with you.`, {
+        type: 'document',
+        documentId: document.id,
+      }).catch(err => console.error('Push notification failed:', err))
+    }
 
     return NextResponse.json({
       success: true,

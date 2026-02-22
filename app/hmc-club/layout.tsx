@@ -3,6 +3,6 @@ export default function ClientPortalLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Client portal has its own layout per page - no shared header/footer from main site
+  // HMC Club has its own layout per page - no shared header/footer from main site
   return <>{children}</>
 }

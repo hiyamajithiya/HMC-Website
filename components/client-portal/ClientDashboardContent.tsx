@@ -214,7 +214,7 @@ export default function ClientDashboardContent({ session }: ClientDashboardConte
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/client-portal/documents" className="block">
+            <Link href="/hmc-club/documents" className="block">
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -244,7 +244,7 @@ export default function ClientDashboardContent({ session }: ClientDashboardConte
               </div>
             </Link>
 
-            <Link href="/client-portal/profile" className="block">
+            <Link href="/hmc-club/profile" className="block">
               <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -274,7 +274,7 @@ export default function ClientDashboardContent({ session }: ClientDashboardConte
                   <CardDescription>Your latest uploaded documents</CardDescription>
                 </div>
               </div>
-              <Link href="/client-portal/documents">
+              <Link href="/hmc-club/documents">
                 <Button variant="ghost" size="sm" className="text-primary hover:text-primary-dark">
                   View All
                   <ArrowRight className="h-4 w-4 ml-1" />
@@ -286,7 +286,7 @@ export default function ClientDashboardContent({ session }: ClientDashboardConte
             {profile?._count?.documents && profile._count.documents > 0 ? (
               <div className="space-y-3">
                 <p className="text-sm text-slate-500">You have {profile._count.documents} documents in your account.</p>
-                <Link href="/client-portal/documents">
+                <Link href="/hmc-club/documents">
                   <Button variant="outline" className="w-full">
                     <FileText className="h-4 w-4 mr-2" />
                     View All Documents
@@ -299,7 +299,7 @@ export default function ClientDashboardContent({ session }: ClientDashboardConte
                   <FileText className="h-8 w-8 text-slate-400" />
                 </div>
                 <p className="text-slate-500 mb-4">No documents uploaded yet</p>
-                <Link href="/client-portal/documents">
+                <Link href="/hmc-club/documents">
                   <Button variant="outline">
                     <Download className="h-4 w-4 mr-2" />
                     Upload Documents

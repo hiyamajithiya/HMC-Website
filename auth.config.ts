@@ -37,8 +37,8 @@ export const authConfig: NextAuthConfig = {
     },
   },
   pages: {
-    signIn: '/client-portal/login',
-    error: '/client-portal/login',
+    signIn: '/hmc-club/login',
+    error: '/hmc-club/login',
   },
   providers: [], // Providers added in auth.ts (requires Node.js)
   callbacks: {
@@ -61,15 +61,15 @@ export const authConfig: NextAuthConfig = {
       const isLoggedIn = !!auth?.user
       const pathname = nextUrl.pathname
 
-      // Public client portal routes
+      // Public HMC Club routes
       const publicRoutes = [
-        '/client-portal/login',
-        '/client-portal/forgot-password',
-        '/client-portal/reset-password'
+        '/hmc-club/login',
+        '/hmc-club/forgot-password',
+        '/hmc-club/reset-password'
       ]
 
-      // Check if accessing protected client portal routes
-      if (pathname.startsWith('/client-portal') && !publicRoutes.includes(pathname)) {
+      // Check if accessing protected HMC Club routes
+      if (pathname.startsWith('/hmc-club') && !publicRoutes.includes(pathname)) {
         return isLoggedIn // Redirect to login if not authenticated
       }
 

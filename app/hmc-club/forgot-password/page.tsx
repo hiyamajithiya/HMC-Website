@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen flex items-center justify-center gradient-navy py-12 px-4 sm:px-6 lg:px-8 relative">
       {/* Back to Login Link */}
       <Link
-        href="/client-portal/login"
+        href="/hmc-club/login"
         className="absolute top-6 left-6 flex items-center gap-2 text-white/80 hover:text-white transition-colors"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
                 <p className="text-white/80 text-sm mb-6">
                   If an account exists with this email/login ID, you will receive a password reset link shortly.
                 </p>
-                <Link href="/client-portal/login">
+                <Link href="/hmc-club/login">
                   <Button className="bg-secondary hover:bg-secondary-dark text-white">
                     Return to Login
                   </Button>
@@ -153,7 +153,7 @@ export default function ForgotPasswordPage() {
           <p>
             Remember your password?{' '}
             <Link
-              href="/client-portal/login"
+              href="/hmc-club/login"
               className="font-semibold text-secondary-light hover:text-secondary underline"
             >
               Sign in

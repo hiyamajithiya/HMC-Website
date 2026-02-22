@@ -3,7 +3,7 @@ import { Metadata } from "next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { FileText, ClipboardCheck, Building2, Bot, Receipt, Briefcase, Calendar, Calculator } from "lucide-react"
-import { SITE_INFO, SERVICES } from "@/lib/constants"
+import { SITE_INFO, SERVICES, getYearsOfPractice } from "@/lib/constants"
 import { generateMetadata as createMetadata } from "@/lib/metadata"
 import { organizationSchema, localBusinessSchema } from "@/lib/schema"
 
@@ -81,7 +81,7 @@ export default function HomePage() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 my-8 max-w-xl mx-auto">
               <div className="text-center p-4">
-                <div className="text-3xl font-bold text-primary mb-2">17+</div>
+                <div className="text-3xl font-bold text-primary mb-2">{getYearsOfPractice()}+</div>
                 <div className="text-sm text-text-muted">Years of Practice</div>
               </div>
               <div className="text-center p-4">

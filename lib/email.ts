@@ -267,7 +267,7 @@ export async function sendWelcomeEmail(data: {
   const fromAddress = `"${settings.fromName}" <${settings.user}>`
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
-  const portalUrl = `${siteUrl}/client-portal/login`
+  const portalUrl = `${siteUrl}/hmc-club/login`
 
   const emailHtml = `
     <!DOCTYPE html>
@@ -284,9 +284,9 @@ export async function sendWelcomeEmail(data: {
           <p style="margin: 5px 0 0; opacity: 0.9; font-size: 14px;">Chartered Accountants</p>
         </div>
         <div style="padding: 30px; background: #f8f9fa;">
-          <h2 style="color: #1e3a5f; margin-top: 0; font-size: 22px;">Welcome to Client Portal!</h2>
+          <h2 style="color: #1e3a5f; margin-top: 0; font-size: 22px;">Welcome to HMC Club!</h2>
           <p style="margin: 0 0 15px;">Dear ${data.name},</p>
-          <p style="margin: 0 0 15px;">Your account has been created on the <strong>Himanshu Majithiya & Co.</strong> Client Portal. You can now access your documents, appointments, and more.</p>
+          <p style="margin: 0 0 15px;">Your account has been created on <strong>HMC Club</strong> by Himanshu Majithiya & Co. You can now access your documents, appointments, and more.</p>
           <p style="margin: 0 0 10px;">Here are your login credentials:</p>
           <table style="width: 100%; background: white; border-radius: 8px; border-collapse: collapse; margin: 15px 0; border-left: 4px solid #c9a227;">
             <tr>
@@ -306,7 +306,7 @@ export async function sendWelcomeEmail(data: {
             <strong>Important:</strong> Please change your password after your first login for security purposes.
           </div>
           <p style="text-align: center; margin: 25px 0;">
-            <a href="${portalUrl}" style="display: inline-block; background: #c9a227; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to Client Portal</a>
+            <a href="${portalUrl}" style="display: inline-block; background: #c9a227; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold;">Login to HMC Club</a>
           </p>
           <p style="font-size: 14px; color: #666; margin: 0 0 5px;">If the button doesn't work, copy and paste this link into your browser:</p>
           <p style="font-size: 12px; color: #999; word-break: break-all; margin: 0;">${portalUrl}</p>
@@ -326,7 +326,7 @@ export async function sendWelcomeEmail(data: {
   await transporter.sendMail({
     from: fromAddress,
     to: data.email,
-    subject: 'Welcome to Client Portal - Himanshu Majithiya & Co.',
+    subject: 'Welcome to HMC Club - Himanshu Majithiya & Co.',
     html: emailHtml,
   })
 }
@@ -387,7 +387,7 @@ export async function sendPasswordResetEmail(data: {
         </div>
         <div style="padding: 30px; background: #f8f9fa;">
           <p style="font-size: 16px; color: #333;">Dear ${data.name || 'Client'},</p>
-          <p style="font-size: 16px; color: #333;">We received a request to reset your password for your Client Portal account.</p>
+          <p style="font-size: 16px; color: #333;">We received a request to reset your password for your HMC Club account.</p>
           <p style="font-size: 16px; color: #333;">Click the button below to reset your password:</p>
           <div style="text-align: center; margin: 30px 0;">
             <a href="${data.resetUrl}" style="background: #c9a227; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>

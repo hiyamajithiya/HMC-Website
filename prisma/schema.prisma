@@ -45,6 +45,8 @@ model User {
   toolPurchases   ToolPurchase[]
   sessions        Session[]
   blogPosts       BlogPost[]
+  refreshTokens   RefreshToken[]
+  pushTokens      PushToken[]
 
   @@index([email])
   @@index([isActive])
@@ -427,4 +429,32 @@ model DownloadLead {
   @@index([toolId])
   @@index([verified])
   @@index([email, verified])
+}
+
+// Mobile app refresh tokens (JWT rotation)
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  family    String    // Token family for rotation detection
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([family])
+  @@index([expiresAt])
+}
+
+// Mobile push notification tokens
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   // "ios" | "android"
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

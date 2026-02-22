@@ -8,7 +8,7 @@ import ChangePasswordForm from '@/components/client-portal/ChangePasswordForm'
 import { prisma } from '@/lib/prisma'
 
 export const metadata: Metadata = {
-  title: 'Profile | Client Portal',
+  title: 'Profile | HMC Club',
   description: 'Manage your account settings and profile information.',
   robots: {
     index: false,
@@ -22,7 +22,7 @@ export default async function ProfilePage() {
   const session = await auth()
 
   if (!session) {
-    redirect('/client-portal/login')
+    redirect('/hmc-club/login')
   }
 
   // Check user role

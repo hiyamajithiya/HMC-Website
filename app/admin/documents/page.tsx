@@ -142,7 +142,7 @@ export default function AdminDocumentsPage() {
   useEffect(() => {
     if (status === 'loading') return
     if (!session || (session.user?.role !== 'ADMIN' && session.user?.role !== 'STAFF')) {
-      router.push('/client-portal/login')
+      router.push('/hmc-club/login')
       return
     }
     fetchUsers()

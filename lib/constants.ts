@@ -1,3 +1,15 @@
+// Calculate years of practice from founding date (25 Jan 2007)
+export function getYearsOfPractice(): number {
+  const founding = new Date(2007, 0, 25) // Jan 25, 2007
+  const now = new Date()
+  let years = now.getFullYear() - founding.getFullYear()
+  const monthDiff = now.getMonth() - founding.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < founding.getDate())) {
+    years--
+  }
+  return years
+}
+
 // Site Information
 export const SITE_INFO = {
   name: "Himanshu Majithiya & Co.",
@@ -10,6 +22,7 @@ export const SITE_INFO = {
   icaiMembership: "126185",
   firmRegistrationNo: "128134W",
   yearEstablished: "2007",
+  foundingDate: "2007-01-25",
 
   // Professional Memberships
   memberships: {
@@ -136,7 +149,7 @@ export const NAV_ITEMS = [
   },
   { label: "Tools", href: "/tools" },
   { label: "Contact", href: "/contact" },
-  { label: "Client Portal", href: "/client-portal/login" },
+  { label: "HMC Club", href: "/hmc-club/login" },
 ];
 
 // Regulatory Links (Permitted by ICAI)

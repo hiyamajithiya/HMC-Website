@@ -4,6 +4,7 @@ import { SITE_INFO } from "@/lib/constants"
 import { prisma } from "@/lib/prisma"
 import { sendContactEmail } from "@/lib/email"
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
+import { notifyRole } from "@/lib/push-notifications"
 
 export async function POST(request: NextRequest) {
   try {
@@ -193,6 +194,12 @@ export async function POST(request: NextRequest) {
         purpose: 'contact',
       },
     })
+
+    // Push notification to admins about new contact
+    notifyRole('ADMIN', 'New Contact', `${name} sent a message about "${subject}".`, {
+      type: 'contact',
+      contactId: contact.id,
+    }).catch(err => console.error('Push notification failed:', err))
 
     // Always return success since the contact was saved to the database
     return NextResponse.json(

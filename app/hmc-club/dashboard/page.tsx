@@ -5,7 +5,7 @@ import ClientDashboardContent from '@/components/client-portal/ClientDashboardCo
 import ClientPortalLayout from '@/components/client-portal/ClientPortalLayout'
 
 export const metadata: Metadata = {
-  title: 'Dashboard | Client Portal',
+  title: 'Dashboard | HMC Club',
   description: 'Your personal dashboard for managing documents and appointments.',
   robots: {
     index: false,
@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   const session = await auth()
 
   if (!session) {
-    redirect('/client-portal/login')
+    redirect('/hmc-club/login')
   }
 
   // Check user role
@@ -35,7 +35,7 @@ export default async function DashboardPage() {
     redirect('/admin/documents')
   }
 
-  // Only CLIENT users see the client portal dashboard
+  // Only CLIENT users see the HMC Club dashboard
   return (
     <ClientPortalLayout
       userName={session.user?.name}

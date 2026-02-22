@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { checkAdminOrStaff } from '@/lib/auth-check'
-import { auth } from '@/auth'
+import { checkAdminOrStaff, getSession } from '@/lib/auth-check'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -166,7 +165,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    const session = await getSession()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

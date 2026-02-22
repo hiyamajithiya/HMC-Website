@@ -20,7 +20,7 @@ import Link from 'next/link'
 import ClientPortalLayout from '@/components/client-portal/ClientPortalLayout'
 
 export const metadata: Metadata = {
-  title: 'Appointments | Client Portal',
+  title: 'Appointments | HMC Club',
   description: 'View and manage your appointments.',
   robots: {
     index: false,
@@ -34,7 +34,7 @@ export default async function AppointmentsPage() {
   const session = await auth()
 
   if (!session) {
-    redirect('/client-portal/login')
+    redirect('/hmc-club/login')
   }
 
   // Check user role

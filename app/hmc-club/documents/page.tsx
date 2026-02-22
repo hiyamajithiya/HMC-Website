@@ -5,7 +5,7 @@ import ClientPortalLayout from '@/components/client-portal/ClientPortalLayout'
 import ClientDocumentsContent from '@/components/client-portal/ClientDocumentsContent'
 
 export const metadata: Metadata = {
-  title: 'Documents | Client Portal',
+  title: 'Documents | HMC Club',
   description: 'Access and manage your documents.',
   robots: {
     index: false,
@@ -19,7 +19,7 @@ export default async function DocumentsPage() {
   const session = await auth()
 
   if (!session) {
-    redirect('/client-portal/login')
+    redirect('/hmc-club/login')
   }
 
   // Check user role
@@ -35,7 +35,7 @@ export default async function DocumentsPage() {
     redirect('/admin/documents')
   }
 
-  // Only CLIENT users see the client portal
+  // Only CLIENT users see the HMC Club
   return (
     <ClientPortalLayout userName={session.user?.name} userEmail={session.user?.email} isAdmin={false}>
       <ClientDocumentsContent userId={session.user?.id || ''} />

@@ -68,7 +68,7 @@ export function AdminLayoutContent({
   }
 
   if (status === 'unauthenticated') {
-    redirect('/client-portal/login?callbackUrl=/admin')
+    redirect('/hmc-club/login?callbackUrl=/admin')
   }
 
   // Check if user has admin or staff role

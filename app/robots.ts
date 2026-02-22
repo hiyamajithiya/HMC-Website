@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/client-portal/', '/api/', '/admin/'],
+        disallow: ['/hmc-club/', '/api/', '/admin/'],
       },
     ],
     sitemap: 'https://www.himanshumajithiya.com/sitemap.xml',
