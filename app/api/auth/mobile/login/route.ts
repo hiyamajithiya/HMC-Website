@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Helper to issue tokens for a validated user
-    async function issueTokens(user: { id: string; email: string | null; name: string | null; role: string }) {
+    const issueTokens = async (user: { id: string; email: string | null; name: string | null; role: string }) => {
       // Only ADMIN and CLIENT can use the mobile app (no STAFF)
       if (user.role === 'STAFF') {
         return NextResponse.json(
