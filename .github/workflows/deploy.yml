@@ -12,9 +12,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         with:
@@ -22,27 +19,26 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /var/www/hmc-website
+            cd /var/www/himanshumajithiya.com
 
-            echo "📥 Pulling latest changes from GitHub..."
-            git pull origin master
+            echo "📥 Pulling latest changes..."
+            git stash && git pull origin master
 
-            echo "🛑 Stopping containers..."
-            docker-compose down
+            echo "🔨 Installing dependencies..."
+            npm ci --omit=dev
 
-            echo "🏗️ Building new images..."
-            docker-compose build --no-cache
+            echo "🏗️ Building..."
+            npm run build
 
-            echo "🚀 Starting containers..."
-            docker-compose up -d
+            echo "📂 Copying standalone files..."
+            cp -r .next/static .next/standalone/.next/
+            rsync -a --exclude='uploads' public/ .next/standalone/public/
+            cp .env .next/standalone/.env
 
-            echo "🧹 Cleaning up old images..."
-            docker image prune -af
+            echo "▶️  Restarting PM2..."
+            pm2 restart himanshumajithiya --update-env
 
-            echo "✅ Deployment completed successfully!"
-
-            echo "📊 Container status:"
-            docker-compose ps
+            echo "✅ Deployment complete!"
 
       - name: Health check
         uses: appleboy/ssh-action@master
@@ -51,22 +47,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "⏳ Waiting for services to start..."
             sleep 10
-
-            echo "🔍 Checking service health..."
             if curl -f http://localhost:3000 > /dev/null 2>&1; then
-              echo "✅ Website is up and running!"
+              echo "✅ Website is up!"
             else
-              echo "❌ Website health check failed!"
+              echo "❌ Health check failed!"
               exit 1
             fi
-
-      - name: Notify deployment status
-        if: always()
-        run: |
-          if [ ${{ job.status }} == 'success' ]; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
-          fi
