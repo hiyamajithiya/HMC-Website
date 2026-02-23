@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { sendAppointmentEmail } from "@/lib/email"
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit"
 import { getAvailableSlots, createCalendarEvent } from "@/lib/google-calendar"
+import { notifyRole } from "@/lib/push-notifications"
 
 export async function POST(request: NextRequest) {
   try {
@@ -108,6 +109,16 @@ export async function POST(request: NextRequest) {
       }
     } catch (calendarError) {
       console.error("Failed to create calendar event:", calendarError)
+    }
+
+    // Send push notification to admin
+    try {
+      await notifyRole('ADMIN', 'New Appointment Booked', `${name} booked ${service} on ${appointmentDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} at ${timeSlot}`, {
+        type: 'appointment',
+        appointmentId: appointment.id,
+      })
+    } catch (pushError) {
+      console.error("Failed to send admin push notification:", pushError)
     }
 
     // Send email notification (admin + user acknowledgment)
