@@ -1,43 +1,61 @@
 import { Metadata } from "next"
 import Link from "next/link"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, FileText, FileSpreadsheet, File, BookOpen, ClipboardList, Wrench, FolderOpen } from "lucide-react"
+import {
+  Download,
+  FileText,
+  FileSpreadsheet,
+  File,
+  BookOpen,
+  ClipboardList,
+  Wrench,
+  FolderOpen,
+  ArrowRight,
+} from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import { DownloadButton } from "@/components/downloads/DownloadButton"
+import { ResourceDownloadButton } from "@/components/downloads/ResourceDownloadButton"
 
 export const metadata: Metadata = {
   title: "Downloads",
-  description: "Download useful forms, guides, templates, and automation tools for tax and compliance.",
+  description:
+    "Download useful forms, guides, templates, and automation tools for tax and compliance.",
 }
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-const categoryConfig: Record<string, { label: string; icon: any; color: string }> = {
+const categoryConfig: Record<
+  string,
+  { label: string; icon: any; color: string; bg: string }
+> = {
   GUIDES_TEMPLATES: {
     label: "Guides & Templates",
     icon: BookOpen,
-    color: "bg-orange-500/10 text-orange-600",
+    color: "text-orange-600",
+    bg: "bg-orange-500/10",
   },
   FORMS: {
     label: "Forms",
     icon: FileText,
-    color: "bg-blue-500/10 text-blue-600",
+    color: "text-blue-600",
+    bg: "bg-blue-500/10",
   },
   CHECKLISTS: {
     label: "Checklists",
     icon: ClipboardList,
-    color: "bg-green-500/10 text-green-600",
+    color: "text-green-600",
+    bg: "bg-green-500/10",
   },
   TOOLS: {
     label: "Tools",
     icon: Wrench,
-    color: "bg-purple-500/10 text-purple-600",
+    color: "text-purple-600",
+    bg: "bg-purple-500/10",
   },
   OTHER: {
     label: "Other Resources",
     icon: FolderOpen,
-    color: "bg-gray-500/10 text-gray-600",
+    color: "text-gray-600",
+    bg: "bg-gray-500/10",
   },
 }
 
@@ -46,39 +64,28 @@ async function getDownloads() {
     const downloads = await prisma.download.findMany({
       where: { isActive: true },
       orderBy: [
-        { category: 'asc' },
-        { sortOrder: 'asc' },
-        { createdAt: 'desc' }
+        { category: "asc" },
+        { sortOrder: "asc" },
+        { createdAt: "desc" },
       ],
     })
-
-    // Group by category
-    const grouped = downloads.reduce((acc, download) => {
-      const category = download.category
-      if (!acc[category]) {
-        acc[category] = []
-      }
-      acc[category].push(download)
-      return acc
-    }, {} as Record<string, typeof downloads>)
-
-    return grouped
+    return downloads
   } catch (error) {
-    console.error('Failed to fetch downloads:', error)
-    return {}
+    console.error("Failed to fetch downloads:", error)
+    return []
   }
 }
 
 function getFileIcon(fileType: string) {
   switch (fileType) {
     case "PDF":
-      return <FileText className="h-4 w-4 mr-1.5 text-red-500" />
+      return <FileText className="h-5 w-5 text-red-500" />
     case "Excel":
-      return <FileSpreadsheet className="h-4 w-4 mr-1.5 text-green-500" />
+      return <FileSpreadsheet className="h-5 w-5 text-green-500" />
     case "Word":
-      return <FileText className="h-4 w-4 mr-1.5 text-blue-500" />
+      return <FileText className="h-5 w-5 text-blue-500" />
     default:
-      return <File className="h-4 w-4 mr-1.5" />
+      return <File className="h-5 w-5 text-gray-500" />
   }
 }
 
@@ -89,8 +96,8 @@ function formatFileSize(bytes: number) {
 }
 
 export default async function DownloadsPage() {
-  const groupedDownloads = await getDownloads()
-  const hasDownloads = Object.keys(groupedDownloads).length > 0
+  const downloads = await getDownloads()
+  const hasDownloads = downloads.length > 0
 
   return (
     <div>
@@ -98,70 +105,101 @@ export default async function DownloadsPage() {
       <section className="bg-primary text-white py-16">
         <div className="container-custom">
           <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
+              <Download className="h-4 w-4" />
+              Free Resources & Templates
+            </div>
             <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">
               Downloads
             </h1>
-            <p className="text-xl text-white/90">
-              Free forms, guides, templates, and automation tools
+            <p className="text-xl text-white/90 max-w-2xl mx-auto">
+              Free forms, guides, templates, and tools to simplify your tax and
+              compliance work
             </p>
           </div>
         </div>
       </section>
 
-      {/* Download Categories */}
+      {/* Downloads Grid */}
       <section className="section-padding">
         <div className="container-custom">
-          <div className="space-y-12 max-w-6xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {!hasDownloads ? (
               <div className="text-center py-16">
                 <FolderOpen className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Downloads Available</h3>
-                <p className="text-gray-500">Check back soon for useful resources and templates.</p>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  No Downloads Available
+                </h3>
+                <p className="text-gray-500">
+                  Check back soon for useful resources and templates.
+                </p>
               </div>
             ) : (
-              Object.entries(groupedDownloads).map(([category, downloads]) => {
-                const config = categoryConfig[category] || categoryConfig.OTHER
-                const Icon = config.icon
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {downloads.map((item) => {
+                  const config =
+                    categoryConfig[item.category] || categoryConfig.OTHER
+                  const CategoryIcon = config.icon
 
-                return (
-                  <div key={category}>
-                    <div className="flex items-center space-x-3 mb-6">
-                      <div className={`w-12 h-12 ${config.color} rounded-lg flex items-center justify-center`}>
-                        <Icon className="h-6 w-6" />
+                  return (
+                    <div
+                      key={item.id}
+                      className="group bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col"
+                    >
+                      {/* Card Header */}
+                      <div className="p-6 pb-3">
+                        {/* Category + File Type */}
+                        <div className="flex items-center justify-between mb-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${config.bg} ${config.color}`}
+                          >
+                            <CategoryIcon className="h-3 w-3" />
+                            {config.label}
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            {getFileIcon(item.fileType)}
+                            {item.fileType}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-lg font-heading font-bold text-primary group-hover:text-primary-light transition-colors mb-2">
+                          {item.title}
+                        </h3>
+
+                        {/* Description */}
+                        {item.description && (
+                          <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
+                            {item.description}
+                          </p>
+                        )}
                       </div>
-                      <h2 className="text-2xl font-heading font-bold text-primary">
-                        {config.label}
-                      </h2>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {downloads.map((item) => (
-                        <Card key={item.id} className="card-hover">
-                          <CardHeader>
-                            <CardTitle className="text-lg font-heading">{item.title}</CardTitle>
-                            {item.description && (
-                              <CardDescription className="text-sm text-text-secondary">
-                                {item.description}
-                              </CardDescription>
+                      {/* Card Footer */}
+                      <div className="mt-auto p-6 pt-3">
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="flex items-center gap-3 text-xs text-gray-500">
+                            <span>{formatFileSize(item.fileSize)}</span>
+                            {item.downloadCount > 0 && (
+                              <>
+                                <span>·</span>
+                                <span>
+                                  {item.downloadCount.toLocaleString()} downloads
+                                </span>
+                              </>
                             )}
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm text-text-muted flex items-center">
-                                {getFileIcon(item.fileType)}
-                                <span>{item.fileType}</span>
-                                <span className="mx-2">•</span>
-                                <span>{formatFileSize(item.fileSize)}</span>
-                              </div>
-                              <DownloadButton id={item.id} filePath={item.filePath} />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                          </div>
+                          <ResourceDownloadButton
+                            downloadId={item.id}
+                            downloadName={item.title}
+                            variant="compact"
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+              </div>
             )}
           </div>
         </div>
@@ -175,12 +213,16 @@ export default async function DownloadsPage() {
               Looking for Automation Tools?
             </h2>
             <p className="text-text-secondary text-lg mb-8">
-              Visit our Tools section to explore and download professional automation solutions
+              Explore our professional automation tools for tax, GST, and
+              compliance workflows
             </p>
             <Link href="/tools">
-              <Button size="lg" className="bg-primary hover:bg-primary-light text-white">
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary-light text-white"
+              >
                 Explore Tools
-                <Download className="ml-2 h-5 w-5" />
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </div>
@@ -192,13 +234,17 @@ export default async function DownloadsPage() {
         <div className="container-custom">
           <div className="max-w-4xl mx-auto">
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-r">
-              <h3 className="font-semibold text-yellow-800 mb-2">Important Note</h3>
+              <h3 className="font-semibold text-yellow-800 mb-2">
+                Important Note
+              </h3>
               <p className="text-sm text-yellow-700 mb-2">
-                All downloadable resources are provided for informational purposes. Please ensure compliance
-                with the latest regulations and consult with a qualified professional before use.
+                All downloadable resources are provided for informational
+                purposes. Please ensure compliance with the latest regulations
+                and consult with a qualified professional before use.
               </p>
               <p className="text-sm text-yellow-700">
-                For the latest official forms, please visit respective government portals (Income Tax, GST, MCA, etc.).
+                For the latest official forms, please visit respective government
+                portals (Income Tax, GST, MCA, etc.).
               </p>
             </div>
           </div>
@@ -213,7 +259,8 @@ export default async function DownloadsPage() {
               Need Custom Solutions?
             </h2>
             <p className="text-xl text-white/90 mb-8">
-              We can create custom automation tools tailored to your specific requirements
+              We can create custom automation tools tailored to your specific
+              requirements
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/services/ai-automation">
@@ -233,4 +280,3 @@ export default async function DownloadsPage() {
     </div>
   )
 }
-

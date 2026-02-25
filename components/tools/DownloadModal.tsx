@@ -10,8 +10,12 @@ import { X, Download, Mail, Loader2, CheckCircle, UserCheck } from 'lucide-react
 interface DownloadModalProps {
   isOpen: boolean
   onClose: () => void
-  toolId: string
-  toolName: string
+  toolId?: string
+  toolName?: string
+  /** For resource downloads (from /resources/downloads) */
+  mode?: 'tool' | 'resource'
+  resourceId?: string
+  resourceName?: string
 }
 
 type Step = 'form' | 'otp' | 'success'
@@ -22,7 +26,10 @@ interface ReturningUser {
   company: string | null
 }
 
-export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadModalProps) {
+export function DownloadModal({ isOpen, onClose, toolId, toolName, mode = 'tool', resourceId, resourceName }: DownloadModalProps) {
+  const itemId = mode === 'resource' ? resourceId! : toolId!
+  const itemName = mode === 'resource' ? resourceName! : toolName!
+  const apiPrefix = mode === 'resource' ? '/api/downloads' : '/api/tools'
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -134,13 +141,13 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
         }
       }
 
-      const response = await fetch('/api/tools/download-request', {
+      const response = await fetch(`${apiPrefix}/${mode === 'resource' ? 'request' : 'download-request'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          toolId,
-          skipOtp: isReturningUser, // Skip OTP for returning users
+          ...(mode === 'resource' ? { downloadId: itemId } : { toolId: itemId }),
+          skipOtp: isReturningUser,
         }),
       })
 
@@ -179,7 +186,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     setError('')
 
     try {
-      const response = await fetch('/api/tools/verify-otp', {
+      const response = await fetch(`${apiPrefix}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -215,12 +222,12 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
     setError('')
 
     try {
-      const response = await fetch('/api/tools/download-request', {
+      const response = await fetch(`${apiPrefix}/${mode === 'resource' ? 'request' : 'download-request'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          toolId,
+          ...(mode === 'resource' ? { downloadId: itemId } : { toolId: itemId }),
         }),
       })
 
@@ -254,7 +261,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
   if (!isOpen || !mounted) return null
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={`Download ${toolName}`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={`Download ${itemName}`}>
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -274,7 +281,7 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName }: DownloadMod
             <X className="h-6 w-6" />
           </button>
           <Download className="h-10 w-10 mb-3" />
-          <h2 className="text-xl font-bold">Download {toolName}</h2>
+          <h2 className="text-xl font-bold">Download {itemName}</h2>
           <p className="text-white/80 text-sm mt-1">
             {step === 'form' && (returningUser ? 'Welcome back!' : 'Enter your details to download')}
             {step === 'otp' && 'Verify your email to continue'}

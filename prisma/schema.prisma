@@ -399,6 +399,8 @@ model Download {
   downloadCount Int            @default(0)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  downloadLeads DownloadLead[]
 }
 
 enum DownloadCategory {
@@ -409,15 +411,17 @@ enum DownloadCategory {
   OTHER
 }
 
-// Tool download leads - tracks users who download tools
+// Download leads - tracks users who download tools or resources
 model DownloadLead {
   id           String    @id @default(cuid())
   name         String
   email        String
   phone        String?
   company      String?
-  toolId       String
-  tool         Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  toolId       String?
+  tool         Tool?     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  downloadId   String?
+  download     Download? @relation(fields: [downloadId], references: [id], onDelete: Cascade)
   otp          String?
   otpExpiry    DateTime?
   verified     Boolean   @default(false)
@@ -427,6 +431,7 @@ model DownloadLead {
 
   @@index([email])
   @@index([toolId])
+  @@index([downloadId])
   @@index([verified])
   @@index([email, verified])
 }
