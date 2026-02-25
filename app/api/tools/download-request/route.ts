@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this is a returning user (verified for any tool)
-    const isVerifiedUser = await prisma.downloadLead.findFirst({
+    const isVerifiedUser = await prisma.articleLead.findFirst({
       where: {
         email: email.toLowerCase(),
         verified: true,
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     // If returning user and skipOtp flag is set, skip OTP flow
     if (isVerifiedUser && skipOtp) {
       // Check if there's already a lead for this specific tool
-      const existingLeadForTool = await prisma.downloadLead.findFirst({
+      const existingLeadForTool = await prisma.articleLead.findFirst({
         where: {
           email: email.toLowerCase(),
           toolId: toolId,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
       if (existingLeadForTool) {
         // Update existing record
-        await prisma.downloadLead.update({
+        await prisma.articleLead.update({
           where: { id: existingLeadForTool.id },
           data: {
             name,
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         })
       } else {
         // Create new record for this tool (pre-verified)
-        await prisma.downloadLead.create({
+        await prisma.articleLead.create({
           data: {
             name,
             email: email.toLowerCase(),
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
 
     // Check if there's an existing lead for this email and tool
-    const existingLead = await prisma.downloadLead.findFirst({
+    const existingLead = await prisma.articleLead.findFirst({
       where: {
         email: email.toLowerCase(),
         toolId: toolId,
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     if (existingLead) {
       // Update existing lead with new OTP
-      const updatedLead = await prisma.downloadLead.update({
+      const updatedLead = await prisma.articleLead.update({
         where: { id: existingLead.id },
         data: {
           name,
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       leadId = updatedLead.id
     } else {
       // Create new download lead
-      const newLead = await prisma.downloadLead.create({
+      const newLead = await prisma.articleLead.create({
         data: {
           name,
           email: email.toLowerCase(),

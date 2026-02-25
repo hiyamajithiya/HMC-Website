@@ -45,7 +45,7 @@ interface DashboardStats {
   pendingAppointments: number
   totalUsers: number
   totalDocuments?: number
-  totalDownloads?: number
+  totalArticles?: number
   recentActivities?: RecentActivity[]
 }
 
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
     pendingAppointments: 0,
     totalUsers: 0,
     totalDocuments: 0,
-    totalDownloads: 0,
+    totalArticles: 0,
     recentActivities: [],
   })
   const [loading, setLoading] = useState(true)

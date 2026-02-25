@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the download lead
-    const lead = await prisma.downloadLead.findUnique({
+    const lead = await prisma.articleLead.findUnique({
       where: { id: leadId },
       include: {
         tool: {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    if (!lead) {
+    if (!lead || !lead.tool) {
       return NextResponse.json(
         { error: 'Download request not found' },
         { status: 404 }
@@ -59,13 +59,13 @@ export async function POST(request: NextRequest) {
     // Check if already verified
     if (lead.verified) {
       // Return download URL directly
-      const downloadUrl = normalizeDownloadUrl(lead.tool.downloadUrl)
+      const downloadUrl = normalizeDownloadUrl(lead.tool!.downloadUrl)
 
       return NextResponse.json({
         success: true,
         message: 'Already verified',
         downloadUrl,
-        toolName: lead.tool.name,
+        toolName: lead.tool!.name,
       })
     }
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark as verified and update download time
-    await prisma.downloadLead.update({
+    await prisma.articleLead.update({
       where: { id: leadId },
       data: {
         verified: true,

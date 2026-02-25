@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if this email has any verified download
-    const verifiedLead = await prisma.downloadLead.findFirst({
+    const verifiedLead = await prisma.articleLead.findFirst({
       where: {
         email: email.toLowerCase(),
         verified: true,

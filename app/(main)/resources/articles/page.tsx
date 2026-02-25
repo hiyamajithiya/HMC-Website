@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Download,
   FileText,
@@ -13,12 +14,12 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { prisma } from "@/lib/prisma"
-import { ResourceDownloadButton } from "@/components/downloads/ResourceDownloadButton"
+import { ArticleDownloadButton } from "@/components/articles/ArticleDownloadButton"
 
 export const metadata: Metadata = {
-  title: "Downloads",
+  title: "Articles",
   description:
-    "Download useful forms, guides, templates, and automation tools for tax and compliance.",
+    "Download useful forms, guides, templates, and resources for tax and compliance.",
 }
 
 export const dynamic = "force-dynamic"
@@ -59,9 +60,9 @@ const categoryConfig: Record<
   },
 }
 
-async function getDownloads() {
+async function getArticles() {
   try {
-    const downloads = await prisma.download.findMany({
+    const articles = await prisma.article.findMany({
       where: { isActive: true },
       orderBy: [
         { category: "asc" },
@@ -69,9 +70,9 @@ async function getDownloads() {
         { createdAt: "desc" },
       ],
     })
-    return downloads
+    return articles
   } catch (error) {
-    console.error("Failed to fetch downloads:", error)
+    console.error("Failed to fetch articles:", error)
     return []
   }
 }
@@ -95,9 +96,9 @@ function formatFileSize(bytes: number) {
   return (bytes / (1024 * 1024)).toFixed(1) + " MB"
 }
 
-export default async function DownloadsPage() {
-  const downloads = await getDownloads()
-  const hasDownloads = downloads.length > 0
+export default async function ArticlesPage() {
+  const articles = await getArticles()
+  const hasArticles = articles.length > 0
 
   return (
     <div>
@@ -106,97 +107,113 @@ export default async function DownloadsPage() {
         <div className="container-custom">
           <div className="max-w-4xl mx-auto text-center">
             <div className="inline-flex items-center gap-2 bg-white/10 text-white/90 text-sm font-medium px-4 py-1.5 rounded-full mb-4">
-              <Download className="h-4 w-4" />
-              Free Resources & Templates
+              <BookOpen className="h-4 w-4" />
+              Free Resources & Articles
             </div>
             <h1 className="text-4xl md:text-5xl font-heading font-bold mb-4">
-              Downloads
+              Articles
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto">
-              Free forms, guides, templates, and tools to simplify your tax and
+              Free forms, guides, templates, and resources to simplify your tax and
               compliance work
             </p>
           </div>
         </div>
       </section>
 
-      {/* Downloads Grid */}
+      {/* Articles Grid */}
       <section className="section-padding">
         <div className="container-custom">
-          <div className="max-w-6xl mx-auto">
-            {!hasDownloads ? (
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-heading font-bold text-primary mb-4">
+                Available Articles
+              </h2>
+              <p className="text-text-secondary text-lg">
+                Professional resources for CA firms and businesses
+              </p>
+            </div>
+
+            {!hasArticles ? (
               <div className="text-center py-16">
                 <FolderOpen className="h-16 w-16 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  No Downloads Available
+                  No Articles Available
                 </h3>
                 <p className="text-gray-500">
-                  Check back soon for useful resources and templates.
+                  Check back soon for useful resources and articles.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {downloads.map((item) => {
+                {articles.map((item) => {
                   const config =
                     categoryConfig[item.category] || categoryConfig.OTHER
                   const CategoryIcon = config.icon
 
                   return (
-                    <div
-                      key={item.id}
-                      className="group bg-white rounded-xl border border-gray-200 hover:border-primary/30 hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col"
-                    >
-                      {/* Card Header */}
-                      <div className="p-6 pb-3">
-                        {/* Category + File Type */}
-                        <div className="flex items-center justify-between mb-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${config.bg} ${config.color}`}
-                          >
-                            <CategoryIcon className="h-3 w-3" />
-                            {config.label}
-                          </span>
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                            {getFileIcon(item.fileType)}
-                            {item.fileType}
-                          </span>
-                        </div>
+                    <Card key={item.id} className="card-hover relative flex flex-col">
+                      <Link href={`/resources/articles/${item.slug}`}>
+                        <CardHeader className="cursor-pointer">
+                          {/* Category + File Type */}
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${config.bg} ${config.color}`}
+                            >
+                              <CategoryIcon className="h-3 w-3" />
+                              {config.label}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              {getFileIcon(item.fileType)}
+                              {item.fileType}
+                            </span>
+                          </div>
 
-                        {/* Title */}
-                        <h3 className="text-lg font-heading font-bold text-primary group-hover:text-primary-light transition-colors mb-2">
-                          {item.title}
-                        </h3>
+                          <CardTitle className="text-xl font-heading hover:text-primary transition-colors">
+                            {item.title}
+                          </CardTitle>
+                        </CardHeader>
+                      </Link>
 
+                      <CardContent className="flex-1 flex flex-col">
                         {/* Description */}
                         {item.description && (
-                          <p className="text-sm text-text-secondary leading-relaxed line-clamp-3">
+                          <CardDescription className="text-text-secondary mb-4 line-clamp-3">
                             {item.description}
-                          </p>
+                          </CardDescription>
                         )}
-                      </div>
 
-                      {/* Card Footer */}
-                      <div className="mt-auto p-6 pt-3">
-                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                          <div className="flex items-center gap-3 text-xs text-gray-500">
-                            <span>{formatFileSize(item.fileSize)}</span>
-                            {item.downloadCount > 0 && (
-                              <>
-                                <span>·</span>
-                                <span>
-                                  {item.downloadCount.toLocaleString()} downloads
-                                </span>
-                              </>
-                            )}
-                          </div>
-                          <ResourceDownloadButton
-                            downloadId={item.id}
-                            downloadName={item.title}
-                            variant="compact"
-                          />
+                        {/* Meta Info */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mb-4">
+                          <span>{formatFileSize(item.fileSize)}</span>
+                          {item.downloadCount > 0 && (
+                            <>
+                              <span>·</span>
+                              <span className="inline-flex items-center gap-1">
+                                <Download className="h-3 w-3" />
+                                {item.downloadCount.toLocaleString()} downloads
+                              </span>
+                            </>
+                          )}
                         </div>
-                      </div>
-                    </div>
+
+                        {/* Action Buttons */}
+                        <div className="mt-auto flex gap-2">
+                          <Link href={`/resources/articles/${item.slug}`} className="flex-1">
+                            <Button variant="outline" className="w-full">
+                              View Details
+                            </Button>
+                          </Link>
+                          <div className="flex-1">
+                            <ArticleDownloadButton
+                              articleId={item.id}
+                              articleName={item.title}
+                              variant="compact"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   )
                 })}
               </div>

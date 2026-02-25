@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Fetch all active downloads (public)
+// GET - Fetch all active articles (public)
 export async function GET() {
   try {
-    const downloads = await prisma.download.findMany({
+    const articles = await prisma.article.findMany({
       where: { isActive: true },
       orderBy: [
         { category: 'asc' },
@@ -16,6 +16,7 @@ export async function GET() {
       select: {
         id: true,
         title: true,
+        slug: true,
         description: true,
         fileName: true,
         filePath: true,
@@ -27,20 +28,20 @@ export async function GET() {
     })
 
     // Group by category
-    const grouped = downloads.reduce((acc, download) => {
-      const category = download.category
+    const grouped = articles.reduce((acc, article) => {
+      const category = article.category
       if (!acc[category]) {
         acc[category] = []
       }
-      acc[category].push(download)
+      acc[category].push(article)
       return acc
-    }, {} as Record<string, typeof downloads>)
+    }, {} as Record<string, typeof articles>)
 
-    return NextResponse.json({ downloads, grouped })
+    return NextResponse.json({ articles, grouped })
   } catch (error) {
-    console.error('Failed to fetch downloads:', error)
+    console.error('Failed to fetch articles:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch downloads' },
+      { error: 'Failed to fetch articles' },
       { status: 500 }
     )
   }

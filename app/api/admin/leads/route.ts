@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       where.verified = false
     }
 
-    const leads = await prisma.downloadLead.findMany({
+    const leads = await prisma.articleLead.findMany({
       where,
       include: {
         tool: {
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
 
     // Get stats
     const stats = {
-      total: await prisma.downloadLead.count(),
-      verified: await prisma.downloadLead.count({ where: { verified: true } }),
-      pending: await prisma.downloadLead.count({ where: { verified: false } }),
+      total: await prisma.articleLead.count(),
+      verified: await prisma.articleLead.count({ where: { verified: true } }),
+      pending: await prisma.articleLead.count({ where: { verified: false } }),
     }
 
     return NextResponse.json({ leads, stats })
@@ -70,7 +70,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Lead ID is required' }, { status: 400 })
     }
 
-    await prisma.downloadLead.delete({
+    await prisma.articleLead.delete({
       where: { id },
     })
 

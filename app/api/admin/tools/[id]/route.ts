@@ -140,7 +140,7 @@ export async function PUT(
     if (fileUpdated && notifyUsers) {
       try {
         // Get all verified users who downloaded this tool
-        const leads = await prisma.downloadLead.findMany({
+        const leads = await prisma.articleLead.findMany({
           where: {
             toolId: id,
             verified: true,

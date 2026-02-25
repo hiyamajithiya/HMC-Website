@@ -31,7 +31,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/resources/calculators/capital-gains',
     '/resources/calculators/advance-tax',
     '/resources/compliance-calendar',
-    '/resources/downloads',
+    '/resources/articles',
     '/resources/useful-links',
     '/tools',
     '/privacy-policy',

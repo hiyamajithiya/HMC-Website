@@ -5,22 +5,19 @@ import { Button } from '@/components/ui/button'
 import { Download } from 'lucide-react'
 import { DownloadModal } from '@/components/tools/DownloadModal'
 
-interface ResourceDownloadButtonProps {
-  downloadId: string
-  downloadName: string
+interface ArticleDownloadButtonProps {
+  articleId: string
+  articleName: string
   variant?: 'default' | 'compact'
 }
 
-export function ResourceDownloadButton({ downloadId, downloadName, variant = 'default' }: ResourceDownloadButtonProps) {
+export function ArticleDownloadButton({ articleId, articleName, variant = 'default' }: ArticleDownloadButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
   return (
     <>
       <Button
-        className={variant === 'compact'
-          ? 'bg-primary hover:bg-primary-light text-white'
-          : 'bg-primary hover:bg-primary-light text-white'
-        }
+        className="bg-primary hover:bg-primary-light text-white"
         size={variant === 'compact' ? 'sm' : 'default'}
         onClick={() => setIsModalOpen(true)}
       >
@@ -31,9 +28,9 @@ export function ResourceDownloadButton({ downloadId, downloadName, variant = 'de
       <DownloadModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        mode="resource"
-        resourceId={downloadId}
-        resourceName={downloadName}
+        mode="article"
+        articleId={articleId}
+        articleName={articleName}
       />
     </>
   )

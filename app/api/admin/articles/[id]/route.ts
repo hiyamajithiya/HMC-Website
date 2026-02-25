@@ -8,7 +8,7 @@ import { existsSync } from 'fs'
 export const dynamic = 'force-dynamic'
 
 // Get uploads directory - use UPLOADS_PATH for persistent storage
-function getDownloadsDir(): string {
+function getArticlesDir(): string {
   const persistentPath = process.env.UPLOADS_PATH
   if (persistentPath) {
     return path.join(persistentPath, 'resources')
@@ -20,19 +20,25 @@ function getDownloadsDir(): string {
 function getFullFilePath(storedPath: string): string {
   const persistentPath = process.env.UPLOADS_PATH
   if (persistentPath) {
-    // New format: /api/uploads/resources/filename
     if (storedPath.includes('/api/uploads/resources/')) {
       const fileName = storedPath.split('/').pop()
       return path.join(persistentPath, 'resources', fileName || '')
     }
-    // Old format: /downloads/filename
     const fileName = storedPath.split('/').pop()
     return path.join(process.cwd(), 'public', 'downloads', fileName || '')
   }
   return path.join(process.cwd(), 'public', storedPath)
 }
 
-// GET - Fetch single download
+// Generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+// GET - Fetch single article
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -53,25 +59,25 @@ export async function GET(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const download = await prisma.download.findUnique({
+    const article = await prisma.article.findUnique({
       where: { id }
     })
 
-    if (!download) {
-      return NextResponse.json({ error: 'Download not found' }, { status: 404 })
+    if (!article) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }
 
-    return NextResponse.json(download)
+    return NextResponse.json(article)
   } catch (error) {
-    console.error('Failed to fetch download:', error)
+    console.error('Failed to fetch article:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch download' },
+      { error: 'Failed to fetch article' },
       { status: 500 }
     )
   }
 }
 
-// PATCH - Update download
+// PATCH - Update article
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -92,18 +98,17 @@ export async function PATCH(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const existingDownload = await prisma.download.findUnique({
+    const existingArticle = await prisma.article.findUnique({
       where: { id }
     })
 
-    if (!existingDownload) {
-      return NextResponse.json({ error: 'Download not found' }, { status: 404 })
+    if (!existingArticle) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }
 
     const contentType = request.headers.get('content-type') || ''
 
     if (contentType.includes('multipart/form-data')) {
-      // Handle file upload update
       const formData = await request.formData()
       const file = formData.get('file') as File | null
       const title = formData.get('title') as string
@@ -112,17 +117,29 @@ export async function PATCH(
       const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
       const isActive = formData.get('isActive') === 'true'
 
+      // Update slug if title changed
+      let slugUpdate: { slug?: string } = {}
+      if (title && title !== existingArticle.title) {
+        let newSlug = generateSlug(title)
+        const existingSlug = await prisma.article.findFirst({ where: { slug: newSlug, id: { not: id } } })
+        if (existingSlug) {
+          newSlug = `${newSlug}-${Date.now()}`
+        }
+        slugUpdate = { slug: newSlug }
+      }
+
       let updateData: any = {
-        title: title || existingDownload.title,
-        description: description !== undefined ? description : existingDownload.description,
-        category: category || existingDownload.category,
+        title: title || existingArticle.title,
+        description: description !== undefined ? description : existingArticle.description,
+        category: category || existingArticle.category,
         sortOrder,
         isActive,
+        ...slugUpdate,
       }
 
       if (file && file.size > 0) {
         // Delete old file
-        const oldFilePath = getFullFilePath(existingDownload.filePath)
+        const oldFilePath = getFullFilePath(existingArticle.filePath)
         if (existsSync(oldFilePath)) {
           try {
             await unlink(oldFilePath)
@@ -132,7 +149,7 @@ export async function PATCH(
         }
 
         // Save new file to persistent storage
-        const uploadsDir = getDownloadsDir()
+        const uploadsDir = getArticlesDir()
         if (!existsSync(uploadsDir)) {
           await mkdir(uploadsDir, { recursive: true })
         }
@@ -168,18 +185,28 @@ export async function PATCH(
         }
       }
 
-      const download = await prisma.download.update({
+      const article = await prisma.article.update({
         where: { id },
         data: updateData
       })
 
-      return NextResponse.json(download)
+      return NextResponse.json(article)
     } else {
-      // Handle JSON update (for simple field updates)
       const body = await request.json()
       const { title, description, category, sortOrder, isActive } = body
 
-      const download = await prisma.download.update({
+      // Update slug if title changed
+      let slugUpdate: { slug?: string } = {}
+      if (title && title !== existingArticle.title) {
+        let newSlug = generateSlug(title)
+        const existingSlug = await prisma.article.findFirst({ where: { slug: newSlug, id: { not: id } } })
+        if (existingSlug) {
+          newSlug = `${newSlug}-${Date.now()}`
+        }
+        slugUpdate = { slug: newSlug }
+      }
+
+      const article = await prisma.article.update({
         where: { id },
         data: {
           ...(title && { title }),
@@ -187,21 +214,22 @@ export async function PATCH(
           ...(category && { category }),
           ...(sortOrder !== undefined && { sortOrder }),
           ...(isActive !== undefined && { isActive }),
+          ...slugUpdate,
         }
       })
 
-      return NextResponse.json(download)
+      return NextResponse.json(article)
     }
   } catch (error) {
-    console.error('Failed to update download:', error)
+    console.error('Failed to update article:', error)
     return NextResponse.json(
-      { error: 'Failed to update download' },
+      { error: 'Failed to update article' },
       { status: 500 }
     )
   }
 }
 
-// DELETE - Delete download
+// DELETE - Delete article
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -222,16 +250,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const download = await prisma.download.findUnique({
+    const article = await prisma.article.findUnique({
       where: { id }
     })
 
-    if (!download) {
-      return NextResponse.json({ error: 'Download not found' }, { status: 404 })
+    if (!article) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }
 
     // Delete file from disk
-    const filePath = getFullFilePath(download.filePath)
+    const filePath = getFullFilePath(article.filePath)
     if (existsSync(filePath)) {
       try {
         await unlink(filePath)
@@ -241,15 +269,15 @@ export async function DELETE(
     }
 
     // Delete from database
-    await prisma.download.delete({
+    await prisma.article.delete({
       where: { id }
     })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete download:', error)
+    console.error('Failed to delete article:', error)
     return NextResponse.json(
-      { error: 'Failed to delete download' },
+      { error: 'Failed to delete article' },
       { status: 500 }
     )
   }

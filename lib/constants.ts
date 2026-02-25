@@ -144,7 +144,7 @@ export const NAV_ITEMS = [
       { label: "Tax Calculators", href: "/resources/calculators" },
       { label: "Compliance Calendar", href: "/resources/compliance-calendar" },
       { label: "Useful Links", href: "/resources/useful-links" },
-      { label: "Downloads", href: "/resources/downloads" },
+      { label: "Articles", href: "/resources/articles" },
     ],
   },
   { label: "Tools", href: "/tools" },

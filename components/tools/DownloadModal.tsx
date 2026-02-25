@@ -12,10 +12,10 @@ interface DownloadModalProps {
   onClose: () => void
   toolId?: string
   toolName?: string
-  /** For resource downloads (from /resources/downloads) */
-  mode?: 'tool' | 'resource'
-  resourceId?: string
-  resourceName?: string
+  /** For article downloads (from /resources/articles) */
+  mode?: 'tool' | 'article'
+  articleId?: string
+  articleName?: string
 }
 
 type Step = 'form' | 'otp' | 'success'
@@ -26,10 +26,10 @@ interface ReturningUser {
   company: string | null
 }
 
-export function DownloadModal({ isOpen, onClose, toolId, toolName, mode = 'tool', resourceId, resourceName }: DownloadModalProps) {
-  const itemId = mode === 'resource' ? resourceId! : toolId!
-  const itemName = mode === 'resource' ? resourceName! : toolName!
-  const apiPrefix = mode === 'resource' ? '/api/downloads' : '/api/tools'
+export function DownloadModal({ isOpen, onClose, toolId, toolName, mode = 'tool', articleId, articleName }: DownloadModalProps) {
+  const itemId = mode === 'article' ? articleId! : toolId!
+  const itemName = mode === 'article' ? articleName! : toolName!
+  const apiPrefix = mode === 'article' ? '/api/articles' : '/api/tools'
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -141,12 +141,12 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName, mode = 'tool'
         }
       }
 
-      const response = await fetch(`${apiPrefix}/${mode === 'resource' ? 'request' : 'download-request'}`, {
+      const response = await fetch(`${apiPrefix}/${mode === 'article' ? 'request' : 'download-request'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          ...(mode === 'resource' ? { downloadId: itemId } : { toolId: itemId }),
+          ...(mode === 'article' ? { articleId: itemId } : { toolId: itemId }),
           skipOtp: isReturningUser,
         }),
       })
@@ -222,12 +222,12 @@ export function DownloadModal({ isOpen, onClose, toolId, toolName, mode = 'tool'
     setError('')
 
     try {
-      const response = await fetch(`${apiPrefix}/${mode === 'resource' ? 'request' : 'download-request'}`, {
+      const response = await fetch(`${apiPrefix}/${mode === 'article' ? 'request' : 'download-request'}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          ...(mode === 'resource' ? { downloadId: itemId } : { toolId: itemId }),
+          ...(mode === 'article' ? { articleId: itemId } : { toolId: itemId }),
         }),
       })
 

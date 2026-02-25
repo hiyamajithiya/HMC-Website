@@ -8,7 +8,7 @@ import { existsSync } from 'fs'
 export const dynamic = 'force-dynamic'
 
 // Get uploads directory - use UPLOADS_PATH for persistent storage
-function getDownloadsDir(): string {
+function getArticlesDir(): string {
   const persistentPath = process.env.UPLOADS_PATH
   if (persistentPath) {
     return path.join(persistentPath, 'resources')
@@ -16,7 +16,15 @@ function getDownloadsDir(): string {
   return path.join(process.cwd(), 'public', 'downloads')
 }
 
-// GET - Fetch all downloads
+// Generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+}
+
+// GET - Fetch all articles
 export async function GET() {
   try {
     const session = await getSession()
@@ -24,7 +32,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
@@ -34,7 +41,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const downloads = await prisma.download.findMany({
+    const articles = await prisma.article.findMany({
       orderBy: [
         { category: 'asc' },
         { sortOrder: 'asc' },
@@ -42,17 +49,17 @@ export async function GET() {
       ]
     })
 
-    return NextResponse.json(downloads)
+    return NextResponse.json(articles)
   } catch (error) {
-    console.error('Failed to fetch downloads:', error)
+    console.error('Failed to fetch articles:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch downloads' },
+      { error: 'Failed to fetch articles' },
       { status: 500 }
     )
   }
 }
 
-// POST - Create a new download (with file upload)
+// POST - Create a new article (with file upload)
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
@@ -60,7 +67,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is admin
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
@@ -102,8 +108,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create downloads directory if it doesn't exist (uses UPLOADS_PATH for persistence)
-    const uploadsDir = getDownloadsDir()
+    // Create uploads directory if it doesn't exist
+    const uploadsDir = getArticlesDir()
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true })
     }
@@ -133,10 +139,18 @@ export async function POST(request: NextRequest) {
       return typeMap[mimeType] || 'File'
     }
 
-    // Create download record (served via API route)
-    const download = await prisma.download.create({
+    // Generate unique slug
+    let slug = generateSlug(title)
+    const existingSlug = await prisma.article.findUnique({ where: { slug } })
+    if (existingSlug) {
+      slug = `${slug}-${Date.now()}`
+    }
+
+    // Create article record
+    const article = await prisma.article.create({
       data: {
         title,
+        slug,
         description: description || null,
         fileName: file.name,
         filePath: `/api/uploads/resources/${fileName}`,
@@ -148,11 +162,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(download, { status: 201 })
+    return NextResponse.json(article, { status: 201 })
   } catch (error) {
-    console.error('Failed to create download:', error)
+    console.error('Failed to create article:', error)
     return NextResponse.json(
-      { error: 'Failed to create download' },
+      { error: 'Failed to create article' },
       { status: 500 }
     )
   }

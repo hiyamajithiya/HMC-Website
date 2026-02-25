@@ -29,7 +29,7 @@ export async function GET() {
       pendingAppointments,
       totalUsers,
       totalDocuments,
-      totalDownloads,
+      totalArticles,
       recentUsers,
       recentContacts,
       recentDocuments,
@@ -43,7 +43,7 @@ export async function GET() {
       prisma.appointment.count({ where: { status: 'PENDING' } }),
       prisma.user.count({ where: { role: 'CLIENT' } }),
       prisma.document.count(),
-      prisma.download.count(),
+      prisma.article.count(),
       // Recent activities
       prisma.user.findMany({
         where: { role: 'CLIENT' },
@@ -105,7 +105,7 @@ export async function GET() {
       pendingAppointments,
       totalUsers,
       totalDocuments,
-      totalDownloads,
+      totalArticles,
       recentActivities,
     })
   } catch (error) {

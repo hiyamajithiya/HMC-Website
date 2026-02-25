@@ -11,16 +11,16 @@ export async function POST(
   try {
     const { id } = await params
 
-    const download = await prisma.download.findUnique({
+    const article = await prisma.article.findUnique({
       where: { id }
     })
 
-    if (!download) {
-      return NextResponse.json({ error: 'Download not found' }, { status: 404 })
+    if (!article) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }
 
     // Increment download count
-    await prisma.download.update({
+    await prisma.article.update({
       where: { id },
       data: {
         downloadCount: { increment: 1 }

@@ -232,7 +232,7 @@ model Tool {
   updatedAt        DateTime       @updatedAt
 
   purchases        ToolPurchase[]
-  downloadLeads    DownloadLead[]
+  downloadLeads    ArticleLead[]
   socialPosts      SocialPostLog[]
 
   @@index([isActive])
@@ -384,35 +384,40 @@ model SiteSetting {
   updatedAt DateTime @updatedAt
 }
 
-// Downloadable resources for public downloads page
-model Download {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  fileName    String
-  filePath    String
-  fileSize    Int
-  fileType    String           // PDF, Excel, Word, etc.
-  category    DownloadCategory
-  sortOrder   Int              @default(0)
-  isActive    Boolean          @default(true)
-  downloadCount Int            @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+// Articles (downloadable resources) for public articles page
+model Article {
+  id            String          @id @default(cuid())
+  title         String
+  slug          String          @unique
+  description   String?
+  fileName      String
+  filePath      String
+  fileSize      Int
+  fileType      String          // PDF, Excel, Word, etc.
+  category      ArticleCategory
+  sortOrder     Int             @default(0)
+  isActive      Boolean         @default(true)
+  downloadCount Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  downloadLeads DownloadLead[]
+  articleLeads ArticleLead[]
+
+  @@map("Download")
 }
 
-enum DownloadCategory {
+enum ArticleCategory {
   GUIDES_TEMPLATES
   FORMS
   CHECKLISTS
   TOOLS
   OTHER
+
+  @@map("DownloadCategory")
 }
 
 // Download leads - tracks users who download tools or resources
-model DownloadLead {
+model ArticleLead {
   id           String    @id @default(cuid())
   name         String
   email        String
@@ -420,8 +425,8 @@ model DownloadLead {
   company      String?
   toolId       String?
   tool         Tool?     @relation(fields: [toolId], references: [id], onDelete: Cascade)
-  downloadId   String?
-  download     Download? @relation(fields: [downloadId], references: [id], onDelete: Cascade)
+  articleId    String?   @map("downloadId")
+  article      Article?  @relation(fields: [articleId], references: [id], onDelete: Cascade)
   otp          String?
   otpExpiry    DateTime?
   verified     Boolean   @default(false)
@@ -431,9 +436,11 @@ model DownloadLead {
 
   @@index([email])
   @@index([toolId])
-  @@index([downloadId])
+  @@index([articleId])
   @@index([verified])
   @@index([email, verified])
+
+  @@map("DownloadLead")
 }
 
 // Mobile app refresh tokens (JWT rotation)

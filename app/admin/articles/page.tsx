@@ -21,9 +21,10 @@ import {
   Filter,
 } from "lucide-react"
 
-interface DownloadItem {
+interface ArticleItem {
   id: string
   title: string
+  slug: string
   description: string | null
   fileName: string
   filePath: string
@@ -53,12 +54,12 @@ const categoryColors: Record<string, string> = {
   OTHER: "bg-gray-100 text-gray-700",
 }
 
-export default function AdminDownloadsPage() {
-  const [downloads, setDownloads] = useState<DownloadItem[]>([])
+export default function AdminArticlesPage() {
+  const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editingDownload, setEditingDownload] = useState<DownloadItem | null>(null)
+  const [editingArticle, setEditingArticle] = useState<ArticleItem | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [uploading, setUploading] = useState(false)
@@ -74,24 +75,24 @@ export default function AdminDownloadsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   useEffect(() => {
-    fetchDownloads()
+    fetchArticles()
   }, [])
 
-  const fetchDownloads = async () => {
+  const fetchArticles = async () => {
     try {
-      const response = await fetch("/api/admin/downloads")
+      const response = await fetch("/api/admin/articles")
       if (response.ok) {
         const data = await response.json()
-        setDownloads(data)
+        setArticles(data)
       }
     } catch (error) {
-      console.error("Failed to fetch downloads:", error)
+      console.error("Failed to fetch articles:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAddDownload = async (e: React.FormEvent) => {
+  const handleAddArticle = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedFile) {
       alert("Please select a file to upload")
@@ -107,30 +108,30 @@ export default function AdminDownloadsPage() {
       formDataToSend.append("category", formData.category)
       formDataToSend.append("sortOrder", formData.sortOrder.toString())
 
-      const response = await fetch("/api/admin/downloads", {
+      const response = await fetch("/api/admin/articles", {
         method: "POST",
         body: formDataToSend,
       })
 
       if (response.ok) {
-        fetchDownloads()
+        fetchArticles()
         setShowAddModal(false)
         resetForm()
       } else {
         const error = await response.json()
-        alert(error.error || "Failed to add download")
+        alert(error.error || "Failed to add article")
       }
     } catch (error) {
-      console.error("Failed to add download:", error)
-      alert("Failed to add download")
+      console.error("Failed to add article:", error)
+      alert("Failed to add article")
     } finally {
       setUploading(false)
     }
   }
 
-  const handleEditDownload = async (e: React.FormEvent) => {
+  const handleEditArticle = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingDownload) return
+    if (!editingArticle) return
 
     setUploading(true)
     try {
@@ -144,71 +145,71 @@ export default function AdminDownloadsPage() {
       formDataToSend.append("sortOrder", formData.sortOrder.toString())
       formDataToSend.append("isActive", formData.isActive.toString())
 
-      const response = await fetch(`/api/admin/downloads/${editingDownload.id}`, {
+      const response = await fetch(`/api/admin/articles/${editingArticle.id}`, {
         method: "PATCH",
         body: formDataToSend,
       })
 
       if (response.ok) {
-        fetchDownloads()
+        fetchArticles()
         setShowEditModal(false)
-        setEditingDownload(null)
+        setEditingArticle(null)
         resetForm()
       } else {
         const error = await response.json()
-        alert(error.error || "Failed to update download")
+        alert(error.error || "Failed to update article")
       }
     } catch (error) {
-      console.error("Failed to update download:", error)
-      alert("Failed to update download")
+      console.error("Failed to update article:", error)
+      alert("Failed to update article")
     } finally {
       setUploading(false)
     }
   }
 
-  const handleDeleteDownload = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this download?")) return
+  const handleDeleteArticle = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this article?")) return
 
     try {
-      const response = await fetch(`/api/admin/downloads/${id}`, {
+      const response = await fetch(`/api/admin/articles/${id}`, {
         method: "DELETE",
       })
 
       if (response.ok) {
-        fetchDownloads()
+        fetchArticles()
       } else {
-        alert("Failed to delete download")
+        alert("Failed to delete article")
       }
     } catch (error) {
-      console.error("Failed to delete download:", error)
-      alert("Failed to delete download")
+      console.error("Failed to delete article:", error)
+      alert("Failed to delete article")
     }
   }
 
-  const toggleActive = async (download: DownloadItem) => {
+  const toggleActive = async (article: ArticleItem) => {
     try {
-      const response = await fetch(`/api/admin/downloads/${download.id}`, {
+      const response = await fetch(`/api/admin/articles/${article.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: !download.isActive }),
+        body: JSON.stringify({ isActive: !article.isActive }),
       })
 
       if (response.ok) {
-        fetchDownloads()
+        fetchArticles()
       }
     } catch (error) {
       console.error("Failed to toggle status:", error)
     }
   }
 
-  const openEditModal = (download: DownloadItem) => {
-    setEditingDownload(download)
+  const openEditModal = (article: ArticleItem) => {
+    setEditingArticle(article)
     setFormData({
-      title: download.title,
-      description: download.description || "",
-      category: download.category,
-      sortOrder: download.sortOrder,
-      isActive: download.isActive,
+      title: article.title,
+      description: article.description || "",
+      category: article.category,
+      sortOrder: article.sortOrder,
+      isActive: article.isActive,
     })
     setSelectedFile(null)
     setShowEditModal(true)
@@ -244,19 +245,19 @@ export default function AdminDownloadsPage() {
     }
   }
 
-  const filteredDownloads = downloads.filter((download) => {
+  const filteredArticles = articles.filter((article) => {
     const matchesSearch =
-      download.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      download.description?.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = filterCategory === "all" || download.category === filterCategory
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      article.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = filterCategory === "all" || article.category === filterCategory
     return matchesSearch && matchesCategory
   })
 
   // Stats
   const stats = {
-    total: downloads.length,
-    active: downloads.filter((d) => d.isActive).length,
-    totalDownloads: downloads.reduce((sum, d) => sum + d.downloadCount, 0),
+    total: articles.length,
+    active: articles.filter((a) => a.isActive).length,
+    totalDownloads: articles.reduce((sum, a) => sum + a.downloadCount, 0),
   }
 
   if (loading) {
@@ -272,8 +273,8 @@ export default function AdminDownloadsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Downloads Management</h1>
-          <p className="text-gray-600">Manage downloadable resources for your website</p>
+          <h1 className="text-2xl font-bold text-gray-900">Articles Management</h1>
+          <p className="text-gray-600">Manage articles and downloadable resources for your website</p>
         </div>
         <Button
           onClick={() => {
@@ -283,7 +284,7 @@ export default function AdminDownloadsPage() {
           className="bg-primary hover:bg-primary-light"
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Download
+          Add Article
         </Button>
       </div>
 
@@ -293,7 +294,7 @@ export default function AdminDownloadsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Files</p>
+                <p className="text-sm font-medium text-gray-600">Total Articles</p>
                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -337,7 +338,7 @@ export default function AdminDownloadsPage() {
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search downloads..."
+                placeholder="Search articles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -362,24 +363,24 @@ export default function AdminDownloadsPage() {
         </CardContent>
       </Card>
 
-      {/* Downloads Table */}
+      {/* Articles Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Downloads ({filteredDownloads.length})</CardTitle>
+          <CardTitle>Articles ({filteredArticles.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredDownloads.length === 0 ? (
+          {filteredArticles.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
               <File className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No downloads found</p>
-              <p className="text-sm">Add your first download to get started</p>
+              <p>No articles found</p>
+              <p className="text-sm">Add your first article to get started</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b text-left text-sm text-gray-600">
-                    <th className="pb-3 font-medium">File</th>
+                    <th className="pb-3 font-medium">Article</th>
                     <th className="pb-3 font-medium">Category</th>
                     <th className="pb-3 font-medium">Size</th>
                     <th className="pb-3 font-medium">Downloads</th>
@@ -388,17 +389,17 @@ export default function AdminDownloadsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredDownloads.map((download) => (
-                    <tr key={download.id} className="border-b last:border-b-0">
+                  {filteredArticles.map((article) => (
+                    <tr key={article.id} className="border-b last:border-b-0">
                       <td className="py-4">
                         <div className="flex items-center gap-3">
-                          {getFileIcon(download.fileType)}
+                          {getFileIcon(article.fileType)}
                           <div>
-                            <p className="font-medium text-gray-900">{download.title}</p>
-                            <p className="text-sm text-gray-500">{download.fileName}</p>
-                            {download.description && (
+                            <p className="font-medium text-gray-900">{article.title}</p>
+                            <p className="text-sm text-gray-500">{article.fileName}</p>
+                            {article.description && (
                               <p className="text-xs text-gray-400 mt-1 max-w-xs truncate">
-                                {download.description}
+                                {article.description}
                               </p>
                             )}
                           </div>
@@ -407,26 +408,26 @@ export default function AdminDownloadsPage() {
                       <td className="py-4">
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            categoryColors[download.category]
+                            categoryColors[article.category]
                           }`}
                         >
-                          {categoryLabels[download.category]}
+                          {categoryLabels[article.category]}
                         </span>
                       </td>
                       <td className="py-4 text-sm text-gray-600">
-                        {formatFileSize(download.fileSize)}
+                        {formatFileSize(article.fileSize)}
                       </td>
-                      <td className="py-4 text-sm text-gray-600">{download.downloadCount}</td>
+                      <td className="py-4 text-sm text-gray-600">{article.downloadCount}</td>
                       <td className="py-4">
                         <button
-                          onClick={() => toggleActive(download)}
+                          onClick={() => toggleActive(article)}
                           className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                            download.isActive
+                            article.isActive
                               ? "bg-green-100 text-green-700"
                               : "bg-gray-100 text-gray-600"
                           }`}
                         >
-                          {download.isActive ? (
+                          {article.isActive ? (
                             <>
                               <Eye className="h-3 w-3" /> Active
                             </>
@@ -440,7 +441,7 @@ export default function AdminDownloadsPage() {
                       <td className="py-4">
                         <div className="flex items-center gap-2">
                           <a
-                            href={download.filePath}
+                            href={article.filePath}
                             target="_blank"
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Preview"
@@ -448,14 +449,14 @@ export default function AdminDownloadsPage() {
                             <Eye className="h-4 w-4 text-gray-600" />
                           </a>
                           <button
-                            onClick={() => openEditModal(download)}
+                            onClick={() => openEditModal(article)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit className="h-4 w-4 text-blue-600" />
                           </button>
                           <button
-                            onClick={() => handleDeleteDownload(download.id)}
+                            onClick={() => handleDeleteArticle(article.id)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Delete"
                           >
@@ -477,12 +478,12 @@ export default function AdminDownloadsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Add New Download</h2>
+              <h2 className="text-lg font-semibold">Add New Article</h2>
               <button onClick={() => setShowAddModal(false)}>
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleAddDownload} className="p-4 space-y-4">
+            <form onSubmit={handleAddArticle} className="p-4 space-y-4">
               <div>
                 <Label htmlFor="file">File *</Label>
                 <div className="mt-1 border-2 border-dashed rounded-lg p-4 text-center">
@@ -521,7 +522,7 @@ export default function AdminDownloadsPage() {
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description of the download"
+                  placeholder="Brief description of the article"
                   className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px]"
                 />
               </div>
@@ -568,7 +569,7 @@ export default function AdminDownloadsPage() {
                   disabled={uploading}
                   className="flex-1 bg-primary hover:bg-primary-light"
                 >
-                  {uploading ? "Uploading..." : "Add Download"}
+                  {uploading ? "Uploading..." : "Add Article"}
                 </Button>
               </div>
             </form>
@@ -577,16 +578,16 @@ export default function AdminDownloadsPage() {
       )}
 
       {/* Edit Modal */}
-      {showEditModal && editingDownload && (
+      {showEditModal && editingArticle && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Edit Download</h2>
+              <h2 className="text-lg font-semibold">Edit Article</h2>
               <button onClick={() => setShowEditModal(false)}>
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
-            <form onSubmit={handleEditDownload} className="p-4 space-y-4">
+            <form onSubmit={handleEditArticle} className="p-4 space-y-4">
               <div>
                 <Label htmlFor="editFile">Replace File (optional)</Label>
                 <div className="mt-1 border-2 border-dashed rounded-lg p-4 text-center">
@@ -603,7 +604,7 @@ export default function AdminDownloadsPage() {
                       <p className="text-sm text-primary font-medium">{selectedFile.name}</p>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        Current: {editingDownload.fileName}
+                        Current: {editingArticle.fileName}
                         <br />
                         <span className="text-xs">Click to replace</span>
                       </p>

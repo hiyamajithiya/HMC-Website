@@ -5,11 +5,11 @@ import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
-// POST - Request resource download and send OTP (or skip if returning user)
+// POST - Request article download and send OTP (or skip if returning user)
 export async function POST(request: NextRequest) {
   try {
     const ip = getClientIp(request)
-    const rateLimit = checkRateLimit(`res-download:${ip}`, { max: 10, windowSeconds: 60 })
+    const rateLimit = checkRateLimit(`article-download:${ip}`, { max: 10, windowSeconds: 60 })
     if (!rateLimit.success) {
       return NextResponse.json(
         { error: 'Too many requests. Please try again later.' },
@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, email, phone, company, downloadId, skipOtp } = body
+    const { name, email, phone, company, articleId, skipOtp } = body
 
-    if (!name || !email || !downloadId) {
+    if (!name || !email || !articleId) {
       return NextResponse.json(
-        { error: 'Name, email, and download ID are required' },
+        { error: 'Name, email, and article ID are required' },
         { status: 400 }
       )
     }
@@ -32,39 +32,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
     }
 
-    // Check if download resource exists
-    const download = await prisma.download.findUnique({
-      where: { id: downloadId },
+    // Check if article exists
+    const article = await prisma.article.findUnique({
+      where: { id: articleId },
       select: { id: true, title: true, filePath: true, isActive: true },
     })
 
-    if (!download || !download.isActive) {
-      return NextResponse.json({ error: 'Resource not found' }, { status: 404 })
+    if (!article || !article.isActive) {
+      return NextResponse.json({ error: 'Article not found' }, { status: 404 })
     }
 
     // Check if this is a returning user (verified for any download/tool)
-    const isVerifiedUser = await prisma.downloadLead.findFirst({
+    const isVerifiedUser = await prisma.articleLead.findFirst({
       where: { email: email.toLowerCase(), verified: true },
     })
 
     if (isVerifiedUser && skipOtp) {
-      const existingLead = await prisma.downloadLead.findFirst({
-        where: { email: email.toLowerCase(), downloadId },
+      const existingLead = await prisma.articleLead.findFirst({
+        where: { email: email.toLowerCase(), articleId },
       })
 
       if (existingLead) {
-        await prisma.downloadLead.update({
+        await prisma.articleLead.update({
           where: { id: existingLead.id },
           data: { name, phone: phone || null, company: company || null, verified: true, downloadedAt: new Date(), otp: null, otpExpiry: null },
         })
       } else {
-        await prisma.downloadLead.create({
-          data: { name, email: email.toLowerCase(), phone: phone || null, company: company || null, downloadId, verified: true, downloadedAt: new Date() },
+        await prisma.articleLead.create({
+          data: { name, email: email.toLowerCase(), phone: phone || null, company: company || null, articleId, verified: true, downloadedAt: new Date() },
         })
       }
 
-      await prisma.download.update({
-        where: { id: downloadId },
+      await prisma.article.update({
+        where: { id: articleId },
         data: { downloadCount: { increment: 1 } },
       })
 
@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
         success: true,
         skipOtp: true,
         message: 'Welcome back! Download starting...',
-        downloadUrl: download.filePath,
-        resourceName: download.title,
+        downloadUrl: article.filePath,
+        resourceName: article.title,
       })
     }
 
@@ -81,28 +81,28 @@ export async function POST(request: NextRequest) {
     const otp = generateOTP()
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
 
-    const existingLead = await prisma.downloadLead.findFirst({
-      where: { email: email.toLowerCase(), downloadId },
+    const existingLead = await prisma.articleLead.findFirst({
+      where: { email: email.toLowerCase(), articleId },
       orderBy: { createdAt: 'desc' },
     })
 
     let leadId: string
 
     if (existingLead) {
-      const updated = await prisma.downloadLead.update({
+      const updated = await prisma.articleLead.update({
         where: { id: existingLead.id },
         data: { name, phone: phone || null, company: company || null, otp, otpExpiry, verified: false },
       })
       leadId = updated.id
     } else {
-      const created = await prisma.downloadLead.create({
-        data: { name, email: email.toLowerCase(), phone: phone || null, company: company || null, downloadId, otp, otpExpiry },
+      const created = await prisma.articleLead.create({
+        data: { name, email: email.toLowerCase(), phone: phone || null, company: company || null, articleId, otp, otpExpiry },
       })
       leadId = created.id
     }
 
     try {
-      await sendDownloadOTP({ name, email: email.toLowerCase(), toolName: download.title, otp })
+      await sendDownloadOTP({ name, email: email.toLowerCase(), toolName: article.title, otp })
     } catch (emailError: any) {
       console.error('Failed to send OTP email:', emailError)
       let errorMessage = 'Failed to send OTP email. '
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'OTP sent to your email', leadId })
   } catch (error) {
-    console.error('Download request error:', error)
+    console.error('Article download request error:', error)
     return NextResponse.json({ error: 'Failed to process download request' }, { status: 500 })
   }
 }

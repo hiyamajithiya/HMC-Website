@@ -39,7 +39,7 @@ const allSidebarItems = [
   { name: 'Contacts', href: '/admin/contacts', icon: Mail, roles: ['ADMIN'], description: 'Form submissions' },
   { name: 'Appointments', href: '/admin/appointments', icon: Calendar, roles: ['ADMIN'], description: 'Bookings' },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['ADMIN', 'STAFF'], description: 'Manage accounts' },
-  { name: 'Downloads', href: '/admin/downloads', icon: Download, roles: ['ADMIN'], description: 'Manage files' },
+  { name: 'Articles', href: '/admin/articles', icon: Download, roles: ['ADMIN'], description: 'Manage articles' },
   { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['ADMIN'], description: 'Site config' },
 ]
 
