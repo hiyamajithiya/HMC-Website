@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import Image from "next/image"
 import {
   Plus,
   Upload,
@@ -20,6 +21,7 @@ import {
   X,
   Search,
   Filter,
+  ImageIcon,
 } from "lucide-react"
 
 interface ArticleItem {
@@ -67,6 +69,10 @@ export default function AdminArticlesPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [uploading, setUploading] = useState(false)
+  const [coverImageUrl, setCoverImageUrl] = useState<string>("")
+  const [socialImageUrl, setSocialImageUrl] = useState<string>("")
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingSocial, setUploadingSocial] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -96,6 +102,36 @@ export default function AdminArticlesPage() {
     }
   }
 
+  const handleImageUpload = async (
+    file: File,
+    type: "cover" | "social"
+  ) => {
+    const setUploading = type === "cover" ? setUploadingCover : setUploadingSocial
+    const setUrl = type === "cover" ? setCoverImageUrl : setSocialImageUrl
+
+    setUploading(true)
+    try {
+      const uploadData = new FormData()
+      uploadData.append("file", file)
+      const response = await fetch("/api/admin/articles/upload", {
+        method: "POST",
+        body: uploadData,
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setUrl(data.url)
+      } else {
+        const error = await response.json()
+        alert(error.error || "Failed to upload image")
+      }
+    } catch (error) {
+      console.error("Failed to upload image:", error)
+      alert("Failed to upload image")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleAddArticle = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedFile) {
@@ -111,6 +147,12 @@ export default function AdminArticlesPage() {
       formDataToSend.append("description", formData.description)
       formDataToSend.append("category", formData.category)
       formDataToSend.append("sortOrder", formData.sortOrder.toString())
+      if (coverImageUrl) {
+        formDataToSend.append("coverImage", coverImageUrl)
+      }
+      if (socialImageUrl) {
+        formDataToSend.append("socialImage", socialImageUrl)
+      }
 
       const response = await fetch("/api/admin/articles", {
         method: "POST",
@@ -228,6 +270,8 @@ export default function AdminArticlesPage() {
       isActive: true,
     })
     setSelectedFile(null)
+    setCoverImageUrl("")
+    setSocialImageUrl("")
   }
 
   const formatFileSize = (bytes: number) => {
@@ -480,7 +524,7 @@ export default function AdminArticlesPage() {
       {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-semibold">Add New Article</h2>
               <button onClick={() => setShowAddModal(false)}>
@@ -559,6 +603,106 @@ export default function AdminArticlesPage() {
                 <p className="text-xs text-gray-500 mt-1">Lower numbers appear first</p>
               </div>
 
+              {/* Cover Image Upload */}
+              <div>
+                <Label>Cover Image</Label>
+                <p className="text-xs text-gray-500 mb-1">Displayed on article cards and detail page</p>
+                {coverImageUrl ? (
+                  <div className="relative mt-1 border rounded-lg overflow-hidden">
+                    <Image
+                      src={coverImageUrl}
+                      alt="Cover preview"
+                      width={400}
+                      height={200}
+                      className="w-full h-32 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setCoverImageUrl("")}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 border-2 border-dashed rounded-lg p-3 text-center">
+                    <input
+                      type="file"
+                      id="addCoverImage"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) handleImageUpload(f, "cover")
+                      }}
+                      className="hidden"
+                    />
+                    <label htmlFor="addCoverImage" className="cursor-pointer">
+                      {uploadingCover ? (
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                          Uploading...
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-500">Click to upload cover image (JPG, PNG, WebP)</p>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Social Media Image Upload */}
+              <div>
+                <Label>Social Media Image</Label>
+                <p className="text-xs text-gray-500 mb-1">Optimized for social sharing (PNG/JPG, no SVG)</p>
+                {socialImageUrl ? (
+                  <div className="relative mt-1 border rounded-lg overflow-hidden">
+                    <Image
+                      src={socialImageUrl}
+                      alt="Social preview"
+                      width={400}
+                      height={200}
+                      className="w-full h-32 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setSocialImageUrl("")}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 border-2 border-dashed rounded-lg p-3 text-center">
+                    <input
+                      type="file"
+                      id="addSocialImage"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) handleImageUpload(f, "social")
+                      }}
+                      className="hidden"
+                    />
+                    <label htmlFor="addSocialImage" className="cursor-pointer">
+                      {uploadingSocial ? (
+                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                          Uploading...
+                        </div>
+                      ) : (
+                        <>
+                          <ImageIcon className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-500">Click to upload social image (JPG, PNG, WebP)</p>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <Button
                   type="button"
@@ -570,7 +714,7 @@ export default function AdminArticlesPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={uploading}
+                  disabled={uploading || uploadingCover || uploadingSocial}
                   className="flex-1 bg-primary hover:bg-primary-light"
                 >
                   {uploading ? "Uploading..." : "Add Article"}
