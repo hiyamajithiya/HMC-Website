@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -101,9 +102,28 @@ export async function generateMetadata({
     return { title: "Article Not Found" }
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://himanshumajithiya.com'
+  const ogImage = article.socialImage || article.coverImage
+  const description = article.description || `Download ${article.title}`
+
   return {
     title: `${article.title} - Articles`,
-    description: article.description || `Download ${article.title}`,
+    description,
+    openGraph: {
+      title: article.title,
+      description,
+      ...(ogImage && {
+        images: [{ url: `${siteUrl}${ogImage}` }],
+      }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: article.title,
+      description,
+      ...(ogImage && {
+        images: [`${siteUrl}${ogImage}`],
+      }),
+    },
   }
 }
 
@@ -160,6 +180,19 @@ export default async function ArticleDetailPage({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main Content */}
               <div className="lg:col-span-2 space-y-8">
+                {/* Cover Image */}
+                {article.coverImage && (
+                  <div className="relative w-full h-64 md:h-80 rounded-xl overflow-hidden">
+                    <Image
+                      src={article.coverImage}
+                      alt={article.title}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                )}
+
                 {/* Description */}
                 {article.description && (
                   <Card>

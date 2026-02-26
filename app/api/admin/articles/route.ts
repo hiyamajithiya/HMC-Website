@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
+import { autoPostArticle } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +83,8 @@ export async function POST(request: NextRequest) {
     const description = formData.get('description') as string | null
     const category = formData.get('category') as string
     const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
+    const coverImage = formData.get('coverImage') as string | null
+    const socialImage = formData.get('socialImage') as string | null
 
     if (!file || !title || !category) {
       return NextResponse.json(
@@ -152,6 +155,8 @@ export async function POST(request: NextRequest) {
         title,
         slug,
         description: description || null,
+        coverImage: coverImage || null,
+        socialImage: socialImage || null,
         fileName: file.name,
         filePath: `/api/uploads/resources/${fileName}`,
         fileSize: file.size,
@@ -161,6 +166,19 @@ export async function POST(request: NextRequest) {
         isActive: true,
       }
     })
+
+    // Auto-post to social media
+    if (article.isActive) {
+      autoPostArticle({
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        description: article.description,
+        category: article.category,
+        coverImage: article.coverImage,
+        socialImage: article.socialImage,
+      }).catch(err => console.error('Article auto-post failed:', err))
+    }
 
     return NextResponse.json(article, { status: 201 })
   } catch (error) {

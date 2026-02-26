@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { unlink, writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import { existsSync } from 'fs'
+import { autoPostArticle } from '@/lib/social-poster'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,6 +117,8 @@ export async function PATCH(
       const category = formData.get('category') as string
       const sortOrder = parseInt(formData.get('sortOrder') as string) || 0
       const isActive = formData.get('isActive') === 'true'
+      const coverImage = formData.get('coverImage') as string | null
+      const socialImage = formData.get('socialImage') as string | null
 
       // Update slug if title changed
       let slugUpdate: { slug?: string } = {}
@@ -134,6 +137,8 @@ export async function PATCH(
         category: category || existingArticle.category,
         sortOrder,
         isActive,
+        ...(coverImage !== undefined && { coverImage: coverImage || null }),
+        ...(socialImage !== undefined && { socialImage: socialImage || null }),
         ...slugUpdate,
       }
 
@@ -190,10 +195,19 @@ export async function PATCH(
         data: updateData
       })
 
+      // Auto-post if article was just activated
+      if (!existingArticle.isActive && article.isActive) {
+        autoPostArticle({
+          id: article.id, title: article.title, slug: article.slug,
+          description: article.description, category: article.category,
+          coverImage: article.coverImage, socialImage: article.socialImage,
+        }).catch(err => console.error('Article auto-post failed:', err))
+      }
+
       return NextResponse.json(article)
     } else {
       const body = await request.json()
-      const { title, description, category, sortOrder, isActive } = body
+      const { title, description, category, sortOrder, isActive, coverImage, socialImage } = body
 
       // Update slug if title changed
       let slugUpdate: { slug?: string } = {}
@@ -214,9 +228,20 @@ export async function PATCH(
           ...(category && { category }),
           ...(sortOrder !== undefined && { sortOrder }),
           ...(isActive !== undefined && { isActive }),
+          ...(coverImage !== undefined && { coverImage: coverImage || null }),
+          ...(socialImage !== undefined && { socialImage: socialImage || null }),
           ...slugUpdate,
         }
       })
+
+      // Auto-post if article was just activated
+      if (!existingArticle.isActive && article.isActive) {
+        autoPostArticle({
+          id: article.id, title: article.title, slug: article.slug,
+          description: article.description, category: article.category,
+          coverImage: article.coverImage, socialImage: article.socialImage,
+        }).catch(err => console.error('Article auto-post failed:', err))
+      }
 
       return NextResponse.json(article)
     }

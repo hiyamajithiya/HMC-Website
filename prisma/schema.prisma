@@ -175,6 +175,8 @@ model SocialPostLog {
   blogPost   BlogPost?        @relation(fields: [blogPostId], references: [id], onDelete: Cascade)
   toolId     String?
   tool       Tool?            @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  articleId  String?
+  article    Article?         @relation(fields: [articleId], references: [id], onDelete: Cascade)
   platform   SocialPlatform
   status     SocialPostStatus @default(PENDING)
   postId     String?
@@ -184,6 +186,7 @@ model SocialPostLog {
 
   @@index([blogPostId])
   @@index([toolId])
+  @@index([articleId])
   @@index([platform])
 }
 
@@ -390,6 +393,8 @@ model Article {
   title         String
   slug          String          @unique
   description   String?
+  coverImage    String?
+  socialImage   String?
   fileName      String
   filePath      String
   fileSize      Int
@@ -402,6 +407,7 @@ model Article {
   updatedAt     DateTime        @updatedAt
 
   articleLeads ArticleLead[]
+  socialPosts  SocialPostLog[]
 
   @@map("Download")
 }

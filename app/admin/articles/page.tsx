@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -26,6 +27,8 @@ interface ArticleItem {
   title: string
   slug: string
   description: string | null
+  coverImage: string | null
+  socialImage: string | null
   fileName: string
   filePath: string
   fileSize: number
@@ -55,6 +58,7 @@ const categoryColors: Record<string, string> = {
 }
 
 export default function AdminArticlesPage() {
+  const router = useRouter()
   const [articles, setArticles] = useState<ArticleItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -449,7 +453,7 @@ export default function AdminArticlesPage() {
                             <Eye className="h-4 w-4 text-gray-600" />
                           </a>
                           <button
-                            onClick={() => openEditModal(article)}
+                            onClick={() => router.push(`/admin/articles/${article.id}`)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             title="Edit"
                           >

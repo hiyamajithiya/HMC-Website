@@ -1205,3 +1205,396 @@ export async function manualPostToTool(
     return { success: false, error: errorMsg }
   }
 }
+
+// ============================================================
+// ARTICLE SOCIAL POSTING
+// ============================================================
+
+interface ArticlePostData {
+  id: string
+  title: string
+  slug: string
+  description: string | null
+  category: string
+  coverImage: string | null
+  socialImage: string | null
+}
+
+function resolveArticleImagePath(imagePath: string): string | null {
+  if (!imagePath) return null
+
+  const match = imagePath.match(/\/api\/uploads\/articles\/(.+)$/)
+  if (match) {
+    const filename = match[1]
+    const uploadsPath = process.env.UPLOADS_PATH
+    if (uploadsPath) return path.join(uploadsPath, 'articles', filename)
+    return path.join(process.cwd(), 'public', 'uploads', 'articles', filename)
+  }
+
+  return null
+}
+
+function getArticleImage(article: ArticlePostData): string | null {
+  // Prefer social image over cover image for social posts
+  return article.socialImage || article.coverImage || null
+}
+
+function getArticleImagePath(article: ArticlePostData): string | null {
+  const image = getArticleImage(article)
+  if (!image) return null
+  return resolveArticleImagePath(image)
+}
+
+function buildArticleTwitterText(article: ArticlePostData, isRepost = false): string {
+  const articleUrl = `${SITE_URL}/resources/articles/${article.slug}`
+  const category = formatCategory(article.category)
+  const urlLen = 23
+  let hashtags = `#${category.replace(/\s+/g, '')} #articles`
+  if (isRepost) {
+    const now = new Date()
+    hashtags += ` | ${now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+  }
+  const hashtagLen = hashtags.length + 1
+  const maxDesc = 280 - urlLen - hashtagLen - 10
+
+  let text = article.title
+  if (article.description) {
+    text += ` — ${article.description}`
+  }
+  if (text.length > maxDesc) {
+    text = text.substring(0, maxDesc - 3) + '...'
+  }
+  return `${text}\n\n${articleUrl}\n${hashtags}`
+}
+
+function buildArticleFacebookText(article: ArticlePostData): string {
+  const articleUrl = `${SITE_URL}/resources/articles/${article.slug}`
+  const category = formatCategory(article.category)
+
+  let text = article.title
+  if (article.description) {
+    text += `\n\n${article.description}`
+  }
+  text += `\n\nDownload now: ${articleUrl}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #articles #resources`
+  return text
+}
+
+function buildArticleInstagramCaption(article: ArticlePostData): string {
+  const category = formatCategory(article.category)
+
+  let text = article.title
+  if (article.description) {
+    text += `\n\n${article.description}`
+  }
+  text += `\n\nLink in bio | ${SITE_URL}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #articles #resources #accounting`
+
+  if (text.length > 2200) {
+    text = text.substring(0, 2197) + '...'
+  }
+  return text
+}
+
+function buildArticleLinkedInText(article: ArticlePostData): string {
+  const articleUrl = `${SITE_URL}/resources/articles/${article.slug}`
+  const category = formatCategory(article.category)
+
+  let text = article.title
+  if (article.description) {
+    text += `\n\n${article.description}`
+  }
+  text += `\n\nDownload now: ${articleUrl}`
+  text += `\n\n#${category.replace(/\s+/g, '')} #articles #resources`
+  return text
+}
+
+async function postArticleToTwitter(article: ArticlePostData, isRepost = false): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.twitter.enabled) throw new Error('Twitter is not enabled')
+
+  const { apiKey, apiSecret, accessToken, accessSecret } = settings.twitter
+  if (!apiKey || !apiSecret || !accessToken || !accessSecret) throw new Error('Twitter credentials are incomplete')
+
+  const client = new TwitterApi({ appKey: apiKey, appSecret: apiSecret, accessToken, accessSecret })
+  const text = buildArticleTwitterText(article, isRepost)
+
+  let mediaIds: string[] = []
+  const imagePath = getArticleImagePath(article)
+  if (imagePath && fs.existsSync(imagePath)) {
+    const mediaId = await client.v1.uploadMedia(imagePath)
+    mediaIds = [mediaId]
+  }
+
+  const tweet = await client.v2.tweet({
+    text,
+    ...(mediaIds.length > 0 && { media: { media_ids: mediaIds as any } }),
+  })
+
+  return { postId: tweet.data.id, postUrl: `https://x.com/i/status/${tweet.data.id}` }
+}
+
+async function postArticleToFacebook(article: ArticlePostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.facebook.enabled) throw new Error('Facebook is not enabled')
+
+  const { pageAccessToken, pageId } = settings.facebook
+  if (!pageAccessToken || !pageId) throw new Error('Facebook credentials are incomplete')
+
+  const text = buildArticleFacebookText(article)
+  const articleUrl = `${SITE_URL}/resources/articles/${article.slug}`
+  let response: Response
+
+  const imagePath = getArticleImagePath(article)
+  if (imagePath && fs.existsSync(imagePath)) {
+    const formData = new FormData()
+    const imageBuffer = fs.readFileSync(imagePath)
+    const blob = new Blob([imageBuffer], { type: getMimeType(imagePath) })
+    formData.append('source', blob, path.basename(imagePath))
+    formData.append('message', text)
+    formData.append('access_token', pageAccessToken)
+    response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/photos`, { method: 'POST', body: formData })
+  } else {
+    response = await fetch(`https://graph.facebook.com/v19.0/${pageId}/feed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, link: articleUrl, access_token: pageAccessToken }),
+    })
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json()
+    throw new Error(`Facebook API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const data = await response.json()
+  const fbPostId = data.id || data.post_id
+  return { postId: fbPostId, postUrl: `https://www.facebook.com/${fbPostId}` }
+}
+
+async function postArticleToLinkedIn(article: ArticlePostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.linkedin.enabled) throw new Error('LinkedIn is not enabled')
+
+  const { accessToken, personUrn } = settings.linkedin
+  if (!accessToken || !personUrn) throw new Error('LinkedIn credentials are incomplete')
+
+  const text = buildArticleLinkedInText(article)
+  const articleUrl = `${SITE_URL}/resources/articles/${article.slug}`
+  const descText = (article.description || article.title).substring(0, 200)
+  let sharePayload: any
+
+  const imagePath = getArticleImagePath(article)
+  if (imagePath && fs.existsSync(imagePath)) {
+    const registerResponse = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        registerUploadRequest: {
+          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+          owner: personUrn,
+          serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+        },
+      }),
+    })
+    if (!registerResponse.ok) throw new Error(`LinkedIn register upload failed: ${await registerResponse.text()}`)
+
+    const registerData = await registerResponse.json()
+    const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl
+    const imageAsset = registerData.value.asset
+
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': getMimeType(imagePath) },
+      body: fs.readFileSync(imagePath),
+    })
+    if (!uploadResponse.ok) throw new Error(`LinkedIn image upload failed: ${uploadResponse.status}`)
+
+    sharePayload = {
+      author: personUrn, lifecycleState: 'PUBLISHED',
+      specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text }, shareMediaCategory: 'IMAGE', media: [{ status: 'READY', media: imageAsset, title: { text: article.title } }] } },
+      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+    }
+  } else {
+    sharePayload = {
+      author: personUrn, lifecycleState: 'PUBLISHED',
+      specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text }, shareMediaCategory: 'ARTICLE', media: [{ status: 'READY', originalUrl: articleUrl, title: { text: article.title }, description: { text: descText } }] } },
+      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+    }
+  }
+
+  const response = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0' },
+    body: JSON.stringify(sharePayload),
+  })
+
+  if (!response.ok) throw new Error(`LinkedIn API error (${response.status}): ${await response.text()}`)
+
+  const data = await response.json()
+  return { postId: data.id, postUrl: `https://www.linkedin.com/feed/update/${data.id}` }
+}
+
+async function postArticleToInstagram(article: ArticlePostData): Promise<{ postId: string; postUrl: string }> {
+  const settings = await getSocialMediaSettings()
+  if (!settings?.instagram.enabled) throw new Error('Instagram is not enabled')
+
+  const { pageAccessToken, instagramAccountId } = settings.instagram
+  if (!pageAccessToken || !instagramAccountId) throw new Error('Instagram credentials are incomplete')
+
+  const caption = buildArticleInstagramCaption(article)
+
+  let imageUrl = ''
+  const imagePath = getArticleImagePath(article)
+  if (imagePath && fs.existsSync(imagePath)) {
+    const processedPath = await processImageForInstagram(imagePath)
+    imageUrl = getProcessedImageUrl(processedPath)
+  }
+  if (!imageUrl) {
+    const image = getArticleImage(article)
+    if (image) {
+      if (image.startsWith('http')) {
+        imageUrl = image
+      } else {
+        const directPath = image.replace(/^\/api\/uploads\//, '/uploads/')
+        imageUrl = `${SITE_URL}${directPath}`
+      }
+    }
+  }
+
+  if (!imageUrl) throw new Error('Instagram requires an image. Please add a cover image to the article.')
+
+  const containerResponse = await fetch(`https://graph.instagram.com/v22.0/${instagramAccountId}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_type: 'IMAGE', image_url: imageUrl, caption, access_token: pageAccessToken }),
+  })
+
+  if (!containerResponse.ok) {
+    const errorData = await containerResponse.json()
+    throw new Error(`Instagram container error (${containerResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const containerId = (await containerResponse.json()).id
+  await new Promise(resolve => setTimeout(resolve, 5000))
+
+  const publishResponse = await fetch(`https://graph.instagram.com/v22.0/${instagramAccountId}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: containerId, access_token: pageAccessToken }),
+  })
+
+  if (!publishResponse.ok) {
+    const errorData = await publishResponse.json()
+    throw new Error(`Instagram publish error (${publishResponse.status}): ${errorData.error?.message || JSON.stringify(errorData)}`)
+  }
+
+  const igPostId = (await publishResponse.json()).id
+
+  let postUrl = `https://www.instagram.com`
+  try {
+    const permalinkResponse = await fetch(`https://graph.instagram.com/v22.0/${igPostId}?fields=permalink&access_token=${pageAccessToken}`)
+    if (permalinkResponse.ok) {
+      const permalinkData = await permalinkResponse.json()
+      if (permalinkData.permalink) postUrl = permalinkData.permalink
+    }
+  } catch { /* Use default */ }
+
+  return { postId: igPostId, postUrl }
+}
+
+export async function autoPostArticle(article: ArticlePostData): Promise<void> {
+  const settings = await getSocialMediaSettings()
+  if (!settings) {
+    console.log('No social media settings configured, skipping article auto-post')
+    return
+  }
+
+  const existingPosts = await prisma.socialPostLog.findMany({ where: { articleId: article.id } })
+
+  const platforms: Array<{
+    name: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
+    enabled: boolean
+    postFn: (article: ArticlePostData) => Promise<{ postId: string; postUrl: string }>
+  }> = [
+    { name: 'TWITTER', enabled: settings.twitter.enabled, postFn: postArticleToTwitter },
+    { name: 'LINKEDIN', enabled: settings.linkedin.enabled, postFn: postArticleToLinkedIn },
+    { name: 'FACEBOOK', enabled: settings.facebook.enabled, postFn: postArticleToFacebook },
+    { name: 'INSTAGRAM', enabled: settings.instagram.enabled, postFn: postArticleToInstagram },
+  ]
+
+  for (const platform of platforms) {
+    if (!platform.enabled) continue
+
+    const alreadyPosted = existingPosts.find(p => p.platform === platform.name && p.status === 'POSTED')
+    if (alreadyPosted) {
+      console.log(`Article already posted to ${platform.name}, skipping`)
+      continue
+    }
+
+    const log = await prisma.socialPostLog.create({
+      data: { articleId: article.id, platform: platform.name, status: 'PENDING' },
+    })
+
+    try {
+      const result = await platform.postFn(article)
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: { status: 'POSTED', postId: result.postId, postUrl: result.postUrl },
+      })
+      console.log(`Successfully posted article to ${platform.name}:`, result.postUrl)
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      console.error(`Failed to post article to ${platform.name}:`, errorMsg)
+      await prisma.socialPostLog.update({
+        where: { id: log.id },
+        data: { status: 'FAILED', error: errorMsg.substring(0, 500) },
+      })
+    }
+  }
+}
+
+export async function manualPostToArticle(
+  articleId: string,
+  platform: 'TWITTER' | 'LINKEDIN' | 'FACEBOOK' | 'INSTAGRAM'
+): Promise<{ success: boolean; error?: string }> {
+  const dbArticle = await prisma.article.findUnique({ where: { id: articleId } })
+
+  if (!dbArticle || !dbArticle.isActive) {
+    return { success: false, error: 'Article not found or not active' }
+  }
+
+  const article: ArticlePostData = {
+    id: dbArticle.id, title: dbArticle.title, slug: dbArticle.slug,
+    description: dbArticle.description, category: dbArticle.category,
+    coverImage: dbArticle.coverImage, socialImage: dbArticle.socialImage,
+  }
+
+  const platformFns: Record<string, (a: ArticlePostData) => Promise<{ postId: string; postUrl: string }>> = {
+    TWITTER: (a) => postArticleToTwitter(a, true), LINKEDIN: postArticleToLinkedIn,
+    FACEBOOK: postArticleToFacebook, INSTAGRAM: postArticleToInstagram,
+  }
+
+  const postFn = platformFns[platform]
+  if (!postFn) return { success: false, error: `Unknown platform: ${platform}` }
+
+  const log = await prisma.socialPostLog.create({
+    data: { articleId: dbArticle.id, platform, status: 'PENDING' },
+  })
+
+  try {
+    const result = await postFn(article)
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: { status: 'POSTED', postId: result.postId, postUrl: result.postUrl },
+    })
+    return { success: true }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    await prisma.socialPostLog.update({
+      where: { id: log.id },
+      data: { status: 'FAILED', error: errorMsg.substring(0, 500) },
+    })
+    return { success: false, error: errorMsg }
+  }
+}

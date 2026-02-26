@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -152,7 +153,19 @@ export default async function ArticlesPage() {
                   const CategoryIcon = config.icon
 
                   return (
-                    <Card key={item.id} className="card-hover relative flex flex-col">
+                    <Card key={item.id} className="card-hover relative flex flex-col overflow-hidden">
+                      {item.coverImage && (
+                        <Link href={`/resources/articles/${item.slug}`}>
+                          <div className="relative w-full h-48 overflow-hidden">
+                            <Image
+                              src={item.coverImage}
+                              alt={item.title}
+                              fill
+                              className="object-cover hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        </Link>
+                      )}
                       <Link href={`/resources/articles/${item.slug}`}>
                         <CardHeader className="cursor-pointer">
                           {/* Category + File Type */}
