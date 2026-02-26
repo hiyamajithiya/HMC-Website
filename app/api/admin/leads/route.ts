@@ -37,6 +37,13 @@ export async function GET(request: NextRequest) {
             slug: true,
           },
         },
+        article: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })

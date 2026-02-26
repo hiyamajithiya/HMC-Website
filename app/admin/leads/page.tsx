@@ -19,6 +19,12 @@ import {
   FileDown,
 } from "lucide-react"
 
+interface LeadSource {
+  id: string
+  name: string
+  slug: string
+}
+
 interface DownloadLead {
   id: string
   name: string
@@ -32,7 +38,12 @@ interface DownloadLead {
     id: string
     name: string
     slug: string
-  }
+  } | null
+  article: {
+    id: string
+    title: string
+    slug: string
+  } | null
 }
 
 interface Stats {
@@ -49,9 +60,20 @@ export default function AdminLeadsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all")
   const [filterTool, setFilterTool] = useState<string>("all")
 
-  // Get unique tools for filter
-  const uniqueTools = Array.from(
-    new Map(leads.map((lead) => [lead.tool.id, lead.tool])).values()
+  // Get unique sources (tools + articles) for filter
+  const getLeadSource = (lead: DownloadLead): LeadSource | null => {
+    if (lead.tool) return { id: lead.tool.id, name: lead.tool.name, slug: lead.tool.slug }
+    if (lead.article) return { id: lead.article.id, name: lead.article.title, slug: lead.article.slug }
+    return null
+  }
+
+  const uniqueSources = Array.from(
+    new Map(
+      leads
+        .map((lead) => getLeadSource(lead))
+        .filter((s): s is LeadSource => s !== null)
+        .map((s) => [s.id, s])
+    ).values()
   )
 
   useEffect(() => {
@@ -93,17 +115,20 @@ export default function AdminLeadsPage() {
   }
 
   const exportToCSV = () => {
-    const headers = ["Name", "Email", "Phone", "Company", "Tool", "Status", "Downloaded At", "Created At"]
-    const rows = filteredLeads.map((lead) => [
-      lead.name,
-      lead.email,
-      lead.phone || "",
-      lead.company || "",
-      lead.tool.name,
-      lead.verified ? "Verified" : "Pending",
-      lead.downloadedAt ? new Date(lead.downloadedAt).toLocaleString() : "",
-      new Date(lead.createdAt).toLocaleString(),
-    ])
+    const headers = ["Name", "Email", "Phone", "Company", "Source", "Status", "Downloaded At", "Created At"]
+    const rows = filteredLeads.map((lead) => {
+      const source = getLeadSource(lead)
+      return [
+        lead.name,
+        lead.email,
+        lead.phone || "",
+        lead.company || "",
+        source?.name || "Unknown",
+        lead.verified ? "Verified" : "Pending",
+        lead.downloadedAt ? new Date(lead.downloadedAt).toLocaleString() : "",
+        new Date(lead.createdAt).toLocaleString(),
+      ]
+    })
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -118,20 +143,21 @@ export default function AdminLeadsPage() {
   }
 
   const filteredLeads = leads.filter((lead) => {
+    const source = getLeadSource(lead)
     const matchesSearch =
       lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.tool.name.toLowerCase().includes(searchTerm.toLowerCase())
+      source?.name.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus =
       filterStatus === "all" ||
       (filterStatus === "verified" && lead.verified) ||
       (filterStatus === "pending" && !lead.verified)
 
-    const matchesTool = filterTool === "all" || lead.tool.id === filterTool
+    const matchesSource = filterTool === "all" || source?.id === filterTool
 
-    return matchesSearch && matchesStatus && matchesTool
+    return matchesSearch && matchesStatus && matchesSource
   })
 
   const formatDate = (dateString: string) => {
@@ -158,7 +184,7 @@ export default function AdminLeadsPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Download Leads</h1>
-          <p className="text-gray-600">View users who downloaded tools</p>
+          <p className="text-gray-600">View users who downloaded tools & articles</p>
         </div>
         <Button onClick={exportToCSV} variant="outline" className="gap-2">
           <FileDown className="h-4 w-4" />
@@ -238,10 +264,10 @@ export default function AdminLeadsPage() {
                 onChange={(e) => setFilterTool(e.target.value)}
                 className="px-3 py-2 border rounded-lg text-sm"
               >
-                <option value="all">All Tools</option>
-                {uniqueTools.map((tool) => (
-                  <option key={tool.id} value={tool.id}>
-                    {tool.name}
+                <option value="all">All Sources</option>
+                {uniqueSources.map((source) => (
+                  <option key={source.id} value={source.id}>
+                    {source.name}
                   </option>
                 ))}
               </select>
@@ -269,7 +295,7 @@ export default function AdminLeadsPage() {
                   <tr className="border-b text-left text-sm text-gray-600">
                     <th className="pb-3 font-medium">User</th>
                     <th className="pb-3 font-medium">Contact</th>
-                    <th className="pb-3 font-medium">Tool</th>
+                    <th className="pb-3 font-medium">Source</th>
                     <th className="pb-3 font-medium">Status</th>
                     <th className="pb-3 font-medium">Date</th>
                     <th className="pb-3 font-medium">Actions</th>
@@ -308,9 +334,9 @@ export default function AdminLeadsPage() {
                         </div>
                       </td>
                       <td className="py-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${lead.article ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
                           <Download className="h-3 w-3" />
-                          {lead.tool.name}
+                          {lead.tool?.name || lead.article?.title || "Unknown"}
                         </span>
                       </td>
                       <td className="py-4">
