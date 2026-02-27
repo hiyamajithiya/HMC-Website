@@ -4,7 +4,7 @@ import crypto from 'crypto'
 
 const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET)
 
-const ACCESS_TOKEN_EXPIRY = '1h'
+const ACCESS_TOKEN_EXPIRY = '15m'
 const REFRESH_TOKEN_EXPIRY = '30d'
 
 export interface MobileTokenPayload {
