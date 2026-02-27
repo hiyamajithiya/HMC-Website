@@ -606,7 +606,7 @@ export default function AdminArticlesPage() {
               {/* Cover Image Upload */}
               <div>
                 <Label>Cover Image</Label>
-                <p className="text-xs text-gray-500 mb-1">Displayed on article cards and detail page</p>
+                <p className="text-xs text-gray-500 mb-1">Displayed on article cards and detail page (1200 x 630px recommended)</p>
                 {coverImageUrl ? (
                   <div className="relative mt-1 border rounded-lg overflow-hidden">
                     <Image
@@ -656,7 +656,7 @@ export default function AdminArticlesPage() {
               {/* Social Media Image Upload */}
               <div>
                 <Label>Social Media Image</Label>
-                <p className="text-xs text-gray-500 mb-1">Optimized for social sharing (PNG/JPG, no SVG)</p>
+                <p className="text-xs text-gray-500 mb-1">1200 x 630px, PNG/JPG, under 5MB (no SVG)</p>
                 {socialImageUrl ? (
                   <div className="relative mt-1 border rounded-lg overflow-hidden">
                     <Image

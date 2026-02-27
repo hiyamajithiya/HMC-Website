@@ -431,7 +431,7 @@ export default function EditArticlePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-xs text-gray-500">Displayed on the website cards and article detail page. JPG, PNG, GIF, or WebP (max 10MB).</p>
+              <p className="text-xs text-gray-500">Displayed on website cards and detail page. Recommended: 1200 x 630px, JPG/PNG/WebP (max 10MB).</p>
               {coverImage ? (
                 <div className="relative">
                   <div className="relative w-full h-48 rounded-lg overflow-hidden border">
@@ -485,7 +485,7 @@ export default function EditArticlePage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-xs text-gray-500">Optimized image for social media sharing (Twitter, LinkedIn, Facebook, Instagram). PNG or JPG recommended. SVG is not supported by social platforms.</p>
+              <p className="text-xs text-gray-500">Recommended: 1200 x 630px, PNG/JPG, under 5MB. No SVG — social platforms reject it.</p>
               {socialImage ? (
                 <div className="relative">
                   <div className="relative w-full h-48 rounded-lg overflow-hidden border">
