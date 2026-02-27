@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Metadata } from "next"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, ClipboardCheck, Building2, Bot, Receipt, Briefcase, Calendar, Calculator } from "lucide-react"
+import { FileText, ClipboardCheck, Building2, Bot, Receipt, Briefcase, Calendar, Calculator, Smartphone } from "lucide-react"
 import { SITE_INFO, SERVICES, getYearsOfPractice } from "@/lib/constants"
 import { generateMetadata as createMetadata } from "@/lib/metadata"
 import { organizationSchema, localBusinessSchema } from "@/lib/schema"
@@ -63,6 +63,12 @@ export default function HomePage() {
                   Contact Us
                 </Button>
               </Link>
+              <a href={SITE_INFO.playStore} target="_blank" rel="noopener noreferrer">
+                <Button size="lg" variant="outline" className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Download App
+                </Button>
+              </a>
             </div>
           </div>
         </div>

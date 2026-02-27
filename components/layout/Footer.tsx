@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Facebook, Linkedin, Youtube, Phone, Mail, MapPin } from "lucide-react"
+import { Facebook, Linkedin, Youtube, Phone, Mail, MapPin, Smartphone } from "lucide-react"
 import { SITE_INFO, REGULATORY_LINKS } from "@/lib/constants"
 import { Separator } from "@/components/ui/separator"
 
@@ -54,6 +54,22 @@ export function Footer() {
                   <Youtube className="h-5 w-5" />
                 </a>
               </div>
+            </div>
+
+            <div className="mt-6">
+              <h4 className="font-semibold mb-3">Download App</h4>
+              <a
+                href={SITE_INFO.playStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 rounded-lg px-4 py-2.5 transition-colors"
+              >
+                <Smartphone className="h-5 w-5" />
+                <div className="text-left">
+                  <div className="text-[10px] leading-tight text-white/70">GET IT ON</div>
+                  <div className="text-sm font-semibold leading-tight">Google Play</div>
+                </div>
+              </a>
             </div>
           </div>
 

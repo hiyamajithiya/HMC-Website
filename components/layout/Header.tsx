@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, X, Phone, Mail, ChevronDown } from "lucide-react"
+import { Menu, X, Phone, Mail, ChevronDown, Smartphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   NavigationMenu,
@@ -135,7 +135,18 @@ export function Header() {
           </nav>
 
           {/* CTA Buttons - Desktop */}
-          <div className="hidden lg:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-3">
+            <a
+              href={SITE_INFO.playStore}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Download HMC Club App"
+              title="Download HMC Club App"
+            >
+              <Button variant="outline" size="icon" className="border-primary/30 text-primary hover:bg-primary hover:text-white">
+                <Smartphone className="h-4 w-4" />
+              </Button>
+            </a>
             <Link href="/book-appointment">
               <Button className="bg-secondary hover:bg-secondary-dark text-white">
                 Book Appointment
@@ -200,6 +211,18 @@ export function Header() {
                   </Link>
                 )
               )}
+              <a
+                href={SITE_INFO.playStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mx-3"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Button variant="outline" className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white">
+                  <Smartphone className="h-4 w-4 mr-2" />
+                  Download HMC Club App
+                </Button>
+              </a>
               <Link
                 href="/book-appointment"
                 className="mx-3"

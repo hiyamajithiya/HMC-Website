@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import LoginForm from '@/components/client-portal/LoginForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, ArrowLeft } from 'lucide-react'
+import { Shield, ArrowLeft, Smartphone } from 'lucide-react'
+import { SITE_INFO } from '@/lib/constants'
 
 export const metadata: Metadata = {
   title: 'HMC Club Login | Himanshu Majithiya & Co.',
@@ -85,6 +86,24 @@ export default async function LoginPage({
               Contact us
             </a>
           </p>
+        </div>
+
+        {/* Download App */}
+        <div className="bg-white/10 border border-white/20 rounded-lg p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-center gap-3">
+            <Smartphone className="h-5 w-5 text-secondary-light flex-shrink-0" />
+            <div className="text-sm text-white">
+              <span>Also available on Android — </span>
+              <a
+                href={SITE_INFO.playStore}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-secondary-light hover:text-secondary underline"
+              >
+                Download from Google Play
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Security Notice */}

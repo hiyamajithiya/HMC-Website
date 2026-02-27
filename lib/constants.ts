@@ -59,6 +59,9 @@ export const SITE_INFO = {
     facebook: "https://www.facebook.com/profile.php?id=61580046548872",
   },
 
+  // Mobile App
+  playStore: "https://play.google.com/store/apps/details?id=com.hmcclub.app&pcampaignid=web_share",
+
   // Team Structure
   team: {
     caInter: 1,
