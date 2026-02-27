@@ -30,6 +30,7 @@ export async function GET() {
       totalUsers,
       totalDocuments,
       totalArticles,
+      totalViewsAgg,
       recentUsers,
       recentContacts,
       recentDocuments,
@@ -44,6 +45,7 @@ export async function GET() {
       prisma.user.count({ where: { role: 'CLIENT' } }),
       prisma.document.count(),
       prisma.article.count(),
+      prisma.blogPost.aggregate({ _sum: { viewCount: true } }),
       // Recent activities
       prisma.user.findMany({
         where: { role: 'CLIENT' },
@@ -96,6 +98,8 @@ export async function GET() {
       })),
     ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5)
 
+    const totalViews = totalViewsAgg._sum.viewCount || 0
+
     return NextResponse.json({
       totalBlogPosts,
       publishedPosts,
@@ -106,6 +110,7 @@ export async function GET() {
       totalUsers,
       totalDocuments,
       totalArticles,
+      totalViews,
       recentActivities,
     })
   } catch (error) {
