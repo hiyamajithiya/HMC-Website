@@ -37,6 +37,7 @@ export default function EditBlogPostPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [existingSeriesNames, setExistingSeriesNames] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     title: '',
@@ -64,6 +65,10 @@ export default function EditBlogPostPage() {
   useEffect(() => {
     fetchPost()
     fetchSocialPosts()
+    fetch('/api/admin/blog/series')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setExistingSeriesNames(data))
+      .catch(() => {})
   }, [postId])
 
   const fetchPost = async () => {
@@ -429,14 +434,47 @@ export default function EditBlogPostPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="seriesName">Series Name</Label>
-                <Input
-                  id="seriesName"
-                  value={formData.seriesName}
-                  onChange={(e) => setFormData({ ...formData, seriesName: e.target.value })}
-                  placeholder="e.g., GST Guide for Beginners"
-                />
+                {existingSeriesNames.length > 0 ? (
+                  <>
+                    <select
+                      id="seriesSelect"
+                      value={existingSeriesNames.includes(formData.seriesName) ? formData.seriesName : (formData.seriesName ? '__new__' : '')}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setFormData({ ...formData, seriesName: '' })
+                          setTimeout(() => document.getElementById('seriesNameNew')?.focus(), 100)
+                        } else {
+                          setFormData({ ...formData, seriesName: e.target.value })
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-border-light rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">No Series</option>
+                      {existingSeriesNames.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__new__">+ New Series...</option>
+                    </select>
+                    {(!existingSeriesNames.includes(formData.seriesName) && (formData.seriesName || false)) && (
+                      <Input
+                        id="seriesNameNew"
+                        value={formData.seriesName}
+                        onChange={(e) => setFormData({ ...formData, seriesName: e.target.value })}
+                        placeholder="Enter new series name"
+                        className="mt-2"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <Input
+                    id="seriesName"
+                    value={formData.seriesName}
+                    onChange={(e) => setFormData({ ...formData, seriesName: e.target.value })}
+                    placeholder="e.g., GST Guide for Beginners"
+                  />
+                )}
                 <p className="text-xs text-text-muted">
-                  Group posts into a series by giving them the same series name
+                  Select an existing series or create a new one
                 </p>
               </div>
               <div className="space-y-2">
