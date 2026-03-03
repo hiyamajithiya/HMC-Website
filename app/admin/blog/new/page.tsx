@@ -35,6 +35,7 @@ export default function NewBlogPostPage() {
   const [uploadingImage, setUploadingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [existingSeriesNames, setExistingSeriesNames] = useState<string[]>([])
+  const [isNewSeries, setIsNewSeries] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -387,13 +388,14 @@ export default function NewBlogPostPage() {
                   <>
                     <select
                       id="seriesSelect"
-                      value={existingSeriesNames.includes(formData.seriesName) ? formData.seriesName : (formData.seriesName ? '__new__' : '')}
+                      value={isNewSeries ? '__new__' : (existingSeriesNames.includes(formData.seriesName) ? formData.seriesName : '')}
                       onChange={(e) => {
                         if (e.target.value === '__new__') {
+                          setIsNewSeries(true)
                           setFormData({ ...formData, seriesName: '' })
-                          // Focus the text input after selecting "New Series"
                           setTimeout(() => document.getElementById('seriesNameNew')?.focus(), 100)
                         } else {
+                          setIsNewSeries(false)
                           setFormData({ ...formData, seriesName: e.target.value })
                         }
                       }}
@@ -405,7 +407,7 @@ export default function NewBlogPostPage() {
                       ))}
                       <option value="__new__">+ New Series...</option>
                     </select>
-                    {(!existingSeriesNames.includes(formData.seriesName) && (formData.seriesName || false)) && (
+                    {isNewSeries && (
                       <Input
                         id="seriesNameNew"
                         value={formData.seriesName}
