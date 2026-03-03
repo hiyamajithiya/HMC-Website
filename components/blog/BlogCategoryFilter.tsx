@@ -5,7 +5,7 @@ import Link from 'next/link'
 // Using img tag for uploaded images as they're served directly by nginx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, BookOpen, ImageIcon } from "lucide-react"
+import { Calendar, Clock, BookOpen, ImageIcon, List } from "lucide-react"
 
 // Blog card image component with error handling
 function BlogCardImage({ src, alt, category, categoryLabel }: {
@@ -55,6 +55,8 @@ interface BlogPost {
   coverImage: string | null
   publishedAt: Date | null
   viewCount: number
+  seriesName: string | null
+  seriesOrder: number | null
 }
 
 interface BlogCategoryFilterProps {
@@ -156,6 +158,14 @@ export function BlogCategoryFilter({ posts }: BlogCategoryFilterProps) {
                           {estimateReadTime(post.excerpt)}
                         </div>
                       </div>
+                      {post.seriesName && (
+                        <div className="flex items-center gap-1 mb-1">
+                          <List className="h-3 w-3 text-purple-600" />
+                          <span className="text-xs font-medium text-purple-600 line-clamp-1">
+                            {post.seriesName} {post.seriesOrder ? `- Part ${post.seriesOrder}` : ''}
+                          </span>
+                        </div>
+                      )}
                       <CardTitle className="text-lg font-heading line-clamp-2">
                         {post.title}
                       </CardTitle>

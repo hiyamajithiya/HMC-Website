@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, slug, excerpt, content, category, coverImage, tags, isPublished } = body
+    const { title, slug, excerpt, content, category, coverImage, tags, isPublished, seriesName, seriesOrder } = body
 
     // Validate required fields
     if (!title || !excerpt || !content) {
@@ -87,6 +87,8 @@ export async function POST(request: Request) {
         tags: tags || [],
         isPublished: isPublished || false,
         publishedAt: isPublished ? new Date() : null,
+        seriesName: seriesName || null,
+        seriesOrder: seriesOrder ? parseInt(seriesOrder) : null,
         authorId: user.id,
       },
     })

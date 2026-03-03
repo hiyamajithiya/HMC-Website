@@ -156,6 +156,8 @@ model BlogPost {
   isPublished Boolean     @default(false)
   publishedAt DateTime?
   viewCount   Int         @default(0)
+  seriesName  String?
+  seriesOrder Int?
   authorId    String?
   author      User?       @relation(fields: [authorId], references: [id])
   socialPosts SocialPostLog[]
@@ -166,6 +168,7 @@ model BlogPost {
   @@index([category])
   @@index([authorId])
   @@index([isPublished, category])
+  @@index([seriesName])
 }
 
 // Social media auto-post tracking

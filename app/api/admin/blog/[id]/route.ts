@@ -52,7 +52,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await request.json()
-    const { title, slug, excerpt, content, category, coverImage, tags, isPublished, publishedAt } = body
+    const { title, slug, excerpt, content, category, coverImage, tags, isPublished, publishedAt, seriesName, seriesOrder } = body
 
     // Check if post exists
     const existingPost = await prisma.blogPost.findUnique({
@@ -92,6 +92,8 @@ export async function PUT(
         tags: tags ?? existingPost.tags,
         isPublished: isPublished ?? existingPost.isPublished,
         publishedAt: publishedAt ? new Date(publishedAt) : (isPublished && !existingPost.isPublished ? new Date() : existingPost.publishedAt),
+        seriesName: seriesName !== undefined ? (seriesName || null) : existingPost.seriesName,
+        seriesOrder: seriesOrder !== undefined ? (seriesOrder ? parseInt(seriesOrder) : null) : existingPost.seriesOrder,
       },
     })
 

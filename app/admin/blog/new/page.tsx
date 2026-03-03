@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowLeft, Save, Eye, Upload, X, Loader2, ImageIcon } from 'lucide-react'
+import { ArrowLeft, Save, Eye, Upload, X, Loader2, ImageIcon, List } from 'lucide-react'
 
 // Dynamically import RichTextEditor to avoid SSR issues
 const RichTextEditor = dynamic(
@@ -42,6 +42,8 @@ export default function NewBlogPostPage() {
     category: 'GENERAL',
     coverImage: '',
     tags: '',
+    seriesName: '',
+    seriesOrder: '',
     isPublished: false,
   })
 
@@ -125,6 +127,8 @@ export default function NewBlogPostPage() {
           tags: formData.tags.split(',').map((t) => t.trim()).filter(Boolean),
           isPublished: publish,
           publishedAt: publish ? new Date().toISOString() : null,
+          seriesName: formData.seriesName.trim() || null,
+          seriesOrder: formData.seriesOrder ? parseInt(formData.seriesOrder) : null,
         }),
       })
 
@@ -356,6 +360,44 @@ export default function NewBlogPostPage() {
                   onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                   placeholder="tax, gst, compliance (comma separated)"
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Series Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <List className="h-4 w-4" />
+                Series
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="seriesName">Series Name</Label>
+                <Input
+                  id="seriesName"
+                  value={formData.seriesName}
+                  onChange={(e) => setFormData({ ...formData, seriesName: e.target.value })}
+                  placeholder="e.g., GST Guide for Beginners"
+                />
+                <p className="text-xs text-text-muted">
+                  Group posts into a series by giving them the same series name
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="seriesOrder">Order in Series</Label>
+                <Input
+                  id="seriesOrder"
+                  type="number"
+                  min="1"
+                  value={formData.seriesOrder}
+                  onChange={(e) => setFormData({ ...formData, seriesOrder: e.target.value })}
+                  placeholder="e.g., 1, 2, 3..."
+                />
+                <p className="text-xs text-text-muted">
+                  Position of this post in the series (1 = first)
+                </p>
               </div>
             </CardContent>
           </Card>

@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Clock, ArrowLeft } from "lucide-react"
+import { Calendar, Clock, ArrowLeft, List, ChevronLeft, ChevronRight } from "lucide-react"
 import { prisma } from "@/lib/prisma"
 import { ShareButton } from "@/components/blog/ShareButton"
 import { ContentRenderer } from "@/components/content/ContentRenderer"
@@ -62,6 +62,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+async function getSeriesPosts(seriesName: string) {
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: {
+        seriesName,
+        isPublished: true,
+      },
+      orderBy: { seriesOrder: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        seriesOrder: true,
+      },
+    })
+    return posts
+  } catch (error) {
+    console.error('Failed to fetch series posts:', error)
+    return []
+  }
+}
+
 function estimateReadTime(content: string): string {
   const wordsPerMinute = 200
   const wordCount = content.split(/\s+/).length
@@ -76,6 +98,15 @@ export default async function BlogPostPage({ params }: Props) {
   if (!post || !post.isPublished) {
     notFound()
   }
+
+  // Fetch series posts if this post belongs to a series
+  const seriesPosts = post.seriesName
+    ? await getSeriesPosts(post.seriesName)
+    : []
+
+  const currentIndex = seriesPosts.findIndex(p => p.id === post.id)
+  const prevPost = currentIndex > 0 ? seriesPosts[currentIndex - 1] : null
+  const nextPost = currentIndex < seriesPosts.length - 1 ? seriesPosts[currentIndex + 1] : null
 
   const articleSchema = generateArticleSchema({
     title: post.title,
@@ -104,10 +135,16 @@ export default async function BlogPostPage({ params }: Props) {
               Back to Blog
             </Link>
 
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-4">
               <Badge variant="secondary" className="bg-secondary text-white">
                 {categoryLabels[post.category] || post.category}
               </Badge>
+              {post.seriesName && (
+                <Badge variant="secondary" className="bg-purple-600 text-white">
+                  <List className="h-3 w-3 mr-1" />
+                  {post.seriesName} {post.seriesOrder ? `- Part ${post.seriesOrder}` : ''}
+                </Badge>
+              )}
               <span className="text-white/60 text-sm flex items-center">
                 <Clock className="h-4 w-4 mr-1" />
                 {estimateReadTime(post.content)}
@@ -152,6 +189,69 @@ export default async function BlogPostPage({ params }: Props) {
             <article className="prose prose-lg max-w-none">
               <ContentRenderer content={post.content} />
             </article>
+
+            {/* Series Navigation */}
+            {seriesPosts.length > 1 && (
+              <div className="mt-8 pt-8 border-t border-border-light">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                  <h3 className="text-lg font-heading font-bold text-purple-800 mb-4 flex items-center gap-2">
+                    <List className="h-5 w-5" />
+                    {post.seriesName}
+                  </h3>
+                  <ol className="space-y-2">
+                    {seriesPosts.map((seriesPost, index) => (
+                      <li key={seriesPost.id}>
+                        {seriesPost.id === post.id ? (
+                          <span className="flex items-center gap-2 text-sm font-semibold text-purple-800 bg-purple-100 rounded px-3 py-2">
+                            <span className="bg-purple-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                              {seriesPost.seriesOrder || index + 1}
+                            </span>
+                            {seriesPost.title}
+                            <span className="text-xs text-purple-500 ml-auto flex-shrink-0">(You are here)</span>
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/resources/blog/${seriesPost.slug}`}
+                            className="flex items-center gap-2 text-sm text-purple-700 hover:text-purple-900 hover:bg-purple-100 rounded px-3 py-2 transition-colors"
+                          >
+                            <span className="bg-purple-200 text-purple-700 text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                              {seriesPost.seriesOrder || index + 1}
+                            </span>
+                            {seriesPost.title}
+                          </Link>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+
+                  {/* Prev / Next Navigation */}
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-purple-200">
+                    {prevPost ? (
+                      <Link
+                        href={`/resources/blog/${prevPost.slug}`}
+                        className="flex items-center gap-1 text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous: {prevPost.title}
+                      </Link>
+                    ) : (
+                      <div />
+                    )}
+                    {nextPost ? (
+                      <Link
+                        href={`/resources/blog/${nextPost.slug}`}
+                        className="flex items-center gap-1 text-sm font-medium text-purple-700 hover:text-purple-900 transition-colors text-right"
+                      >
+                        Next: {nextPost.title}
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    ) : (
+                      <div />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tags */}
             {post.tags.length > 0 && (

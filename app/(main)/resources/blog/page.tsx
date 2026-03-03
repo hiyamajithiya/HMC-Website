@@ -25,6 +25,8 @@ async function getBlogPosts() {
         coverImage: true,
         publishedAt: true,
         viewCount: true,
+        seriesName: true,
+        seriesOrder: true,
       },
     })
     return posts
