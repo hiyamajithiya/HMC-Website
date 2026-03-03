@@ -25,7 +25,8 @@ import {
   MoreVertical,
   UserCheck,
   UserX,
-  Building2
+  Building2,
+  Trash2
 } from 'lucide-react'
 
 // Available services that can be offered to clients
@@ -220,6 +221,29 @@ export default function UsersPage() {
       setEditError(error instanceof Error ? error.message : 'Failed to update user')
     } finally {
       setUpdatingUser(false)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string, userName: string | null) => {
+    if (!confirm(`Are you sure you want to delete user "${userName || 'Unknown'}"? This action cannot be undone.`)) return
+
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        alert(error.error || 'Failed to delete user')
+        return
+      }
+
+      setUsers(users.filter((u) => u.id !== userId))
+      setShowEditModal(false)
+      setEditingUser(null)
+    } catch (error) {
+      console.error('Failed to delete user:', error)
+      alert('Failed to delete user')
     }
   }
 
@@ -687,6 +711,16 @@ export default function UsersPage() {
               )}
 
               <div className="flex gap-3 pt-4">
+                {currentUserRole === 'ADMIN' && editingUser.role !== 'ADMIN' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                    onClick={() => handleDeleteUser(editingUser.id, editingUser.name)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="outline"
